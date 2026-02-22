@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #e5e7eb;
+  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  @apply min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-zinc-900 text-slate-100;
+}
+
+.hud-card {
+  @apply rounded-xl border border-slate-700/70 bg-slate-900/85 px-4 py-3 shadow-lg;
+}
+
+.fox-tile {
+  width: 78px;
+  height: 78px;
+  @apply absolute select-none rounded-xl border border-amber-500/60 bg-slate-800/95 text-center shadow-md;
+}
+
+.fox-tile.dragging {
+  @apply scale-105 border-amber-300 shadow-amber-400/20;
+}
+
+.context-menu {
+  @apply fixed z-40 w-56 rounded-xl border border-slate-700 bg-slate-900/95 p-3 shadow-2xl;
+}
+
+.shop-tab {
+  @apply rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium transition;
+}
+
+.shop-tab.active {
+  @apply border-amber-400 bg-amber-500/15 text-amber-200;
+}
+
+.primary-btn {
+  @apply rounded-xl bg-amber-500 px-4 py-3 font-bold text-slate-900 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-500 disabled:text-slate-300;
+}
+
+.panel {
+  @apply rounded-2xl border border-slate-700 bg-panel/95 p-4 shadow-xl;
+}
+
+.toast {
+  @apply rounded-lg border border-amber-500/60 bg-slate-900/95 px-4 py-2 text-sm text-amber-100 shadow-lg;
+}

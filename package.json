@@ -1,0 +1,53 @@
+{
+  "name": "fox-evolution",
+  "version": "1.0.0",
+  "description": "Offline desktop merge game built with Electron + React + Vite + Tailwind",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron electron/main.js\"",
+    "build:web": "vite build",
+    "build": "npm run build:web && electron-builder",
+    "preview": "vite preview"
+  },
+  "build": {
+    "appId": "com.foxevolution.app",
+    "productName": "Fox Evolution",
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  },
+  "keywords": [
+    "electron",
+    "react",
+    "vite",
+    "merge-game"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.1.2",
+    "electron": "^36.3.1",
+    "electron-builder": "^25.1.8",
+    "postcss": "^8.5.2",
+    "tailwindcss": "^3.4.17",
+    "vite": "^6.1.0",
+    "wait-on": "^8.0.3"
+  }
+}
