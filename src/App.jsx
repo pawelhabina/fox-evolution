@@ -5,8 +5,9 @@ import FoxContextMenu from './components/FoxContextMenu';
 import Hud from './components/Hud';
 import ShopPanel from './components/ShopPanel';
 import ToastStack from './components/ToastStack';
-import { AUTOSAVE_SECONDS, MAX_FOXES, TICK_SECONDS } from './game/constants';
+import { AUTOSAVE_SECONDS, EVOLUTION_COST_GEMS, MAX_FOXES, TICK_SECONDS } from './game/constants';
 import { getBuyFoxCost, getExpectedCoinsPerSecond, getRebirthTokensEarned } from './game/economy';
+import { formatNumber } from './game/format';
 import { gameReducer, ACTIONS, getFoxInfoForMenu } from './game/reducer';
 import { createInitialState } from './storage/defaultState';
 import {
@@ -151,7 +152,7 @@ export default function App() {
     if (!source || !target) {
       return;
     }
-    if (source.tier !== target.tier || source.tier >= 15) {
+    if (source.tier !== target.tier) {
       return;
     }
     dispatch({ type: ACTIONS.MERGE_FOXES, sourceId, targetId, nowTs: Date.now() });
@@ -240,9 +241,9 @@ export default function App() {
           type="button"
           className="primary-btn pointer-events-auto text-xl"
           onClick={buyFox}
-          title={`Koszt: ${buyCost} coins`}
+          title={`Koszt: ${formatNumber(buyCost)} coins`}
         >
-          Kup lisa ({buyCost} coins)
+          Kup lisa ({formatNumber(buyCost)} coins)
         </button>
       </div>
 
@@ -261,6 +262,11 @@ export default function App() {
           if (!contextMenu) {
             return;
           }
+          if (state.currencies.gems < EVOLUTION_COST_GEMS) {
+            pushToast(`Potrzebujesz ${EVOLUTION_COST_GEMS} gems na ewolucję`);
+            setContextMenu(null);
+            return;
+          }
           setEvolutionTargetId(contextMenu.foxId);
           setContextMenu(null);
         }}
@@ -268,6 +274,7 @@ export default function App() {
 
       <EvolutionModal
         fox={evolutionFox}
+        currentGems={state.currencies.gems}
         onSelect={(evolutionId) => {
           dispatch({ type: ACTIONS.EVOLVE_FOX, id: evolutionTargetId, evolutionId, nowTs: Date.now() });
           setEvolutionTargetId(null);

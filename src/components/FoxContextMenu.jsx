@@ -1,4 +1,4 @@
-import { MAX_TIER } from '../game/constants';
+import { MEGA_TIER } from '../game/constants';
 import { formatNumber } from '../game/format';
 
 export default function FoxContextMenu({ menu, info, onClose, onSell, onEvolve }) {
@@ -6,7 +6,7 @@ export default function FoxContextMenu({ menu, info, onClose, onSell, onEvolve }
     return null;
   }
 
-  const canEvolve = info.fox.tier === MAX_TIER && !info.fox.evolution;
+  const canEvolve = info.fox.tier === MEGA_TIER && !info.fox.evolution;
 
   return (
     <div className="context-menu" style={{ left: menu.x, top: menu.y }}>

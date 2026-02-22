@@ -1,4 +1,4 @@
-import { formatNumber } from '../game/format';
+import { formatCompact, formatNumber } from '../game/format';
 
 export default function Hud({ coins, gems, rebirthTokens, coinsPerSecond, countdown, foxCount, foxLimit }) {
   return (
@@ -10,7 +10,7 @@ export default function Hud({ coins, gems, rebirthTokens, coinsPerSecond, countd
 
       <div className="hud-card">
         <p className="text-xs uppercase tracking-wider text-slate-400">Coins/s</p>
-        <p className="text-2xl font-black text-emerald-300">{coinsPerSecond.toFixed(1)}</p>
+        <p className="text-2xl font-black text-emerald-300">{formatCompact(coinsPerSecond, 1)}</p>
       </div>
 
       <div className="hud-card">

@@ -39,7 +39,24 @@ export const FOX_TIERS = TIER_NAMES.map((name, index) => {
   };
 });
 
-export const MAX_TIER = 15;
+const EXTRA_EVOLUTION_TIERS = [];
+let previousIncome = FOX_TIERS[FOX_TIERS.length - 1].baseIncomePerTick;
+for (let tier = 16; tier <= 30; tier += 1) {
+  const baseIncomePerTick = Math.max(1, Math.round(previousIncome * 1.75));
+  EXTRA_EVOLUTION_TIERS.push({
+    tier,
+    name: `Elemental Fox Lv ${tier}`,
+    baseIncomePerTick,
+    clickValue: Math.max(1, Math.round(baseIncomePerTick * 0.6)),
+    sellValue: Math.max(1, Math.round(baseIncomePerTick * 6.5)),
+    icon: '🌟'
+  });
+  previousIncome = baseIncomePerTick;
+}
+
+export const ALL_FOX_TIERS = [...FOX_TIERS, ...EXTRA_EVOLUTION_TIERS];
+export const BASE_MAX_TIER = 15;
+export const MAX_TIER = 30;
 export const MEGA_TIER = 15;
 
 export const EVOLUTION_TYPES = {
@@ -47,21 +64,27 @@ export const EVOLUTION_TYPES = {
     id: 'fire',
     name: 'Fire Fox',
     icon: '🔥',
-    multiplier: 1.25
+    incomeMultiplier: 1,
+    clickMultiplier: 1.5
   },
   water: {
     id: 'water',
     name: 'Water Fox',
     icon: '💧',
-    multiplier: 1.35
+    incomeMultiplier: 1,
+    clickMultiplier: 1,
+    auraMultiplier: 1.5
   },
   electric: {
     id: 'electric',
     name: 'Electric Fox',
     icon: '⚡',
-    multiplier: 1.5
+    incomeMultiplier: 1.5,
+    clickMultiplier: 1
   }
 };
+
+export const EVOLUTION_COST_GEMS = 2;
 
 export const UPGRADE_DEFS = {
   basePurchaseTier: {

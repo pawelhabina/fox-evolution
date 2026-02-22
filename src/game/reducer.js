@@ -1,5 +1,6 @@
 import { createInitialState } from '../storage/defaultState';
 import {
+  buildWaterBuffMap,
   clamp,
   clampCurrency,
   clampFoxPosition,
@@ -7,14 +8,16 @@ import {
   getBasePurchaseTier,
   getBuyFoxCost,
   getFoxClickValue,
-  getFoxIncomePerTick,
+  getFoxClickValueCached,
+  getFoxIncomePerTickCached,
   getFoxSellValue,
+  getFoxSellValueCached,
   getRebirthTokensEarned,
   getSafeSpawnPosition,
   getTierData,
   getUpgradeCost
 } from './economy';
-import { EVOLUTION_TYPES, MAX_FOXES, MAX_TIER, UPGRADE_DEFS } from './constants';
+import { BASE_MAX_TIER, EVOLUTION_COST_GEMS, EVOLUTION_TYPES, MAX_FOXES, MAX_TIER, MEGA_TIER, UPGRADE_DEFS } from './constants';
 import { claimDailyQuest, claimWeeklyBonus, ensureTemporalResets, refreshQuestProgress } from './quests';
 
 export const ACTIONS = {
@@ -113,7 +116,7 @@ export function gameReducer(state, action) {
 
       const baseTier = getBasePurchaseTier(next);
       const roll = action.roll ?? Math.random();
-      const finalTier = baseTier < MAX_TIER && roll < 0.05 ? baseTier + 1 : baseTier;
+      const finalTier = baseTier < BASE_MAX_TIER && roll < 0.05 ? baseTier + 1 : baseTier;
       const pos = getSafeSpawnPosition(next.arena, action.offsetSeed ?? Math.random());
 
       const newFox = {
@@ -174,7 +177,24 @@ export function gameReducer(state, action) {
       if (!source || !target || source.id === target.id) {
         return next;
       }
-      if (source.tier !== target.tier || target.tier >= MAX_TIER) {
+      if (source.tier !== target.tier) {
+        return next;
+      }
+
+      const sourceEvo = source.evolution || null;
+      const targetEvo = target.evolution || null;
+      const bothNonEvolved = !sourceEvo && !targetEvo;
+      const bothSameElement = sourceEvo && targetEvo && sourceEvo === targetEvo;
+
+      if (!bothNonEvolved && !bothSameElement) {
+        return next;
+      }
+
+      if (bothNonEvolved && target.tier >= BASE_MAX_TIER) {
+        return next;
+      }
+
+      if (bothSameElement && target.tier >= MAX_TIER) {
         return next;
       }
 
@@ -188,7 +208,7 @@ export function gameReducer(state, action) {
           return {
             ...fox,
             tier: newTier,
-            evolution: null
+            evolution: bothSameElement ? targetEvo : null
           };
         });
 
@@ -248,13 +268,26 @@ export function gameReducer(state, action) {
       if (!evo) {
         return next;
       }
+      if (next.currencies.gems < EVOLUTION_COST_GEMS) {
+        return next;
+      }
+
+      const canEvolve = next.foxes.some((fox) => fox.id === action.id && fox.tier === MEGA_TIER && !fox.evolution);
+      if (!canEvolve) {
+        return next;
+      }
+
       return {
         ...next,
+        currencies: {
+          ...next.currencies,
+          gems: clampCurrency(next.currencies.gems - EVOLUTION_COST_GEMS)
+        },
         foxes: next.foxes.map((fox) => {
           if (fox.id !== action.id) {
             return fox;
           }
-          if (fox.tier !== MAX_TIER || fox.evolution) {
+          if (fox.tier !== MEGA_TIER || fox.evolution) {
             return fox;
           }
           return {
@@ -298,6 +331,7 @@ export function gameReducer(state, action) {
       let gemsGained = 0;
       let gemDropCounter = next.meta.gemDropCounter || 0;
       let gemDropHits = 0;
+      const waterBuffMap = buildWaterBuffMap(next);
 
       const gemUpgrade = next.upgrades.gemDropBonus || 0;
       next.foxes.forEach((fox) => {
@@ -309,7 +343,7 @@ export function gameReducer(state, action) {
           gemDropHits += 1;
           return;
         }
-        coinsGained += getFoxIncomePerTick(fox, next);
+        coinsGained += getFoxIncomePerTickCached(fox, next, waterBuffMap);
       });
 
       let updated = withCoinsGain(next, coinsGained);
@@ -416,11 +450,12 @@ export function getFoxInfoForMenu(state, foxId) {
   }
 
   const tierData = getTierData(fox.tier);
+  const waterBuffMap = buildWaterBuffMap(state);
   return {
     fox,
     tierData,
-    income: getFoxIncomePerTick(fox, state),
-    clickValue: getFoxClickValue(fox, state),
-    sellValue: getFoxSellValue(fox, state)
+    income: getFoxIncomePerTickCached(fox, state, waterBuffMap),
+    clickValue: getFoxClickValueCached(fox, state, waterBuffMap),
+    sellValue: getFoxSellValueCached(fox, state, waterBuffMap)
   };
 }

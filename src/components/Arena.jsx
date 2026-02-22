@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { MAX_TIER } from '../game/constants';
+import { MEGA_TIER } from '../game/constants';
 import { getTierData, getEvolutionData } from '../game/economy';
 
 function foxLabel(fox) {
@@ -149,7 +149,7 @@ export default function Arena({
                 <div className="text-2xl">{evolution?.icon || tier.icon}</div>
                 <div className="text-[10px] font-bold text-amber-200">T{fox.tier}</div>
                 <div className="text-[10px] text-slate-300">{foxLabel(fox)}</div>
-                {fox.tier >= MAX_TIER && !fox.evolution && (
+                {fox.tier >= MEGA_TIER && !fox.evolution && (
                   <div className="rounded bg-amber-500/25 px-1 text-[9px] text-amber-100">Evolve</div>
                 )}
               </div>

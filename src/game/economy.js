@@ -1,4 +1,12 @@
-import { EVOLUTION_TYPES, FOX_TIERS, MAX_TIER, TICK_SECONDS, TILE_SIZE, UPGRADE_DEFS } from './constants';
+import {
+  ALL_FOX_TIERS,
+  BASE_MAX_TIER,
+  EVOLUTION_TYPES,
+  MAX_TIER,
+  TICK_SECONDS,
+  TILE_SIZE,
+  UPGRADE_DEFS
+} from './constants';
 
 export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -13,7 +21,7 @@ export function clampCurrency(value) {
 
 export function getTierData(tier) {
   const safeTier = clamp(Number(tier) || 1, 1, MAX_TIER);
-  return FOX_TIERS[safeTier - 1];
+  return ALL_FOX_TIERS[safeTier - 1];
 }
 
 export function getEvolutionData(evolutionId) {
@@ -34,7 +42,7 @@ export function getUpgradeCost(upgradeId, level) {
 
 export function getBasePurchaseTier(state) {
   const level = state.upgrades.basePurchaseTier || 0;
-  return clamp(1 + level, 1, 14);
+  return clamp(1 + level, 1, BASE_MAX_TIER - 1);
 }
 
 export function getPassiveIncomeMultiplier(state) {
@@ -62,29 +70,95 @@ export function getBuyFoxCost(state) {
 }
 
 export function getFoxIncomePerTick(fox, state) {
+  const waterBuffMap = buildWaterBuffMap(state);
+  return getFoxIncomePerTickWithBuffs(fox, state, waterBuffMap);
+}
+
+function getFoxIncomePerTickWithBuffs(fox, state, waterBuffMap) {
   const tierData = getTierData(fox.tier);
-  const evolutionMultiplier = getEvolutionData(fox.evolution)?.multiplier || 1;
-  const value = tierData.baseIncomePerTick * getPassiveIncomeMultiplier(state) * evolutionMultiplier;
+  const evolutionMultiplier = getEvolutionData(fox.evolution)?.incomeMultiplier || 1;
+  const waterMultiplier = getWaterBuffMultiplier(fox.id, waterBuffMap);
+  const value = tierData.baseIncomePerTick * getPassiveIncomeMultiplier(state) * evolutionMultiplier * waterMultiplier;
   return Math.max(1, Math.floor(value));
 }
 
 export function getFoxClickValue(fox, state) {
+  const waterBuffMap = buildWaterBuffMap(state);
+  return getFoxClickValueWithBuffs(fox, state, waterBuffMap);
+}
+
+function getFoxClickValueWithBuffs(fox, state, waterBuffMap) {
   const tierData = getTierData(fox.tier);
-  const evolutionMultiplier = getEvolutionData(fox.evolution)?.multiplier || 1;
-  const value = tierData.clickValue * getClickMultiplier(state) * evolutionMultiplier;
+  const evolutionMultiplier = getEvolutionData(fox.evolution)?.clickMultiplier || 1;
+  const waterMultiplier = getWaterBuffMultiplier(fox.id, waterBuffMap);
+  const value = tierData.clickValue * getClickMultiplier(state) * evolutionMultiplier * waterMultiplier;
   return Math.max(1, Math.floor(value));
 }
 
 export function getFoxSellValue(fox, state) {
+  const waterBuffMap = buildWaterBuffMap(state);
+  return getFoxSellValueWithBuffs(fox, state, waterBuffMap);
+}
+
+function getFoxSellValueWithBuffs(fox, state, waterBuffMap) {
   const tierData = getTierData(fox.tier);
-  const evolutionMultiplier = getEvolutionData(fox.evolution)?.multiplier || 1;
-  const value = tierData.sellValue * getPassiveIncomeMultiplier(state) * evolutionMultiplier;
+  const waterMultiplier = getWaterBuffMultiplier(fox.id, waterBuffMap);
+  const value = tierData.sellValue * getPassiveIncomeMultiplier(state) * waterMultiplier;
   return Math.max(1, Math.floor(value));
 }
 
 export function getExpectedCoinsPerSecond(state) {
-  const totalPerTick = state.foxes.reduce((sum, fox) => sum + getFoxIncomePerTick(fox, state) * 0.99, 0);
+  const waterBuffMap = buildWaterBuffMap(state);
+  const totalPerTick = state.foxes.reduce((sum, fox) => sum + getFoxIncomePerTickWithBuffs(fox, state, waterBuffMap) * 0.99, 0);
   return totalPerTick / TICK_SECONDS;
+}
+
+export function buildWaterBuffMap(state) {
+  const buffs = new Map();
+  const waterFoxes = state.foxes.filter((fox) => fox.evolution === 'water');
+
+  waterFoxes.forEach((waterFox) => {
+    let nearestTargetId = null;
+    let nearestDistanceSq = Infinity;
+
+    state.foxes.forEach((candidate) => {
+      if (candidate.id === waterFox.id) {
+        return;
+      }
+
+      const dx = candidate.x - waterFox.x;
+      const dy = candidate.y - waterFox.y;
+      const distanceSq = dx * dx + dy * dy;
+
+      if (distanceSq < nearestDistanceSq) {
+        nearestDistanceSq = distanceSq;
+        nearestTargetId = candidate.id;
+      }
+    });
+
+    if (nearestTargetId !== null) {
+      buffs.set(nearestTargetId, (buffs.get(nearestTargetId) || 0) + 1);
+    }
+  });
+
+  return buffs;
+}
+
+function getWaterBuffMultiplier(foxId, waterBuffMap) {
+  const stackCount = waterBuffMap.get(foxId) || 0;
+  return 1.5 ** stackCount;
+}
+
+export function getFoxIncomePerTickCached(fox, state, waterBuffMap) {
+  return getFoxIncomePerTickWithBuffs(fox, state, waterBuffMap);
+}
+
+export function getFoxClickValueCached(fox, state, waterBuffMap) {
+  return getFoxClickValueWithBuffs(fox, state, waterBuffMap);
+}
+
+export function getFoxSellValueCached(fox, state, waterBuffMap) {
+  return getFoxSellValueWithBuffs(fox, state, waterBuffMap);
 }
 
 export function gemsFromDrop(dropCounter, gemDropUpgradeLevel) {
