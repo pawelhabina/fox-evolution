@@ -19,7 +19,7 @@ export default function EvolutionModal({ fox, currentGems, onSelect, onClose }) 
         <h3 className="text-lg font-bold text-amber-300">Wybierz ewolucję Mega Foxa</h3>
         <p className="mt-1 text-sm text-slate-400">Ta decyzja jest permanentna dla tego lisa.</p>
         <p className="mt-1 text-xs text-slate-300">
-          Koszt ewolucji: {EVOLUTION_COST_GEMS} gems (masz: {currentGems})
+          Koszt ewolucji: {EVOLUTION_COST_GEMS} diamenty (masz: {currentGems})
         </p>
 
         <div className="mt-4 grid gap-2">
@@ -31,7 +31,7 @@ export default function EvolutionModal({ fox, currentGems, onSelect, onClose }) 
               disabled={!canAfford}
               onClick={() => {
                 const ok = window.confirm(
-                  `Nadać ewolucję ${evo.name} za ${EVOLUTION_COST_GEMS} gems? To zmiana na stałe.`
+                  `Nadać ewolucję ${evo.name} za ${EVOLUTION_COST_GEMS} diamenty? To zmiana na stałe.`
                 );
                 if (ok) {
                   onSelect(evo.id);

@@ -1,5 +1,5 @@
 import { UPGRADE_DEFS } from '../game/constants';
-import { getBasePurchaseTier, getUpgradeCost } from '../game/economy';
+import { getBasePurchaseTier, getFoxLimit, getUpgradeCost } from '../game/economy';
 import { formatNumber } from '../game/format';
 
 const TABS = ['Ulepszenia', 'Rebirth', 'Ustawienia'];
@@ -19,7 +19,6 @@ export default function ShopPanel({
 }) {
   return (
     <aside className="panel flex h-full w-full min-h-0 max-w-sm min-w-[320px] flex-col">
-      <h2 className="mb-3 text-lg font-black text-amber-300">Sklep</h2>
 
       <div className="mb-4 flex flex-wrap gap-2">
         {TABS.map((tab) => (
@@ -42,15 +41,20 @@ export default function ShopPanel({
               const cost = getUpgradeCost(upgrade.id, level);
               const canBuy = level < upgrade.cap && state.currencies[upgrade.currency] >= cost;
               const baseTier = getBasePurchaseTier(state);
+              const currentValues = {
+                basePurchaseTier: `Aktualny bazowy tier zakupu: ${baseTier}`,
+                passiveIncome: `Aktualny income: ${100 + (state.upgrades.passiveIncome || 0) * 5}%`,
+                buyDiscount: `Aktualna zniżka: ${(state.upgrades.buyDiscount || 0) * 2}%`,
+                clickBonus: `Aktualna wartość kliknięć: ${100 + (state.upgrades.clickBonus || 0) * 5}%`,
+                foxLimit: `Aktualny limit lisów: ${getFoxLimit(state)}`
+              };
               return (
                 <div key={upgrade.id} className="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="text-sm font-bold text-slate-100">{upgrade.title}</p>
                       <p className="text-xs text-slate-400">{upgrade.description}</p>
-                      {upgrade.id === 'basePurchaseTier' && (
-                        <p className="mt-1 text-xs text-amber-200">Aktualny base tier zakupu: {baseTier}</p>
-                      )}
+                      <p className="mt-1 text-xs text-amber-200">{currentValues[upgrade.id]}</p>
                     </div>
                     <p className="text-xs text-slate-400">
                       Lv {level}/{upgrade.cap}
@@ -58,9 +62,7 @@ export default function ShopPanel({
                   </div>
 
                   <div className="mt-2 flex items-center justify-between">
-                    <p className="text-xs text-slate-300">
-                      Koszt: {formatNumber(cost)} {upgrade.currency === 'coins' ? 'coins' : 'gems'}
-                    </p>
+                    <p className="text-xs text-slate-300">Koszt: {formatNumber(cost)} monet</p>
                     <button
                       type="button"
                       className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold disabled:cursor-not-allowed disabled:bg-slate-600"
@@ -79,12 +81,12 @@ export default function ShopPanel({
         {activeTab === 'Rebirth' && (
           <div className="space-y-3 text-sm">
             <div className="rounded-xl border border-indigo-500/40 bg-indigo-500/10 p-3">
-              <p className="font-semibold text-indigo-200">Rebirth resetuje planszę i coinowe upgrady.</p>
-              <p className="mt-1 text-xs text-slate-300">Zachowujesz Gems, Rebirth Tokens, statystyki lifetime i Gem Drop Bonus.</p>
+              <p className="font-semibold text-indigo-200">Rebirth resetuje planszę i monetowe ulepszenia.</p>
+              <p className="mt-1 text-xs text-slate-300">Zachowujesz Diamenty, Rebirth Tokens i statystyki lifetime.</p>
             </div>
 
             <p className="text-slate-300">Wymaganie: min. 1 Mega Fox na planszy.</p>
-            <p className="font-bold text-amber-200">Dostaniesz: {rebirthPreview} tokens</p>
+            <p className="font-bold text-amber-200">Liczba tokenów które otrzymasz: {rebirthPreview}</p>
 
             <button
               type="button"
@@ -97,7 +99,7 @@ export default function ShopPanel({
                 }
               }}
             >
-              Wykonaj Rebirth
+              Zrób Rebirth
             </button>
           </div>
         )}
@@ -106,19 +108,19 @@ export default function ShopPanel({
           <div className="space-y-4 pb-2 text-sm">
             <div className="grid gap-2">
               <button type="button" className="rounded-lg bg-slate-700 px-3 py-2 text-left" onClick={() => onToggleSetting('sound')}>
-                Sound: {state.settings.sound ? 'ON' : 'OFF'}
+                Dźwięki: {state.settings.sound ? 'ON' : 'OFF'}
               </button>
               <button
                 type="button"
                 className="rounded-lg bg-slate-700 px-3 py-2 text-left"
                 onClick={() => onToggleSetting('animations')}
               >
-                Animations: {state.settings.animations ? 'ON' : 'OFF'}
+                Animacje: {state.settings.animations ? 'ON' : 'OFF'}
               </button>
             </div>
 
             <div className="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
-              <p className="font-bold text-amber-200">Questy dzienne</p>
+              <p className="font-bold text-amber-200">Dzienne zadania</p>
               <div className="mt-2 grid gap-2">
                 {state.quests.daily.map((quest) => {
                   const done = quest.progress >= quest.target;
@@ -142,14 +144,14 @@ export default function ShopPanel({
               </div>
 
               <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/80 p-2">
-                <p className="text-xs text-slate-300">Weekly bonus: +{state.quests.weekly.reward} gems</p>
+                <p className="text-xs text-slate-300">Bonus tygodniowy: +{state.quests.weekly.reward} diamentów</p>
                 <button
                   type="button"
                   className="mt-1 rounded bg-cyan-500 px-2 py-1 text-xs font-bold text-slate-900 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-300"
                   disabled={state.quests.weekly.claimed}
                   onClick={onClaimWeekly}
                 >
-                  {state.quests.weekly.claimed ? 'Odebrane w tym tygodniu' : 'Odbierz weekly bonus'}
+                  {state.quests.weekly.claimed ? 'Odebrane w tym tygodniu' : 'Odbierz tygodniowy bonus'}
                 </button>
               </div>
             </div>

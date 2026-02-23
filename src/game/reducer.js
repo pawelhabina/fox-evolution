@@ -7,6 +7,7 @@ import {
   gemsFromDrop,
   getBasePurchaseTier,
   getBuyFoxCost,
+  getFoxLimit,
   getFoxClickValue,
   getFoxClickValueCached,
   getFoxIncomePerTickCached,
@@ -17,7 +18,15 @@ import {
   getTierData,
   getUpgradeCost
 } from './economy';
-import { BASE_MAX_TIER, EVOLUTION_COST_GEMS, EVOLUTION_TYPES, MAX_FOXES, MAX_TIER, MEGA_TIER, UPGRADE_DEFS } from './constants';
+import {
+  BASE_MAX_TIER,
+  EVOLUTION_COST_GEMS,
+  EVOLUTION_TYPES,
+  MAX_FOXES_LIMIT,
+  MAX_TIER,
+  MEGA_TIER,
+  UPGRADE_DEFS
+} from './constants';
 import { claimDailyQuest, claimWeeklyBonus, ensureTemporalResets, refreshQuestProgress } from './quests';
 
 export const ACTIONS = {
@@ -106,7 +115,7 @@ export function gameReducer(state, action) {
     }
 
     case ACTIONS.BUY_FOX: {
-      if (next.foxes.length >= MAX_FOXES) {
+      if (next.foxes.length >= getFoxLimit(next)) {
         return next;
       }
       const cost = getBuyFoxCost(next);
@@ -333,11 +342,10 @@ export function gameReducer(state, action) {
       let gemDropHits = 0;
       const waterBuffMap = buildWaterBuffMap(next);
 
-      const gemUpgrade = next.upgrades.gemDropBonus || 0;
       next.foxes.forEach((fox) => {
         const roll = Math.random();
         if (roll < 0.01) {
-          const drop = gemsFromDrop(gemDropCounter, gemUpgrade);
+          const drop = gemsFromDrop(gemDropCounter, 0);
           gemDropCounter = drop.nextCounter;
           gemsGained += drop.gems;
           gemDropHits += 1;
@@ -399,10 +407,7 @@ export function gameReducer(state, action) {
           gems: next.currencies.gems,
           rebirthTokens: next.currencies.rebirthTokens + earned
         },
-        upgrades: {
-          ...fresh.upgrades,
-          gemDropBonus: next.upgrades.gemDropBonus
-        },
+        upgrades: fresh.upgrades,
         settings: next.settings,
         stats: {
           ...next.stats,
@@ -432,7 +437,7 @@ export function canRebirth(state) {
 }
 
 export function sanitizeReducerOutput(state) {
-  const clampedFoxes = state.foxes.slice(0, MAX_FOXES).map((fox) => ({
+  const clampedFoxes = state.foxes.slice(0, MAX_FOXES_LIMIT).map((fox) => ({
     ...fox,
     tier: clamp(fox.tier, 1, MAX_TIER)
   }));

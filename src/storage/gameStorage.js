@@ -1,5 +1,5 @@
 import { clamp, clampCurrency, clampFoxPosition } from '../game/economy';
-import { MAX_TIER } from '../game/constants';
+import { MAX_FOXES_LIMIT, MAX_TIER } from '../game/constants';
 import { createInitialState } from './defaultState';
 
 const STORAGE_KEY = 'fox-evolution-save-v1';
@@ -26,9 +26,9 @@ function sanitizeState(rawState, nowTs = Date.now()) {
   const upgrades = {
     basePurchaseTier: clamp(Number(rawState.upgrades?.basePurchaseTier) || 0, 0, 13),
     passiveIncome: clamp(Number(rawState.upgrades?.passiveIncome) || 0, 0, 60),
-    buyDiscount: clamp(Number(rawState.upgrades?.buyDiscount) || 0, 0, 12),
+    buyDiscount: clamp(Number(rawState.upgrades?.buyDiscount) || 0, 0, 35),
     clickBonus: clamp(Number(rawState.upgrades?.clickBonus) || 0, 0, 40),
-    gemDropBonus: clamp(Number(rawState.upgrades?.gemDropBonus) || 0, 0, 12)
+    foxLimit: clamp(Number(rawState.upgrades?.foxLimit ?? rawState.upgrades?.gemDropBonus) || 0, 0, 45)
   };
 
   const arenaWidth = Math.max(300, Math.floor(rawState.arena?.width || base.arena.width));
@@ -36,7 +36,7 @@ function sanitizeState(rawState, nowTs = Date.now()) {
 
   const foxes = Array.isArray(rawState.foxes)
     ? rawState.foxes
-        .slice(0, 40)
+        .slice(0, MAX_FOXES_LIMIT)
         .map((fox) => {
           const tier = clamp(Number(fox.tier) || 1, 1, MAX_TIER);
           const pos = clampFoxPosition(Number(fox.x) || 0, Number(fox.y) || 0, arenaWidth, arenaHeight);

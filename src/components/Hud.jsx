@@ -4,17 +4,17 @@ export default function Hud({ coins, gems, rebirthTokens, coinsPerSecond, countd
   return (
     <header className="grid gap-3 md:grid-cols-5">
       <div className="hud-card">
-        <p className="text-xs uppercase tracking-wider text-slate-400">Coins</p>
+        <p className="text-xs uppercase tracking-wider text-slate-400">Ilość monet</p>
         <p className="text-2xl font-black text-amber-300">{formatNumber(coins)}</p>
       </div>
 
       <div className="hud-card">
-        <p className="text-xs uppercase tracking-wider text-slate-400">Coins/s</p>
+        <p className="text-xs uppercase tracking-wider text-slate-400">Monet na sekunde</p>
         <p className="text-2xl font-black text-emerald-300">{formatCompact(coinsPerSecond, 1)}</p>
       </div>
 
       <div className="hud-card">
-        <p className="text-xs uppercase tracking-wider text-slate-400">Next tick in</p>
+        <p className="text-xs uppercase tracking-wider text-slate-400">Następny tick za</p>
         <p className="text-2xl font-black text-cyan-300">{countdown}s</p>
       </div>
 
@@ -27,7 +27,7 @@ export default function Hud({ coins, gems, rebirthTokens, coinsPerSecond, countd
 
       <div className="hud-card flex justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-wider text-slate-400">Gems</p>
+          <p className="text-xs uppercase tracking-wider text-slate-400">Diamenty</p>
           <p className="text-xl font-black text-fuchsia-300">{formatNumber(gems)}</p>
         </div>
         <div>

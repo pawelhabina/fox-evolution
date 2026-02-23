@@ -5,8 +5,8 @@ import FoxContextMenu from './components/FoxContextMenu';
 import Hud from './components/Hud';
 import ShopPanel from './components/ShopPanel';
 import ToastStack from './components/ToastStack';
-import { AUTOSAVE_SECONDS, EVOLUTION_COST_GEMS, MAX_FOXES, TICK_SECONDS } from './game/constants';
-import { getBuyFoxCost, getExpectedCoinsPerSecond, getRebirthTokensEarned } from './game/economy';
+import { AUTOSAVE_SECONDS, EVOLUTION_COST_GEMS, TICK_SECONDS } from './game/constants';
+import { getBuyFoxCost, getExpectedCoinsPerSecond, getFoxLimit, getRebirthTokensEarned } from './game/economy';
 import { formatNumber } from './game/format';
 import { gameReducer, ACTIONS, getFoxInfoForMenu } from './game/reducer';
 import { createInitialState } from './storage/defaultState';
@@ -47,6 +47,7 @@ export default function App() {
 
   const coinsPerSecond = useMemo(() => getExpectedCoinsPerSecond(state), [state]);
   const buyCost = useMemo(() => getBuyFoxCost(state), [state]);
+  const foxLimit = useMemo(() => getFoxLimit(state), [state]);
   const rebirthPreview = useMemo(() => getRebirthTokensEarned(state), [state]);
   const contextInfo = useMemo(
     () => (contextMenu ? getFoxInfoForMenu(state, contextMenu.foxId) : null),
@@ -135,12 +136,12 @@ export default function App() {
   }
 
   const buyFox = () => {
-    if (state.foxes.length >= MAX_FOXES) {
+    if (state.foxes.length >= foxLimit) {
       pushToast('Masz za dużo lisów na planszy');
       return;
     }
     if (state.currencies.coins < buyCost) {
-      pushToast('Brakuje coins na zakup lisa');
+      pushToast('Brakuje monet na zakup lisa');
       return;
     }
     dispatch({ type: ACTIONS.BUY_FOX, nowTs: Date.now() });
@@ -174,7 +175,7 @@ export default function App() {
         coinsPerSecond={coinsPerSecond}
         countdown={tickCountdown}
         foxCount={state.foxes.length}
-        foxLimit={MAX_FOXES}
+        foxLimit={foxLimit}
       />
 
       <div className="mt-4 flex min-h-0 flex-1 gap-4">
@@ -220,7 +221,7 @@ export default function App() {
             }
             dispatch({ type: ACTIONS.REBIRTH, nowTs: Date.now() });
             setTickCountdown(TICK_SECONDS);
-            pushToast(`Rebirth udany. +${rebirthPreview} tokens`);
+            pushToast(`Udało ci się zrobi rebirtha. Otrzymujesz tokeny w liczbie ${rebirthPreview}`);
           }}
           onToggleSetting={(key) => {
             dispatch({ type: ACTIONS.TOGGLE_SETTING, key, nowTs: Date.now() });
@@ -243,7 +244,7 @@ export default function App() {
           onClick={buyFox}
           title={`Koszt: ${formatNumber(buyCost)} coins`}
         >
-          Kup lisa ({formatNumber(buyCost)} coins)
+          Kup lisa za {formatNumber(buyCost)}
         </button>
       </div>
 
@@ -263,7 +264,7 @@ export default function App() {
             return;
           }
           if (state.currencies.gems < EVOLUTION_COST_GEMS) {
-            pushToast(`Potrzebujesz ${EVOLUTION_COST_GEMS} gems na ewolucję`);
+            pushToast(`Potrzebujesz ${EVOLUTION_COST_GEMS} diamentów na ewolucję`);
             setContextMenu(null);
             return;
           }

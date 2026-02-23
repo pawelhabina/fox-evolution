@@ -1,7 +1,8 @@
 export const GAME_VERSION = '1.0.0';
 export const TICK_SECONDS = 5;
 export const AUTOSAVE_SECONDS = 10;
-export const MAX_FOXES = 40;
+export const MIN_FOXES_LIMIT = 5;
+export const MAX_FOXES_LIMIT = 50;
 export const TILE_SIZE = 78;
 
 const TIER_NAMES = [
@@ -67,6 +68,13 @@ export const EVOLUTION_TYPES = {
     incomeMultiplier: 1,
     clickMultiplier: 1.5
   },
+  electric: {
+    id: 'electric',
+    name: 'Electric Fox',
+    icon: '⚡',
+    incomeMultiplier: 1.5,
+    clickMultiplier: 1
+  },
   water: {
     id: 'water',
     name: 'Water Fox',
@@ -74,13 +82,6 @@ export const EVOLUTION_TYPES = {
     incomeMultiplier: 1,
     clickMultiplier: 1,
     auraMultiplier: 1.5
-  },
-  electric: {
-    id: 'electric',
-    name: 'Electric Fox',
-    icon: '⚡',
-    incomeMultiplier: 1.5,
-    clickMultiplier: 1
   }
 };
 
@@ -89,7 +90,7 @@ export const EVOLUTION_COST_GEMS = 2;
 export const UPGRADE_DEFS = {
   basePurchaseTier: {
     id: 'basePurchaseTier',
-    title: 'Base Purchase Tier',
+    title: 'Tier kupowanych lisów',
     description: 'Podnosi bazowy tier kupowanego lisa.',
     currency: 'coins',
     cap: 13,
@@ -98,8 +99,8 @@ export const UPGRADE_DEFS = {
   },
   passiveIncome: {
     id: 'passiveIncome',
-    title: 'Passive Income Boost',
-    description: '+12% pasywnego income na poziom.',
+    title: 'Pasywny income',
+    description: '+5% pasywnego income na poziom.',
     currency: 'coins',
     cap: 60,
     baseCost: 120,
@@ -107,30 +108,30 @@ export const UPGRADE_DEFS = {
   },
   buyDiscount: {
     id: 'buyDiscount',
-    title: 'Buy Cost Reduction',
-    description: '-4% kosztu "Kup lisa" na poziom.',
+    title: 'Koszt kupna lisa',
+    description: '-2% kosztu lisa na poziom.',
     currency: 'coins',
-    cap: 12,
+    cap: 35,
     baseCost: 180,
-    growth: 1.55
+    growth: 1.42
   },
   clickBonus: {
     id: 'clickBonus',
-    title: 'Click Value Boost',
-    description: '+15% wartości kliknięcia na poziom.',
+    title: 'Wartość klików',
+    description: '+5% wartości kliknięcia na poziom.',
     currency: 'coins',
     cap: 40,
     baseCost: 100,
     growth: 1.42
   },
-  gemDropBonus: {
-    id: 'gemDropBonus',
-    title: 'Gem Drop Bonus',
-    description: 'Bonus gemów za drop (szansa 1% bez zmian).',
-    currency: 'gems',
-    cap: 12,
-    baseCost: 3,
-    growth: 1.45
+  foxLimit: {
+    id: 'foxLimit',
+    title: 'Limit lisów',
+    description: 'Zwiększa limit lisów na planszy o 1.',
+    currency: 'coins',
+    cap: 45,
+    baseCost: 140,
+    growth: 1.28
   }
 };
 

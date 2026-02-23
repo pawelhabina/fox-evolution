@@ -2,7 +2,9 @@ import {
   ALL_FOX_TIERS,
   BASE_MAX_TIER,
   EVOLUTION_TYPES,
+  MAX_FOXES_LIMIT,
   MAX_TIER,
+  MIN_FOXES_LIMIT,
   TICK_SECONDS,
   TILE_SIZE,
   UPGRADE_DEFS
@@ -48,18 +50,23 @@ export function getBasePurchaseTier(state) {
 export function getPassiveIncomeMultiplier(state) {
   const passiveLevel = state.upgrades.passiveIncome || 0;
   const rebirthTokens = state.currencies.rebirthTokens || 0;
-  return (1 + passiveLevel * 0.12) * (1 + rebirthTokens * 0.025);
+  return (1 + passiveLevel * 0.05) * (1 + rebirthTokens * 0.025);
 }
 
 export function getClickMultiplier(state) {
   const clickLevel = state.upgrades.clickBonus || 0;
-  return 1 + clickLevel * 0.15;
+  return 1 + clickLevel * 0.05;
 }
 
 export function getBuyDiscountMultiplier(state) {
   const discountLevel = state.upgrades.buyDiscount || 0;
-  const discount = clamp(discountLevel * 0.04, 0, 0.7);
+  const discount = clamp(discountLevel * 0.02, 0, 0.7);
   return 1 - discount;
+}
+
+export function getFoxLimit(state) {
+  const level = state.upgrades.foxLimit || 0;
+  return clamp(MIN_FOXES_LIMIT + level, MIN_FOXES_LIMIT, MAX_FOXES_LIMIT);
 }
 
 export function getBuyFoxCost(state) {

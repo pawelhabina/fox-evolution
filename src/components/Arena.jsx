@@ -109,7 +109,7 @@ export default function Arena({
       >
         {foxes.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center text-slate-500">
-            Kup lisa i zacznij łączyć tiery.
+            Kup lisa i zacznij je łączyć.
           </div>
         )}
 
@@ -150,7 +150,7 @@ export default function Arena({
                 <div className="text-[10px] font-bold text-amber-200">T{fox.tier}</div>
                 <div className="text-[10px] text-slate-300">{foxLabel(fox)}</div>
                 {fox.tier >= MEGA_TIER && !fox.evolution && (
-                  <div className="rounded bg-amber-500/25 px-1 text-[9px] text-amber-100">Evolve</div>
+                  <div className="rounded bg-amber-500/25 px-1 text-[9px] text-amber-100">Ewoluuj</div>
                 )}
               </div>
             </button>

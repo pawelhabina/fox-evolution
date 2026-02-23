@@ -19,9 +19,9 @@ export default function FoxContextMenu({ menu, info, onClose, onSell, onEvolve }
 
       <div className="space-y-1 text-xs text-slate-300">
         <p>Tier: {info.fox.tier}</p>
-        <p>Income/tick: {formatNumber(info.income)}</p>
-        <p>Click value: {formatNumber(info.clickValue)}</p>
-        <p>Sell value: {formatNumber(info.sellValue)}</p>
+        <p>Przychód na tick: {formatNumber(info.income)}</p>
+        <p>Wartość kliknięcia: {formatNumber(info.clickValue)}</p>
+        <p>Wartość sprzedarzy: {formatNumber(info.sellValue)}</p>
       </div>
 
       <div className="mt-3 grid gap-2">
@@ -31,7 +31,7 @@ export default function FoxContextMenu({ menu, info, onClose, onSell, onEvolve }
 
         {canEvolve && (
           <button type="button" className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-slate-900" onClick={onEvolve}>
-            Evolve Mega Fox
+            Ewoluuj Mega Fox
           </button>
         )}
       </div>
