@@ -1,22 +1,38 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { FaCog, FaHome, FaPowerOff, FaShoppingCart } from 'react-icons/fa';
 import Arena from './components/Arena';
 import EvolutionModal from './components/EvolutionModal';
 import FoxContextMenu from './components/FoxContextMenu';
 import Hud from './components/Hud';
+import MainMenu from './components/MainMenu';
+import SettingsModal from './components/SettingsModal';
 import ShopPanel from './components/ShopPanel';
 import ToastStack from './components/ToastStack';
 import { AUTOSAVE_SECONDS, EVOLUTION_COST_GEMS, TICK_SECONDS } from './game/constants';
-import { getBuyFoxCost, getExpectedCoinsPerSecond, getFoxLimit, getRebirthTokensEarned } from './game/economy';
 import { formatNumber } from './game/format';
+import { getBuyFoxCost, getExpectedCoinsPerSecond, getFoxLimit, getRebirthTokensEarned } from './game/economy';
 import { gameReducer, ACTIONS, getFoxInfoForMenu } from './game/reducer';
+import { getResetCountdowns } from './game/quests';
 import { createInitialState } from './storage/defaultState';
 import {
-  hardResetPersistedState,
-  loadPersistedState,
+  deleteSlot,
+  listSaveMeta,
+  loadSlotState,
+  quitGameApp,
   readGameVersion,
-  savePersistedState,
-  savePersistedStateSync
+  saveSlotState,
+  saveSlotStateSync,
+  updateMenuSettings
 } from './storage/gameStorage';
+
+const DEFAULT_MENU_META = {
+  lastPlayedSlotId: null,
+  settings: {
+    defaultSound: true,
+    defaultAnimations: true
+  },
+  slots: []
+};
 
 function useToasts() {
   const [toasts, setToasts] = useState([]);
@@ -34,9 +50,15 @@ function useToasts() {
 
 export default function App() {
   const [state, dispatch] = useReducer(gameReducer, createInitialState());
+  const [appScreen, setAppScreen] = useState('menu');
+  const [menuView, setMenuView] = useState('root');
+  const [saveMeta, setSaveMeta] = useState(DEFAULT_MENU_META);
+  const [currentSlotId, setCurrentSlotId] = useState(null);
   const [shopTab, setShopTab] = useState('Ulepszenia');
   const [tickCountdown, setTickCountdown] = useState(TICK_SECONDS);
   const [contextMenu, setContextMenu] = useState(null);
+  const [systemMenuOpen, setSystemMenuOpen] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [evolutionTargetId, setEvolutionTargetId] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [gameVersion, setGameVersion] = useState('dev');
@@ -49,6 +71,10 @@ export default function App() {
   const buyCost = useMemo(() => getBuyFoxCost(state), [state]);
   const foxLimit = useMemo(() => getFoxLimit(state), [state]);
   const rebirthPreview = useMemo(() => getRebirthTokensEarned(state), [state]);
+  const resetCountdowns = useMemo(
+    () => getResetCountdowns(Date.now()),
+    [tickCountdown, state.quests.dailyKey, state.quests.weeklyKey]
+  );
   const contextInfo = useMemo(
     () => (contextMenu ? getFoxInfoForMenu(state, contextMenu.foxId) : null),
     [contextMenu, state]
@@ -59,15 +85,55 @@ export default function App() {
     [evolutionTargetId, state.foxes]
   );
 
+  const refreshMenuMeta = useCallback(async () => {
+    const meta = await listSaveMeta();
+    setSaveMeta(meta);
+    return meta;
+  }, []);
+
+  const enterGameWithState = useCallback((nextState, slotId) => {
+    dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: nextState, nowTs: Date.now() });
+    setCurrentSlotId(slotId);
+    setShopTab('Ulepszenia');
+    setTickCountdown(TICK_SECONDS);
+    setContextMenu(null);
+    setEvolutionTargetId(null);
+    setAppScreen('game');
+  }, []);
+
+  const loadSlotAndStart = useCallback(
+    async (slotId) => {
+      const loaded = await loadSlotState(slotId);
+      if (!loaded) {
+        pushToast('Nie udało się wczytać zapisu');
+        await refreshMenuMeta();
+        return;
+      }
+      enterGameWithState(loaded, slotId);
+    },
+    [enterGameWithState, pushToast, refreshMenuMeta]
+  );
+
+  const createNewGameAndStart = useCallback(async () => {
+    const fresh = createInitialState(Date.now());
+    fresh.settings.sound = Boolean(saveMeta.settings.defaultSound);
+    fresh.settings.animations = Boolean(saveMeta.settings.defaultAnimations);
+
+    const result = await saveSlotState({ state: fresh });
+    const slotId = result?.slotId || null;
+    enterGameWithState(fresh, slotId);
+    await refreshMenuMeta();
+  }, [enterGameWithState, refreshMenuMeta, saveMeta.settings.defaultAnimations, saveMeta.settings.defaultSound]);
+
   useEffect(() => {
     let mounted = true;
 
     (async () => {
-      const [loadedState, version] = await Promise.all([loadPersistedState(), readGameVersion()]);
+      const [meta, version] = await Promise.all([listSaveMeta(), readGameVersion()]);
       if (!mounted) {
         return;
       }
-      dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: loadedState, nowTs: Date.now() });
+      setSaveMeta(meta);
       setGameVersion(version);
       setIsLoaded(true);
     })();
@@ -78,7 +144,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!isLoaded) {
+    if (!isLoaded || appScreen !== 'game') {
       return undefined;
     }
 
@@ -95,36 +161,37 @@ export default function App() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isLoaded]);
+  }, [appScreen, isLoaded]);
 
   useEffect(() => {
-    if (!isLoaded) {
+    if (!isLoaded || appScreen !== 'game' || !currentSlotId) {
       return undefined;
     }
 
     const autosave = setInterval(() => {
-      savePersistedState(stateRef.current);
+      saveSlotState({ slotId: currentSlotId, state: stateRef.current });
     }, AUTOSAVE_SECONDS * 1000);
 
     return () => clearInterval(autosave);
-  }, [isLoaded]);
+  }, [appScreen, currentSlotId, isLoaded]);
 
   useEffect(() => {
-    if (!isLoaded) {
+    if (!isLoaded || appScreen !== 'game' || !currentSlotId) {
       return undefined;
     }
 
     function onBeforeUnload() {
-      savePersistedStateSync(stateRef.current);
+      saveSlotStateSync({ slotId: currentSlotId, state: stateRef.current });
     }
 
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [isLoaded]);
+  }, [appScreen, currentSlotId, isLoaded]);
 
   useEffect(() => {
     function closeMenu() {
       setContextMenu(null);
+      setSystemMenuOpen(false);
     }
 
     window.addEventListener('click', closeMenu);
@@ -135,13 +202,60 @@ export default function App() {
     return <div className="app-shell flex items-center justify-center">Ładowanie...</div>;
   }
 
+  if (appScreen === 'menu') {
+    return (
+      <main className="app-shell flex min-h-screen flex-col items-center justify-center p-4">
+        <MainMenu
+          view={menuView}
+          meta={saveMeta}
+          onContinue={async () => {
+            if (saveMeta.lastPlayedSlotId) {
+              await loadSlotAndStart(saveMeta.lastPlayedSlotId);
+              return;
+            }
+            if (saveMeta.slots.length > 0) {
+              await loadSlotAndStart(saveMeta.slots[0].id);
+              return;
+            }
+            await createNewGameAndStart();
+          }}
+          onOpenLoad={() => setMenuView('load')}
+          onOpenRanking={() => setMenuView('ranking')}
+          onOpenSettings={() => setMenuView('settings')}
+          onExit={async () => {
+            await quitGameApp();
+          }}
+          onBack={() => setMenuView('root')}
+          onLoad={loadSlotAndStart}
+          onNew={createNewGameAndStart}
+          onDelete={async (slotId) => {
+            await deleteSlot(slotId);
+            await refreshMenuMeta();
+          }}
+          onToggleSettings={async (key) => {
+            const nextValue = !saveMeta.settings[key];
+            const updated = await updateMenuSettings({ [key]: nextValue });
+            setSaveMeta((prev) => ({
+              ...prev,
+              settings: {
+                ...prev.settings,
+                ...updated
+              }
+            }));
+          }}
+        />
+        <p className="mt-4 text-xs text-slate-500">Wersja gry: {gameVersion}</p>
+      </main>
+    );
+  }
+
   const buyFox = () => {
     if (state.foxes.length >= foxLimit) {
       pushToast('Masz za dużo lisów na planszy');
       return;
     }
     if (state.currencies.coins < buyCost) {
-      pushToast('Brakuje monet na zakup lisa');
+      pushToast('Brakuje coins na zakup lisa');
       return;
     }
     dispatch({ type: ACTIONS.BUY_FOX, nowTs: Date.now() });
@@ -160,10 +274,37 @@ export default function App() {
   };
 
   const handleHardReset = async () => {
-    await hardResetPersistedState();
-    dispatch({ type: ACTIONS.HARD_RESET_STATE, nowTs: Date.now() });
+    const fresh = createInitialState(Date.now());
+    fresh.settings = {
+      ...state.settings
+    };
+    dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: fresh, nowTs: Date.now() });
     setTickCountdown(TICK_SECONDS);
+
+    if (currentSlotId) {
+      await saveSlotState({ slotId: currentSlotId, state: fresh });
+      await refreshMenuMeta();
+    }
+
     pushToast('Zapis został wyczyszczony');
+  };
+
+  const goToMainMenu = async () => {
+    if (currentSlotId) {
+      await saveSlotState({ slotId: currentSlotId, state: stateRef.current });
+      await refreshMenuMeta();
+    }
+    setSystemMenuOpen(false);
+    setMenuView('root');
+    setAppScreen('menu');
+  };
+
+  const exitGameFromInGame = async () => {
+    if (currentSlotId) {
+      await saveSlotState({ slotId: currentSlotId, state: stateRef.current });
+    }
+    setSystemMenuOpen(false);
+    await quitGameApp();
   };
 
   return (
@@ -176,7 +317,44 @@ export default function App() {
         countdown={tickCountdown}
         foxCount={state.foxes.length}
         foxLimit={foxLimit}
+        onOpenSystemMenu={() => setSystemMenuOpen((prev) => !prev)}
       />
+
+      {systemMenuOpen && (
+        <div
+          className="fixed right-5 top-24 z-40 w-64 rounded-xl border border-slate-700 bg-slate-900/95 p-3 shadow-2xl"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <p className="mb-2 flex items-center gap-2 text-sm font-bold text-amber-300">
+            <FaCog />
+            Menu gry
+          </p>
+          <div className="grid gap-2">
+            <button
+              type="button"
+              className="rounded-lg bg-slate-700 px-3 py-2 text-left text-sm"
+              onClick={() => {
+                setSettingsModalOpen(true);
+                setSystemMenuOpen(false);
+              }}
+            >
+              Ustawienia
+            </button>
+            <button type="button" className="flex items-center gap-2 rounded-lg bg-indigo-600/80 px-3 py-2 text-left text-sm" onClick={goToMainMenu}>
+              <FaHome />
+              Wyjście do menu głównego
+            </button>
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-lg bg-rose-700/80 px-3 py-2 text-left text-sm text-rose-100"
+              onClick={exitGameFromInGame}
+            >
+              <FaPowerOff />
+              Wyjście z gry
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 flex min-h-0 flex-1 gap-4">
         <Arena
@@ -210,6 +388,8 @@ export default function App() {
           activeTab={shopTab}
           onChangeTab={setShopTab}
           state={state}
+          dailyResetInSeconds={resetCountdowns.dailyResetInSeconds}
+          weeklyResetInSeconds={resetCountdowns.weeklyResetInSeconds}
           rebirthPreview={rebirthPreview}
           onBuyUpgrade={(upgradeId) => {
             dispatch({ type: ACTIONS.BUY_UPGRADE, upgradeId, nowTs: Date.now() });
@@ -221,30 +401,29 @@ export default function App() {
             }
             dispatch({ type: ACTIONS.REBIRTH, nowTs: Date.now() });
             setTickCountdown(TICK_SECONDS);
-            pushToast(`Udało ci się zrobi rebirtha. Otrzymujesz tokeny w liczbie ${rebirthPreview}`);
-          }}
-          onToggleSetting={(key) => {
-            dispatch({ type: ACTIONS.TOGGLE_SETTING, key, nowTs: Date.now() });
+            pushToast(`Rebirth udany. +${rebirthPreview} tokens`);
           }}
           onClaimQuest={(questId) => {
             dispatch({ type: ACTIONS.CLAIM_DAILY, questId, nowTs: Date.now() });
           }}
-          onClaimWeekly={() => {
-            dispatch({ type: ACTIONS.CLAIM_WEEKLY, nowTs: Date.now() });
+          onClaimWeekly={(questId) => {
+            dispatch({ type: ACTIONS.CLAIM_WEEKLY, questId, nowTs: Date.now() });
           }}
-          onHardReset={handleHardReset}
-          gameVersion={gameVersion}
+          onClaimLoginReward={() => {
+            dispatch({ type: ACTIONS.CLAIM_LOGIN_REWARD, nowTs: Date.now() });
+          }}
         />
       </div>
 
       <div className="pointer-events-none fixed bottom-4 left-1/2 z-30 -translate-x-1/2">
         <button
           type="button"
-          className="primary-btn pointer-events-auto text-xl"
+          className="primary-btn pointer-events-auto flex items-center gap-2 text-xl"
           onClick={buyFox}
           title={`Koszt: ${formatNumber(buyCost)} coins`}
         >
-          Kup lisa za {formatNumber(buyCost)}
+          <FaShoppingCart />
+          Kup lisa ({formatNumber(buyCost)} coins)
         </button>
       </div>
 
@@ -264,7 +443,7 @@ export default function App() {
             return;
           }
           if (state.currencies.gems < EVOLUTION_COST_GEMS) {
-            pushToast(`Potrzebujesz ${EVOLUTION_COST_GEMS} diamentów na ewolucję`);
+            pushToast(`Potrzebujesz ${EVOLUTION_COST_GEMS} gems na ewolucję`);
             setContextMenu(null);
             return;
           }
@@ -282,6 +461,17 @@ export default function App() {
           pushToast('Mega Fox ewoluowany');
         }}
         onClose={() => setEvolutionTargetId(null)}
+      />
+
+      <SettingsModal
+        isOpen={settingsModalOpen}
+        settings={state.settings}
+        gameVersion={gameVersion}
+        onToggleSetting={(key) => {
+          dispatch({ type: ACTIONS.TOGGLE_SETTING, key, nowTs: Date.now() });
+        }}
+        onHardReset={handleHardReset}
+        onClose={() => setSettingsModalOpen(false)}
       />
 
       <ToastStack toasts={toasts} />

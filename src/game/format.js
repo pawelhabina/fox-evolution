@@ -1,11 +1,20 @@
 export function formatNumber(value) {
   const safe = Number(value) || 0;
-  if (safe >= 1000000) {
-    return `${trimTrailingZeros((safe / 1000000).toFixed(2))}M`;
+  const abs = Math.abs(safe);
+  const units = [
+    { value: 1e15, suffix: 'Qa' },
+    { value: 1e12, suffix: 'T' },
+    { value: 1e9, suffix: 'B' },
+    { value: 1e6, suffix: 'M' },
+    { value: 1e3, suffix: 'K' }
+  ];
+
+  for (const unit of units) {
+    if (abs >= unit.value) {
+      return `${trimTrailingZeros((safe / unit.value).toFixed(2))}${unit.suffix}`;
+    }
   }
-  if (safe >= 1000) {
-    return `${trimTrailingZeros((safe / 1000).toFixed(1))}K`;
-  }
+
   return Math.floor(safe).toString();
 }
 

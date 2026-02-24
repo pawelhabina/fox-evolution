@@ -204,11 +204,13 @@ export function getSafeSpawnPosition(arena, offsetSeed = Math.random()) {
 }
 
 export function getRebirthTokensEarned(state) {
-  const megaCount = state.foxes.filter((fox) => fox.tier >= 15).length;
-  if (megaCount <= 0) {
-    return 0;
-  }
-  const lifetimeCoins = state.stats.lifetimeCoinsEarned || 0;
-  const raw = megaCount + Math.sqrt(lifetimeCoins / 50000);
-  return Math.max(1, Math.floor(raw));
+  const points = state.foxes.reduce((sum, fox) => {
+    if (fox.tier < 15) {
+      return sum;
+    }
+    const tierPoints = 2 ** (fox.tier - 15);
+    return sum + tierPoints;
+  }, 0);
+
+  return Math.max(0, Math.floor(points));
 }

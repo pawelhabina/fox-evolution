@@ -27,7 +27,7 @@ import {
   MEGA_TIER,
   UPGRADE_DEFS
 } from './constants';
-import { claimDailyQuest, claimWeeklyBonus, ensureTemporalResets, refreshQuestProgress } from './quests';
+import { claimDailyQuest, claimLoginReward, claimWeeklyQuest, ensureTemporalResets, refreshQuestProgress } from './quests';
 
 export const ACTIONS = {
   INIT_FROM_SAVE: 'INIT_FROM_SAVE',
@@ -41,6 +41,7 @@ export const ACTIONS = {
   EVOLVE_FOX: 'EVOLVE_FOX',
   BUY_UPGRADE: 'BUY_UPGRADE',
   APPLY_TICK: 'APPLY_TICK',
+  CLAIM_LOGIN_REWARD: 'CLAIM_LOGIN_REWARD',
   CLAIM_DAILY: 'CLAIM_DAILY',
   CLAIM_WEEKLY: 'CLAIM_WEEKLY',
   TOGGLE_SETTING: 'TOGGLE_SETTING',
@@ -66,6 +67,10 @@ function withCoinsGain(state, coins) {
       daily: {
         ...state.stats.daily,
         coinsEarned: clampCurrency(state.stats.daily.coinsEarned + safeCoins)
+      },
+      weekly: {
+        ...state.stats.weekly,
+        coinsEarned: clampCurrency(state.stats.weekly.coinsEarned + safeCoins)
       }
     }
   };
@@ -155,6 +160,11 @@ export function gameReducer(state, action) {
             ...next.stats.daily,
             buys: clampCurrency(next.stats.daily.buys + 1),
             maxTier: Math.max(next.stats.daily.maxTier, finalTier)
+          },
+          weekly: {
+            ...next.stats.weekly,
+            buys: clampCurrency(next.stats.weekly.buys + 1),
+            maxTier: Math.max(next.stats.weekly.maxTier, finalTier)
           }
         }
       };
@@ -231,6 +241,11 @@ export function gameReducer(state, action) {
             ...next.stats.daily,
             merges: clampCurrency(next.stats.daily.merges + 1),
             maxTier: Math.max(next.stats.daily.maxTier, newTier)
+          },
+          weekly: {
+            ...next.stats.weekly,
+            merges: clampCurrency(next.stats.weekly.merges + 1),
+            maxTier: Math.max(next.stats.weekly.maxTier, newTier)
           }
         }
       };
@@ -253,6 +268,10 @@ export function gameReducer(state, action) {
           daily: {
             ...clicked.stats.daily,
             clicks: clampCurrency(clicked.stats.daily.clicks + 1)
+          },
+          weekly: {
+            ...clicked.stats.weekly,
+            clicks: clampCurrency(clicked.stats.weekly.clicks + 1)
           }
         }
       };
@@ -377,8 +396,11 @@ export function gameReducer(state, action) {
     case ACTIONS.CLAIM_DAILY:
       return claimDailyQuest(next, action.questId);
 
+    case ACTIONS.CLAIM_LOGIN_REWARD:
+      return claimLoginReward(next);
+
     case ACTIONS.CLAIM_WEEKLY:
-      return claimWeeklyBonus(next);
+      return claimWeeklyQuest(next, action.questId);
 
     case ACTIONS.TOGGLE_SETTING: {
       if (!Object.prototype.hasOwnProperty.call(next.settings, action.key)) {

@@ -5,8 +5,8 @@ export function createInitialState(nowTs = Date.now()) {
   return {
     version: GAME_VERSION,
     currencies: {
-      coins: 120,
-      gems: 0,
+      coins: 250000000000000,
+      gems: 10000000,
       rebirthTokens: 0
     },
     foxes: [],
@@ -30,6 +30,13 @@ export function createInitialState(nowTs = Date.now()) {
       lifetimeRebirths: 0,
       lifetimeGemDrops: 0,
       daily: {
+        merges: 0,
+        clicks: 0,
+        buys: 0,
+        coinsEarned: 0,
+        maxTier: 1
+      },
+      weekly: {
         merges: 0,
         clicks: 0,
         buys: 0,

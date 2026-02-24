@@ -135,37 +135,37 @@ export const UPGRADE_DEFS = {
   }
 };
 
+export const DAILY_QUEST_REWARD = 5;
+export const WEEKLY_QUEST_REWARD = 20;
+export const QUESTS_PER_SECTION = 5;
+
 export const DAILY_QUEST_POOL = [
-  {
-    id: 'merge_count',
-    label: 'Wykonaj 10 merge',
-    target: 10,
-    type: 'merges'
-  },
-  {
-    id: 'click_count',
-    label: 'Kliknij lisy 50 razy',
-    target: 50,
-    type: 'clicks'
-  },
-  {
-    id: 'buy_count',
-    label: 'Kup 20 lisów',
-    target: 20,
-    type: 'buys'
-  },
-  {
-    id: 'reach_tier',
-    label: 'Osiągnij tier 6',
-    target: 6,
-    type: 'maxTier'
-  },
-  {
-    id: 'earn_coins',
-    label: 'Zarób dziś 10 000 coins',
-    target: 10000,
-    type: 'coinsEarned'
-  }
+  { id: 'daily_merge_8', label: 'Wykonaj 8 merge', target: 8, type: 'merges' },
+  { id: 'daily_merge_15', label: 'Wykonaj 15 merge', target: 15, type: 'merges' },
+  { id: 'daily_click_60', label: 'Kliknij lisy 60 razy', target: 60, type: 'clicks' },
+  { id: 'daily_click_120', label: 'Kliknij lisy 120 razy', target: 120, type: 'clicks' },
+  { id: 'daily_buy_20', label: 'Kup 20 lisów', target: 20, type: 'buys' },
+  { id: 'daily_buy_35', label: 'Kup 35 lisów', target: 35, type: 'buys' },
+  { id: 'daily_tier_8', label: 'Osiągnij tier 8', target: 8, type: 'maxTier' },
+  { id: 'daily_coins_20k', label: 'Zarób 20 000 monet', target: 20000, type: 'coinsEarned' }
 ];
 
-export const WEEKLY_BONUS_REWARD = 20;
+export const WEEKLY_QUEST_POOL = [
+  { id: 'weekly_merge_80', label: 'Wykonaj 80 merge', target: 80, type: 'merges' },
+  { id: 'weekly_merge_150', label: 'Wykonaj 150 merge', target: 150, type: 'merges' },
+  { id: 'weekly_click_600', label: 'Kliknij lisy 600 razy', target: 600, type: 'clicks' },
+  { id: 'weekly_click_1200', label: 'Kliknij lisy 1200 razy', target: 1200, type: 'clicks' },
+  { id: 'weekly_buy_140', label: 'Kup 140 lisów', target: 140, type: 'buys' },
+  { id: 'weekly_buy_260', label: 'Kup 260 lisów', target: 260, type: 'buys' },
+  { id: 'weekly_tier_14', label: 'Osiągnij tier 14', target: 14, type: 'maxTier' },
+  { id: 'weekly_tier_18', label: 'Osiągnij tier 18', target: 18, type: 'maxTier' },
+  { id: 'weekly_coins_2m', label: 'Zarób 2 000 000 monet', target: 2000000, type: 'coinsEarned' }
+];
+
+export const LOGIN_REWARD_VALUES = {
+  common: 30,
+  epic: 100,
+  legendary: 250
+};
+export const LOGIN_STREAK_DAYS = 7;
+export const LOGIN_MONTHLY_STEP = 30;

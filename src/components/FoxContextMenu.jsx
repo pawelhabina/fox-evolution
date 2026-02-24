@@ -1,5 +1,6 @@
 import { MEGA_TIER } from '../game/constants';
 import { formatNumber } from '../game/format';
+import { FaBolt, FaCoins, FaHandPointer, FaInfoCircle, FaTrashAlt } from 'react-icons/fa';
 
 export default function FoxContextMenu({ menu, info, onClose, onSell, onEvolve }) {
   if (!menu || !info) {
@@ -18,19 +19,37 @@ export default function FoxContextMenu({ menu, info, onClose, onSell, onEvolve }
       </div>
 
       <div className="space-y-1 text-xs text-slate-300">
-        <p>Tier: {info.fox.tier}</p>
-        <p>Przychód na tick: {formatNumber(info.income)}</p>
-        <p>Wartość kliknięcia: {formatNumber(info.clickValue)}</p>
-        <p>Wartość sprzedarzy: {formatNumber(info.sellValue)}</p>
+        <p className="flex items-center gap-2">
+          <FaInfoCircle />
+          Tier: {info.fox.tier}
+        </p>
+        <p className="flex items-center gap-2">
+          <FaBolt />
+          Przychód na tick: {formatNumber(info.income)}
+        </p>
+        <p className="flex items-center gap-2">
+          <FaHandPointer />
+          Wartość kliknięcia: {formatNumber(info.clickValue)}
+        </p>
+        <p className="flex items-center gap-2">
+          <FaCoins />
+          Wartość sprzedarzy: {formatNumber(info.sellValue)}
+        </p>
       </div>
 
       <div className="mt-3 grid gap-2">
-        <button type="button" className="rounded-lg bg-rose-500/80 px-3 py-2 text-xs font-bold" onClick={onSell}>
+        <button type="button" className="flex items-center justify-center gap-2 rounded-lg bg-rose-500/80 px-3 py-2 text-xs font-bold" onClick={onSell}>
+          <FaTrashAlt />
           Sell
         </button>
 
         {canEvolve && (
-          <button type="button" className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-slate-900" onClick={onEvolve}>
+          <button
+            type="button"
+            className="flex items-center justify-center gap-2 rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-slate-900"
+            onClick={onEvolve}
+          >
+            <FaBolt />
             Ewoluuj Mega Fox
           </button>
         )}
