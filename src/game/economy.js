@@ -45,6 +45,9 @@ export function getUpgradeCost(upgradeId, level) {
   if (upgradeId === 'gemFoxLimit') {
     return config.flatCost;
   }
+  if (upgradeId === 'gemIncomeMultiplier') {
+    return 50 + safeLevel * 50;
+  }
   if (upgradeId === 'tickSpeed') {
     if (safeLevel < 20) {
       return 5 + safeLevel * 5;

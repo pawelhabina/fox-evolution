@@ -1,0 +1,27 @@
+Create a full set of 2D pixel art fox units for a merge idle game called "Fox Evolution".
+Style: charming pixel art, square-friendly composition, readable at tiny sizes, transparent background, crisp 1px outline, no anti-aliasing, no realism.
+Generate one fox portrait or full mini-sprite for each tier below, centered, facing slightly right, cute but distinct, each one visually stronger and more advanced than the previous:
+1 DNA Fox
+2 Proto Fox
+3 Copper Fox
+4 Bronze Fox
+5 Iron Fox
+6 Silver Fox
+7 Gold Fox
+8 Crystal Fox
+9 Plasma Fox
+10 Cosmic Fox
+11 Nova Fox
+12 Quantum Fox
+13 Mythic Fox
+14 Omega Fox
+15 Mega Fox
+Also generate elemental high-tier versions for evolved foxes above Mega Fox with matching style:
+- Fire Fox
+- Water Fox
+- Electric Fox
+- Elemental Fox levels 16 to 30 as scalable variants
+Visual direction:
+- tier progression must be obvious even without labels
+- use stronger materials, energy effects, crowns, orbitals, runes, sparks, droplets, flames only when relevant
+- keep silhouettes clean for small UI cards

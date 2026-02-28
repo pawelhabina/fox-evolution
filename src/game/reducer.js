@@ -335,7 +335,7 @@ export function gameReducer(state, action) {
         return next;
       }
       const currentLevel = next.upgrades[action.upgradeId] || 0;
-      if (currentLevel >= config.cap) {
+      if (Number.isFinite(config.cap) && currentLevel >= config.cap) {
         return next;
       }
       const cost = getUpgradeCost(action.upgradeId, currentLevel);

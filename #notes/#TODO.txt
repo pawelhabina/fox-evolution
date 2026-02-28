@@ -1,0 +1,14 @@
+1. sklep tymczasowych boostów
+2. tekstury
+3. animacje
+4. dźwięki
+5. minigames
+6. bossy
+7. inne krainy
+
+Funkcje sieciowe:
+- achievements
+- leaderboard
+- online saves
+- updates check on startup
+- friends (lista, bonusy)

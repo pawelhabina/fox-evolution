@@ -1,0 +1,20 @@
+Create a cohesive 2D pixel art UI kit for a desktop idle merge game called "Fox Evolution".
+Style: clean retro pixel art, readable at small sizes, dark navy + amber + cyan + emerald accents, crisp 1px outlines, no blur, no anti-aliasing, no realism, no 3D, no vector look.
+Theme: sci-fi fox genetics + evolution + prestige system.
+Generate these transparent PNG-ready UI elements on separate canvas variations:
+- top HUD panels for coins, coins per second, next tick, gems, rebirth tokens, fox count
+- large main button for "Buy Fox"
+- shop tab buttons: Upgrades, Rebirth, Quests
+- card panels for upgrades with normal, hover, disabled, maxed states
+- modal window frame for settings and evolution choice
+- toast notification frame
+- context menu frame for fox actions
+- quest card styles for daily, weekly, login reward
+- streak day boxes: common, epic, legendary
+- small gear button for in-game menu
+Constraints:
+- consistent 16-bit era pixel UI language
+- highly readable typography zones but no actual text rendered
+- transparent background around each asset
+- provide generous padding for slicing
+- avoid clutter and avoid fantasy medieval look

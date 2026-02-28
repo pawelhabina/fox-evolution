@@ -91,6 +91,7 @@ function UpgradeCard({ state, upgrade, onBuyUpgrade }) {
   const cost = getUpgradeCost(upgrade.id, level);
   const cap = upgrade.cap;
   const capped = Number.isFinite(cap);
+  const isMaxed = capped && level >= cap;
   const canBuy = (!capped || level < cap) && state.currencies[upgrade.currency] >= cost;
   const UpgradeIcon = UPGRADE_ICONS[upgrade.id] || FaLayerGroup;
   const currencyLabel = upgrade.currency === 'coins' ? 'monet' : upgrade.currency === 'gems' ? 'diamentów' : 'rebirth points';
@@ -107,21 +108,23 @@ function UpgradeCard({ state, upgrade, onBuyUpgrade }) {
           <p className="text-xs text-slate-400">{upgrade.description}</p>
           <p className="mt-1 text-xs text-amber-200">{getCurrentUpgradeValue(state, upgrade.id)}</p>
         </div>
-        <p className="text-xs text-slate-400">{capped ? `Lv ${level}/${cap}` : `Lv ${level}`}</p>
+        <p className="shrink-0 whitespace-nowrap text-xs text-slate-400">{capped ? `Lv ${level}/${cap}` : `Lv ${level}`}</p>
       </div>
 
       <div className="mt-2 flex items-center justify-between gap-2">
         <p className="flex items-center gap-2 text-xs text-slate-300">
           <CurrencyIcon />
-          Koszt: {formatNumber(cost)} {currencyLabel}
+          {isMaxed ? 'Osiągnięto maksymalny poziom' : `Koszt: ${formatNumber(cost)} ${currencyLabel}`}
         </p>
         <button
           type="button"
-          className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold disabled:cursor-not-allowed disabled:bg-slate-600"
+          className={`rounded-lg px-3 py-1 text-xs font-bold disabled:cursor-not-allowed ${
+            isMaxed ? 'bg-amber-500 text-slate-950 disabled:bg-amber-500' : 'bg-emerald-600 disabled:bg-slate-600'
+          }`}
           onClick={() => onBuyUpgrade(upgrade.id)}
           disabled={!canBuy}
         >
-          Kup
+          {isMaxed ? 'MAX' : 'Kup'}
         </button>
       </div>
     </div>

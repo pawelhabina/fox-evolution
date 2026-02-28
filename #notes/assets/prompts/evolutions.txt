@@ -1,0 +1,11 @@
+Create 2D pixel art evolution variants for a fox merge game.
+Style: high-contrast pixel art, transparent background, crisp edges, no anti-aliasing, no realism.
+Generate three permanent evolution forms for Mega Fox:
+- Fire Fox: aggressive, warm palette, flame mane, ember tail, damage/click-focused vibe
+- Water Fox: calm, elegant, cool palette, wave tail, water aura, support/buff-focused vibe
+- Electric Fox: sharp, energetic, yellow-blue sparks, passive income/power-focused vibe
+Requirements:
+- same base body proportions so they feel like one species
+- each evolution must be instantly recognizable by silhouette and palette
+- include idle stance sprite and separate icon/badge version for UI
+- transparent background only

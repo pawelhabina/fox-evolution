@@ -1,0 +1,13 @@
+Create pixel art backgrounds for a desktop merge game called "Fox Evolution".
+Style: atmospheric retro pixel art, dark sci-fi laboratory mixed with mystical evolution arena, no characters, no UI text, no realism.
+Generate these scenes:
+- main arena background for fox board, mostly dark, low-noise, readable behind draggable units
+- shop background panel texture
+- main menu background
+- prestige / rebirth themed background with cosmic lab energy
+Requirements:
+- desktop aspect ratio friendly
+- subtle depth, but not visually busy
+- designed to keep UI readable on top
+- navy, charcoal, cyan, amber, magenta highlights
+- no huge focal object in the center where gameplay happens

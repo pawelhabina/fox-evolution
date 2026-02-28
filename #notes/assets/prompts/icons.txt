@@ -1,0 +1,26 @@
+Create a pixel art icon pack for a desktop idle merge game called "Fox Evolution".
+Style: retro pixel art, clean 1px outlines, transparent background, readable at 16x16, 24x24, and 32x32, no anti-aliasing.
+Generate icons for:
+- coins
+- gems / diamonds
+- rebirth token
+- fox paw / fox count
+- stopwatch / tick timer
+- gear / settings
+- merge
+- upgrade
+- rebirth
+- quests
+- daily login reward
+- weekly reward
+- sell fox
+- evolve fox
+- click boost
+- passive income boost
+- buy cost reduction
+- higher-tier chance
+- gem drop rate
+Visual rules:
+- unified palette and shape language
+- strong readability on dark backgrounds
+- avoid modern flat icon style

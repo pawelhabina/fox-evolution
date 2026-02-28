@@ -148,8 +148,8 @@ export const UPGRADE_DEFS = {
     shop: 'gems',
     currency: 'gems',
     cap: null,
-    baseCost: 16,
-    growth: 2
+    baseCost: 50,
+    growth: 1
   },
   gemFoxLimit: {
     id: 'gemFoxLimit',

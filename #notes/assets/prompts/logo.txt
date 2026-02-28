@@ -1,0 +1,9 @@
+Create a pixel art game logo for "Fox Evolution".
+Style: bold retro pixel art title logo, crisp edges, dark sci-fi fantasy tone, readable on desktop game menu.
+Requirements:
+- text: Fox Evolution
+- include subtle fox tail / DNA helix / gem / lightning motifs
+- dark navy base with amber and cyan highlights
+- transparent background
+- separate compact icon mark version and full title version
+- no blur, no anti-aliasing, no realistic shading

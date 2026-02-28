@@ -65,8 +65,8 @@ GEM SHOP
 1. Income multiplier
 - Base value: 1.0x
 - Effect per level: +0.1x to all earnings
-- Cost level 1: 16 gems
-- Cost growth: x2 every level
+- Cost level 1: 50 gems
+- Cost increase: +50 gems every level
 - Max level: no cap
 
 2. Premium fox slots
