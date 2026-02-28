@@ -8,9 +8,9 @@ import MainMenu from './components/MainMenu';
 import SettingsModal from './components/SettingsModal';
 import ShopPanel from './components/ShopPanel';
 import ToastStack from './components/ToastStack';
-import { AUTOSAVE_SECONDS, EVOLUTION_COST_GEMS, TICK_SECONDS } from './game/constants';
+import { AUTOSAVE_SECONDS, BASE_TICK_SECONDS, EVOLUTION_COST_GEMS } from './game/constants';
 import { formatNumber } from './game/format';
-import { getBuyFoxCost, getExpectedCoinsPerSecond, getFoxLimit, getRebirthTokensEarned } from './game/economy';
+import { getBuyFoxCost, getExpectedCoinsPerSecond, getFoxLimit, getRebirthTokensEarned, getTickDurationSeconds } from './game/economy';
 import { gameReducer, ACTIONS, getFoxInfoForMenu } from './game/reducer';
 import { getResetCountdowns } from './game/quests';
 import { createInitialState } from './storage/defaultState';
@@ -34,6 +34,10 @@ const DEFAULT_MENU_META = {
   slots: []
 };
 
+function roundToTenth(value) {
+  return Math.round(value * 10) / 10;
+}
+
 function useToasts() {
   const [toasts, setToasts] = useState([]);
 
@@ -55,7 +59,7 @@ export default function App() {
   const [saveMeta, setSaveMeta] = useState(DEFAULT_MENU_META);
   const [currentSlotId, setCurrentSlotId] = useState(null);
   const [shopTab, setShopTab] = useState('Ulepszenia');
-  const [tickCountdown, setTickCountdown] = useState(TICK_SECONDS);
+  const [tickCountdown, setTickCountdown] = useState(BASE_TICK_SECONDS);
   const [contextMenu, setContextMenu] = useState(null);
   const [systemMenuOpen, setSystemMenuOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
@@ -71,6 +75,7 @@ export default function App() {
   const buyCost = useMemo(() => getBuyFoxCost(state), [state]);
   const foxLimit = useMemo(() => getFoxLimit(state), [state]);
   const rebirthPreview = useMemo(() => getRebirthTokensEarned(state), [state]);
+  const tickDuration = useMemo(() => getTickDurationSeconds(state), [state]);
   const resetCountdowns = useMemo(
     () => getResetCountdowns(Date.now()),
     [tickCountdown, state.quests.dailyKey, state.quests.weeklyKey]
@@ -95,7 +100,7 @@ export default function App() {
     dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: nextState, nowTs: Date.now() });
     setCurrentSlotId(slotId);
     setShopTab('Ulepszenia');
-    setTickCountdown(TICK_SECONDS);
+    setTickCountdown(getTickDurationSeconds(nextState));
     setContextMenu(null);
     setEvolutionTargetId(null);
     setAppScreen('game');
@@ -150,18 +155,41 @@ export default function App() {
 
     const interval = setInterval(() => {
       setTickCountdown((prev) => {
-        if (prev <= 1) {
+        const nextCountdown = roundToTenth(prev - 0.1);
+        if (nextCountdown <= 0) {
           dispatch({ type: ACTIONS.APPLY_TICK, nowTs: Date.now() });
-          return TICK_SECONDS;
+          return tickDuration;
         }
-        return prev - 1;
+        return nextCountdown;
       });
+    }, 100);
 
+    return () => clearInterval(interval);
+  }, [appScreen, isLoaded, tickDuration]);
+
+  useEffect(() => {
+    if (!isLoaded || appScreen !== 'game') {
+      return undefined;
+    }
+
+    const interval = setInterval(() => {
       dispatch({ type: ACTIONS.CHECK_RESETS, nowTs: Date.now() });
     }, 1000);
 
     return () => clearInterval(interval);
   }, [appScreen, isLoaded]);
+
+  useEffect(() => {
+    if (appScreen !== 'game') {
+      return;
+    }
+    setTickCountdown((prev) => {
+      if (!Number.isFinite(prev) || prev <= 0 || prev > tickDuration) {
+        return tickDuration;
+      }
+      return roundToTenth(prev);
+    });
+  }, [appScreen, tickDuration]);
 
   useEffect(() => {
     if (!isLoaded || appScreen !== 'game' || !currentSlotId) {
@@ -279,7 +307,7 @@ export default function App() {
       ...state.settings
     };
     dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: fresh, nowTs: Date.now() });
-    setTickCountdown(TICK_SECONDS);
+    setTickCountdown(getTickDurationSeconds(fresh));
 
     if (currentSlotId) {
       await saveSlotState({ slotId: currentSlotId, state: fresh });
@@ -400,7 +428,7 @@ export default function App() {
               return;
             }
             dispatch({ type: ACTIONS.REBIRTH, nowTs: Date.now() });
-            setTickCountdown(TICK_SECONDS);
+            setTickCountdown(tickDuration);
             pushToast(`Rebirth udany. +${rebirthPreview} tokens`);
           }}
           onClaimQuest={(questId) => {

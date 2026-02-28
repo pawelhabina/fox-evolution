@@ -1,0 +1,181 @@
+FOX EVOLUTION - FOX TIERS
+
+Tier 1: DNA Fox
+- Icon: 🧬
+- Income per tick: 2
+- Click value: 1
+- Sell value: 13
+
+Tier 2: Proto Fox
+- Icon: 🦊
+- Income per tick: 4
+- Click value: 2
+- Sell value: 26
+
+Tier 3: Copper Fox
+- Icon: 🟠
+- Income per tick: 7
+- Click value: 4
+- Sell value: 46
+
+Tier 4: Bronze Fox
+- Icon: 🟤
+- Income per tick: 13
+- Click value: 8
+- Sell value: 85
+
+Tier 5: Iron Fox
+- Icon: ⚙️
+- Income per tick: 23
+- Click value: 14
+- Sell value: 150
+
+Tier 6: Silver Fox
+- Icon: 🥈
+- Income per tick: 43
+- Click value: 26
+- Sell value: 280
+
+Tier 7: Gold Fox
+- Icon: 🥇
+- Income per tick: 80
+- Click value: 48
+- Sell value: 520
+
+Tier 8: Crystal Fox
+- Icon: 💎
+- Income per tick: 148
+- Click value: 89
+- Sell value: 962
+
+Tier 9: Plasma Fox
+- Icon: 🟣
+- Income per tick: 274
+- Click value: 164
+- Sell value: 1781
+
+Tier 10: Cosmic Fox
+- Icon: 🌌
+- Income per tick: 508
+- Click value: 305
+- Sell value: 3302
+
+Tier 11: Nova Fox
+- Icon: ✨
+- Income per tick: 939
+- Click value: 563
+- Sell value: 6104
+
+Tier 12: Quantum Fox
+- Icon: ⚛️
+- Income per tick: 1737
+- Click value: 1042
+- Sell value: 11291
+
+Tier 13: Mythic Fox
+- Icon: 🔱
+- Income per tick: 3214
+- Click value: 1928
+- Sell value: 20891
+
+Tier 14: Omega Fox
+- Icon: 🜂
+- Income per tick: 5947
+- Click value: 3568
+- Sell value: 38656
+
+Tier 15: Mega Fox
+- Icon: 👑
+- Income per tick: 11001
+- Click value: 6601
+- Sell value: 71507
+
+Tier 16: Elemental Fox Lv 16
+- Icon: 🌟
+- Income per tick: 19252
+- Click value: 11551
+- Sell value: 125138
+
+Tier 17: Elemental Fox Lv 17
+- Icon: 🌟
+- Income per tick: 33691
+- Click value: 20215
+- Sell value: 218992
+
+Tier 18: Elemental Fox Lv 18
+- Icon: 🌟
+- Income per tick: 58959
+- Click value: 35375
+- Sell value: 383234
+
+Tier 19: Elemental Fox Lv 19
+- Icon: 🌟
+- Income per tick: 103178
+- Click value: 61907
+- Sell value: 670657
+
+Tier 20: Elemental Fox Lv 20
+- Icon: 🌟
+- Income per tick: 180562
+- Click value: 108337
+- Sell value: 1173653
+
+Tier 21: Elemental Fox Lv 21
+- Icon: 🌟
+- Income per tick: 315984
+- Click value: 189590
+- Sell value: 2053896
+
+Tier 22: Elemental Fox Lv 22
+- Icon: 🌟
+- Income per tick: 552972
+- Click value: 331783
+- Sell value: 3594318
+
+Tier 23: Elemental Fox Lv 23
+- Icon: 🌟
+- Income per tick: 967701
+- Click value: 580621
+- Sell value: 6290057
+
+Tier 24: Elemental Fox Lv 24
+- Icon: 🌟
+- Income per tick: 1693477
+- Click value: 1016086
+- Sell value: 11007601
+
+Tier 25: Elemental Fox Lv 25
+- Icon: 🌟
+- Income per tick: 2963585
+- Click value: 1778151
+- Sell value: 19263303
+
+Tier 26: Elemental Fox Lv 26
+- Icon: 🌟
+- Income per tick: 5186274
+- Click value: 3111764
+- Sell value: 33710781
+
+Tier 27: Elemental Fox Lv 27
+- Icon: 🌟
+- Income per tick: 9075980
+- Click value: 5445588
+- Sell value: 58993870
+
+Tier 28: Elemental Fox Lv 28
+- Icon: 🌟
+- Income per tick: 15882965
+- Click value: 9529779
+- Sell value: 103239273
+
+Tier 29: Elemental Fox Lv 29
+- Icon: 🌟
+- Income per tick: 27795189
+- Click value: 16677113
+- Sell value: 180668729
+
+Tier 30: Elemental Fox Lv 30
+- Icon: 🌟
+- Income per tick: 48641581
+- Click value: 29184949
+- Sell value: 316170277

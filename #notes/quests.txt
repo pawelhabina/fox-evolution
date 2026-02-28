@@ -1,0 +1,79 @@
+FOX EVOLUTION - QUEST POOLS
+
+DAILY QUESTS
+- Quests selected per reset: 5
+- Reward per daily quest: 5 gems
+
+- daily_merge_8
+  Label: Wykonaj 8 merge
+  Type: merges
+  Target: 8
+- daily_merge_15
+  Label: Wykonaj 15 merge
+  Type: merges
+  Target: 15
+- daily_click_60
+  Label: Kliknij lisy 60 razy
+  Type: clicks
+  Target: 60
+- daily_click_120
+  Label: Kliknij lisy 120 razy
+  Type: clicks
+  Target: 120
+- daily_buy_20
+  Label: Kup 20 lisów
+  Type: buys
+  Target: 20
+- daily_buy_35
+  Label: Kup 35 lisów
+  Type: buys
+  Target: 35
+- daily_tier_8
+  Label: Osiągnij tier 8
+  Type: maxTier
+  Target: 8
+- daily_coins_20k
+  Label: Zarób 20 000 monet
+  Type: coinsEarned
+  Target: 20000
+
+WEEKLY QUESTS
+- Quests selected per reset: 5
+- Reward per weekly quest: 20 gems
+
+- weekly_merge_80
+  Label: Wykonaj 80 merge
+  Type: merges
+  Target: 80
+- weekly_merge_150
+  Label: Wykonaj 150 merge
+  Type: merges
+  Target: 150
+- weekly_click_600
+  Label: Kliknij lisy 600 razy
+  Type: clicks
+  Target: 600
+- weekly_click_1200
+  Label: Kliknij lisy 1200 razy
+  Type: clicks
+  Target: 1200
+- weekly_buy_140
+  Label: Kup 140 lisów
+  Type: buys
+  Target: 140
+- weekly_buy_260
+  Label: Kup 260 lisów
+  Type: buys
+  Target: 260
+- weekly_tier_14
+  Label: Osiągnij tier 14
+  Type: maxTier
+  Target: 14
+- weekly_tier_18
+  Label: Osiągnij tier 18
+  Type: maxTier
+  Target: 18
+- weekly_coins_2m
+  Label: Zarób 2 000 000 monet
+  Type: coinsEarned
+  Target: 2000000

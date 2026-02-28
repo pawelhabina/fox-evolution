@@ -1,0 +1,127 @@
+FOX EVOLUTION - CURRENT RATES
+
+GENERAL
+- Base tick duration: 5.0s
+- Minimum tick duration: 1.0s
+- Autosave: every 10s
+- Base fox board limit: 5
+- Maximum fox board limit: 100
+- Base higher-tier purchase chance: 5%
+- Base gem drop rate per fox per tick: 1%
+- Evolution cost: 2 gems
+
+BUY FOX
+- Base buy cost: 25 coins
+- Cost growth per purchase: x1.17
+- Buy discount upgrade reduces final buy cost
+- Purchase tier result:
+  - normally gives base purchase tier
+  - can give +1 tier based on higher-tier purchase chance
+  - cannot go above tier 15 from purchase
+
+REBIRTH TOKENS
+- Tier 15 fox = 1 point
+- Tier 16 fox = 2 points
+- Tier 17 fox = 4 points
+- In general: each fox tier >= 15 gives 2^(tier - 15) points
+- Total points = rebirth tokens gained
+
+EVOLUTIONS
+- Fire Fox: click value x1.5
+- Electric Fox: passive income x1.5
+- Water Fox: buffs nearest fox by x1.5 to income/click/sell
+- Evolved foxes can merge only with same element
+- Evolved merge cap: tier 30
+
+COIN UPGRADES
+1. Base purchase tier
+- Effect: +1 base purchase tier per level
+- Start level effect: tier 1
+- Max level: 13
+- Cost formula: 250 * 1.85^level
+
+2. Passive income
+- Effect: +5% passive income per level
+- Max level: 60
+- Cost formula: 120 * 1.36^level
+
+3. Buy cost reduction
+- Effect: -2% fox buy cost per level
+- Max level: 35
+- Cost formula: 180 * 1.42^level
+
+4. Click value boost
+- Effect: +5% click value per level
+- Max level: 40
+- Cost formula: 100 * 1.42^level
+
+5. Fox limit
+- Effect: +1 fox slot per level
+- Max level: 45
+- Cost formula: 140 * 1.28^level
+- Coin-based slots go from 5 to 50 total on their own
+
+GEM SHOP
+1. Income multiplier
+- Base value: 1.0x
+- Effect per level: +0.1x to all earnings
+- Cost level 1: 16 gems
+- Cost growth: x2 every level
+- Max level: no cap
+
+2. Premium fox slots
+- Effect: +1 max fox slot per level
+- Cost: 50 gems every level
+- Max level: 50
+- Total global fox cap with all slot upgrades: 100
+
+REBIRTH SHOP
+1. Tick duration
+- Effect: -0.1s tick duration per level
+- Base value: 5.0s
+- Minimum value: 1.0s
+- Cost before reaching 3.0s:
+  - level 1 costs 5
+  - each next level costs +5 more than previous
+- Cost after reaching 3.0s:
+  - each next level costs +10 more than previous
+- Max level: 40
+
+2. Higher-tier purchase chance
+- Effect: +1% chance per level to buy a fox one tier higher
+- Base chance: 5%
+- Maximum total chance: 100%
+- Upgrade max level: 95
+- Cost level 1: 2 rebirth points
+- Cost growth: x2 every level
+
+3. Gem drop rate
+- Effect: +0.2% gem drop rate per level
+- Base drop rate: 1%
+- Maximum total drop rate: 25%
+- Upgrade max level: 120
+- Cost level 1: 2 rebirth points
+- Cost growth: x2 every level
+
+QUESTS
+DAILY QUESTS
+- 5 random quests from pool
+- Reward per quest: 5 gems
+- Reset: every day at 05:00 local time
+
+WEEKLY QUESTS
+- 5 random quests from pool
+- Reward per quest: 20 gems
+- Reset: Monday at 05:00 local time
+
+DAILY LOGIN REWARDS
+- Common reward: 30 gems
+- Epic reward: 100 gems
+- Legendary reward: 250 gems
+- Epic day: day 7 of streak
+- Legendary reward: every 30 total claims
+
+NOTES
+- Rebirth resets board, foxes, coins, purchase count, and coin upgrades
+- Rebirth keeps gems, rebirth tokens, premium upgrades, and lifetime stats
+- Coins/s shown in HUD accounts for gem-drop replacement chance and current tick speed

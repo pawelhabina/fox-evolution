@@ -33,6 +33,6 @@ export function formatCompact(value, decimals = 1) {
   return trimTrailingZeros(safe.toFixed(decimals));
 }
 
-export function formatPercent(value) {
-  return `${(value * 100).toFixed(0)}%`;
+export function formatPercent(value, decimals = 1) {
+  return `${trimTrailingZeros((value * 100).toFixed(decimals))}%`;
 }

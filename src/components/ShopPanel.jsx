@@ -1,23 +1,34 @@
 import {
   LOGIN_MONTHLY_STEP,
-  LOGIN_REWARD_VALUES,
   LOGIN_STREAK_DAYS,
   UPGRADE_DEFS
 } from '../game/constants';
-import { getBasePurchaseTier, getFoxLimit, getUpgradeCost } from '../game/economy';
-import { formatNumber } from '../game/format';
+import {
+  getBasePurchaseTier,
+  getFoxLimit,
+  getGemDropRate,
+  getGemIncomeMultiplier,
+  getHigherTierChance,
+  getTickDurationSeconds,
+  getUpgradeCost
+} from '../game/economy';
+import { formatCompact, formatNumber, formatPercent } from '../game/format';
 import { formatCountdown, getTodayLoginRewardInfo } from '../game/quests';
 import {
   FaCalendarAlt,
   FaCoins,
+  FaGem,
   FaGift,
   FaHandPointer,
   FaLayerGroup,
   FaPaw,
   FaPercent,
   FaRedo,
+  FaStopwatch,
   FaStore,
-  FaTasks
+  FaTasks,
+  FaBolt,
+  FaArrowUp
 } from 'react-icons/fa';
 
 const TABS = ['Ulepszenia', 'Rebirth', 'Zadania'];
@@ -31,17 +42,104 @@ const UPGRADE_ICONS = {
   passiveIncome: FaPercent,
   buyDiscount: FaPercent,
   clickBonus: FaHandPointer,
-  foxLimit: FaPaw
+  foxLimit: FaPaw,
+  gemIncomeMultiplier: FaGem,
+  gemFoxLimit: FaPaw,
+  tickSpeed: FaStopwatch,
+  purchaseTierChance: FaArrowUp,
+  gemDropRate: FaGem
 };
 
-function getLoginTypeLabel(type) {
-  if (type === 'legendary') {
-    return 'Legendary';
+function getUpgradeGroups() {
+  const upgrades = Object.values(UPGRADE_DEFS);
+  return {
+    coins: upgrades.filter((upgrade) => upgrade.shop === 'coins'),
+    gems: upgrades.filter((upgrade) => upgrade.shop === 'gems'),
+    rebirth: upgrades.filter((upgrade) => upgrade.shop === 'rebirth')
+  };
+}
+
+function getCurrentUpgradeValue(state, upgradeId) {
+  switch (upgradeId) {
+    case 'basePurchaseTier':
+      return `Aktualny bazowy tier zakupu: ${getBasePurchaseTier(state)}`;
+    case 'passiveIncome':
+      return `Aktualny mnożnik pasywnego income: ${formatCompact(getGemIncomeMultiplier(state) * (1 + (state.upgrades.passiveIncome || 0) * 0.05) * (1 + (state.currencies.rebirthTokens || 0) * 0.025), 2)}x`;
+    case 'buyDiscount':
+      return `Aktualna zniżka: ${(state.upgrades.buyDiscount || 0) * 2}%`;
+    case 'clickBonus':
+      return `Aktualny mnożnik kliknięć: ${formatCompact((1 + (state.upgrades.clickBonus || 0) * 0.05) * getGemIncomeMultiplier(state), 2)}x`;
+    case 'foxLimit':
+      return `Sloty z coinów: ${state.upgrades.foxLimit || 0} | Limit łącznie: ${getFoxLimit(state)}`;
+    case 'gemIncomeMultiplier':
+      return `Aktualny mnożnik zarobków: ${formatCompact(getGemIncomeMultiplier(state), 1)}x`;
+    case 'gemFoxLimit':
+      return `Sloty z diamentów: ${state.upgrades.gemFoxLimit || 0}/50 | Limit łącznie: ${getFoxLimit(state)}`;
+    case 'tickSpeed':
+      return `Aktualny tick: ${formatCompact(getTickDurationSeconds(state), 1)}s`;
+    case 'purchaseTierChance':
+      return `Aktualna szansa: ${formatPercent(getHigherTierChance(state))}`;
+    case 'gemDropRate':
+      return `Aktualny drop rate: ${formatPercent(getGemDropRate(state))}`;
+    default:
+      return '';
   }
-  if (type === 'epic') {
-    return 'Epic';
-  }
-  return 'Common';
+}
+
+function UpgradeCard({ state, upgrade, onBuyUpgrade }) {
+  const level = state.upgrades[upgrade.id] || 0;
+  const cost = getUpgradeCost(upgrade.id, level);
+  const cap = upgrade.cap;
+  const capped = Number.isFinite(cap);
+  const canBuy = (!capped || level < cap) && state.currencies[upgrade.currency] >= cost;
+  const UpgradeIcon = UPGRADE_ICONS[upgrade.id] || FaLayerGroup;
+  const currencyLabel = upgrade.currency === 'coins' ? 'monet' : upgrade.currency === 'gems' ? 'diamentów' : 'rebirth points';
+  const CurrencyIcon = upgrade.currency === 'coins' ? FaCoins : upgrade.currency === 'gems' ? FaGem : FaRedo;
+
+  return (
+    <div key={upgrade.id} className="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="flex items-center gap-2 text-sm font-bold text-slate-100">
+            <UpgradeIcon />
+            {upgrade.title}
+          </p>
+          <p className="text-xs text-slate-400">{upgrade.description}</p>
+          <p className="mt-1 text-xs text-amber-200">{getCurrentUpgradeValue(state, upgrade.id)}</p>
+        </div>
+        <p className="text-xs text-slate-400">{capped ? `Lv ${level}/${cap}` : `Lv ${level}`}</p>
+      </div>
+
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <p className="flex items-center gap-2 text-xs text-slate-300">
+          <CurrencyIcon />
+          Koszt: {formatNumber(cost)} {currencyLabel}
+        </p>
+        <button
+          type="button"
+          className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold disabled:cursor-not-allowed disabled:bg-slate-600"
+          onClick={() => onBuyUpgrade(upgrade.id)}
+          disabled={!canBuy}
+        >
+          Kup
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function UpgradeSection({ title, icon: Icon, accentClass, upgrades, state, onBuyUpgrade }) {
+  return (
+    <section className="space-y-2">
+      <p className={`flex items-center gap-2 text-sm font-bold ${accentClass}`}>
+        <Icon />
+        {title}
+      </p>
+      {upgrades.map((upgrade) => (
+        <UpgradeCard key={upgrade.id} state={state} upgrade={upgrade} onBuyUpgrade={onBuyUpgrade} />
+      ))}
+    </section>
+  );
 }
 
 export default function ShopPanel({
@@ -58,6 +156,7 @@ export default function ShopPanel({
   onClaimLoginReward
 }) {
   const loginInfo = getTodayLoginRewardInfo(state);
+  const { coins, gems, rebirth } = getUpgradeGroups();
 
   return (
     <aside className="panel flex h-full w-full min-h-0 max-w-sm min-w-[320px] flex-col">
@@ -85,82 +184,42 @@ export default function ShopPanel({
 
       <div className="min-h-0 flex-1 overflow-y-auto pr-1">
         {activeTab === 'Ulepszenia' && (
-          <div className="space-y-2">
-            {Object.values(UPGRADE_DEFS).map((upgrade) => {
-              const level = state.upgrades[upgrade.id] || 0;
-              const cost = getUpgradeCost(upgrade.id, level);
-              const canBuy = level < upgrade.cap && state.currencies[upgrade.currency] >= cost;
-              const baseTier = getBasePurchaseTier(state);
-              const UpgradeIcon = UPGRADE_ICONS[upgrade.id] || FaLayerGroup;
-              const currentValues = {
-                basePurchaseTier: `Aktualny bazowy tier zakupu: ${baseTier}`,
-                passiveIncome: `Aktualny income: ${100 + (state.upgrades.passiveIncome || 0) * 5}%`,
-                buyDiscount: `Aktualna zniżka: ${(state.upgrades.buyDiscount || 0) * 2}%`,
-                clickBonus: `Aktualna wartość kliknięć: ${100 + (state.upgrades.clickBonus || 0) * 5}%`,
-                foxLimit: `Aktualny limit lisów: ${getFoxLimit(state)}`
-              };
-              return (
-                <div key={upgrade.id} className="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="flex items-center gap-2 text-sm font-bold text-slate-100">
-                        <UpgradeIcon />
-                        {upgrade.title}
-                      </p>
-                      <p className="text-xs text-slate-400">{upgrade.description}</p>
-                      <p className="mt-1 text-xs text-amber-200">{currentValues[upgrade.id]}</p>
-                    </div>
-                    <p className="text-xs text-slate-400">
-                      Lv {level}/{upgrade.cap}
-                    </p>
-                  </div>
-
-                  <div className="mt-2 flex items-center justify-between">
-                    <p className="flex items-center gap-2 text-xs text-slate-300">
-                      <FaCoins />
-                      Koszt: {formatNumber(cost)} monet
-                    </p>
-                    <button
-                      type="button"
-                      className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold disabled:cursor-not-allowed disabled:bg-slate-600"
-                      onClick={() => onBuyUpgrade(upgrade.id)}
-                      disabled={!canBuy}
-                    >
-                      Kup
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="space-y-4 pb-2">
+            <UpgradeSection title="Ulepszenia za monety" icon={FaCoins} accentClass="text-amber-200" upgrades={coins} state={state} onBuyUpgrade={onBuyUpgrade} />
+            <UpgradeSection title="Sklep za diamenty" icon={FaGem} accentClass="text-fuchsia-200" upgrades={gems} state={state} onBuyUpgrade={onBuyUpgrade} />
           </div>
         )}
 
         {activeTab === 'Rebirth' && (
-          <div className="space-y-3 text-sm">
+          <div className="space-y-4 text-sm">
             <div className="rounded-xl border border-indigo-500/40 bg-indigo-500/10 p-3">
               <p className="flex items-center gap-2 font-semibold text-indigo-200">
                 <FaRedo />
                 Rebirth resetuje planszę i monetowe ulepszenia.
               </p>
-              <p className="mt-1 text-xs text-slate-300">Zachowujesz Diamenty, Rebirth Tokens i statystyki lifetime.</p>
+              <p className="mt-1 text-xs text-slate-300">Zachowujesz diamenty, rebirth tokens, sklepy premium i statystyki lifetime.</p>
             </div>
 
-            <p className="text-slate-300">Wymaganie: min. 1 Mega Fox na planszy.</p>
-            <p className="font-bold text-amber-200">Liczba tokenów które otrzymasz: {rebirthPreview}</p>
+            <div className="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+              <p className="text-slate-300">Wymaganie: min. 1 Mega Fox na planszy.</p>
+              <p className="mt-1 font-bold text-amber-200">Liczba tokenów które otrzymasz: {rebirthPreview}</p>
 
-            <button
-              type="button"
-              className="w-full rounded-xl bg-indigo-500 px-3 py-3 font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-600"
-              disabled={rebirthPreview <= 0}
-              onClick={() => {
-                const confirmed = window.confirm('Wykonać Rebirth? Plansza zostanie zresetowana.');
-                if (confirmed) {
-                  onRebirth();
-                }
-              }}
-            >
-              Zrób Rebirth
-            </button>
+              <button
+                type="button"
+                className="mt-3 w-full rounded-xl bg-indigo-500 px-3 py-3 font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-600"
+                disabled={rebirthPreview <= 0}
+                onClick={() => {
+                  const confirmed = window.confirm('Wykonać Rebirth? Plansza i coinowe ulepszenia zostaną zresetowane.');
+                  if (confirmed) {
+                    onRebirth();
+                  }
+                }}
+              >
+                Zrób Rebirth
+              </button>
+            </div>
+
+            <UpgradeSection title="Sklep za rebirth points" icon={FaRedo} accentClass="text-indigo-200" upgrades={rebirth} state={state} onBuyUpgrade={onBuyUpgrade} />
           </div>
         )}
 
@@ -190,9 +249,7 @@ export default function ShopPanel({
                   );
                 })}
               </div>
-              <p className="mt-2 text-xs text-slate-300">
-                Dzisiaj: +{loginInfo.amount} diamentów
-              </p>
+              <p className="mt-2 text-xs text-slate-300">Dzisiaj: +{loginInfo.amount} diamentów</p>
               <p className="mt-1 text-xs text-slate-400">
                 Miesięczny bonus Legendary co {LOGIN_MONTHLY_STEP} odebrań: {loginInfo.monthlyProgress}/{loginInfo.monthlyTarget}
               </p>

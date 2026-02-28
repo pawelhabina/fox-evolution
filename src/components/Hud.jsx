@@ -25,7 +25,7 @@ export default function Hud({ coins, gems, rebirthTokens, coinsPerSecond, countd
           <FaClock />
           Następny tick za
         </p>
-        <p className="text-2xl font-black text-cyan-300">{countdown}s</p>
+        <p className="text-2xl font-black text-cyan-300">{formatCompact(countdown, 1)}s</p>
       </div>
 
       <div className="hud-card">

@@ -15,7 +15,12 @@ export function createInitialState(nowTs = Date.now()) {
       passiveIncome: 0,
       buyDiscount: 0,
       clickBonus: 0,
-      foxLimit: 0
+      foxLimit: 0,
+      gemIncomeMultiplier: 0,
+      gemFoxLimit: 0,
+      tickSpeed: 0,
+      purchaseTierChance: 0,
+      gemDropRate: 0
     },
     purchaseCount: 0,
     settings: {

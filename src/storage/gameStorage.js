@@ -81,7 +81,12 @@ function sanitizeState(rawState, nowTs = Date.now()) {
     passiveIncome: clamp(Number(rawState.upgrades?.passiveIncome) || 0, 0, 60),
     buyDiscount: clamp(Number(rawState.upgrades?.buyDiscount) || 0, 0, 35),
     clickBonus: clamp(Number(rawState.upgrades?.clickBonus) || 0, 0, 40),
-    foxLimit: clamp(Number(rawState.upgrades?.foxLimit ?? rawState.upgrades?.gemDropBonus) || 0, 0, 45)
+    foxLimit: clamp(Number(rawState.upgrades?.foxLimit) || 0, 0, 45),
+    gemIncomeMultiplier: clampCurrency(rawState.upgrades?.gemIncomeMultiplier ?? 0),
+    gemFoxLimit: clamp(Number(rawState.upgrades?.gemFoxLimit) || 0, 0, 50),
+    tickSpeed: clamp(Number(rawState.upgrades?.tickSpeed) || 0, 0, 40),
+    purchaseTierChance: clamp(Number(rawState.upgrades?.purchaseTierChance) || 0, 0, 95),
+    gemDropRate: clamp(Number(rawState.upgrades?.gemDropRate ?? rawState.upgrades?.gemDropBonus) || 0, 0, 120)
   };
 
   const arenaWidth = Math.max(300, Math.floor(rawState.arena?.width || base.arena.width));

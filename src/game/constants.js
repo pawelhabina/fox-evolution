@@ -1,9 +1,12 @@
 export const GAME_VERSION = '1.0.0';
-export const TICK_SECONDS = 5;
+export const BASE_TICK_SECONDS = 5;
+export const MIN_TICK_SECONDS = 1;
 export const AUTOSAVE_SECONDS = 10;
 export const MIN_FOXES_LIMIT = 5;
-export const MAX_FOXES_LIMIT = 50;
+export const MAX_FOXES_LIMIT = 100;
 export const TILE_SIZE = 78;
+export const BASE_HIGHER_TIER_CHANCE = 0.05;
+export const BASE_GEM_DROP_RATE = 0.01;
 
 const TIER_NAMES = [
   'DNA Fox',
@@ -92,6 +95,7 @@ export const UPGRADE_DEFS = {
     id: 'basePurchaseTier',
     title: 'Tier kupowanych lisów',
     description: 'Podnosi bazowy tier kupowanego lisa.',
+    shop: 'coins',
     currency: 'coins',
     cap: 13,
     baseCost: 250,
@@ -101,6 +105,7 @@ export const UPGRADE_DEFS = {
     id: 'passiveIncome',
     title: 'Pasywny income',
     description: '+5% pasywnego income na poziom.',
+    shop: 'coins',
     currency: 'coins',
     cap: 60,
     baseCost: 120,
@@ -110,6 +115,7 @@ export const UPGRADE_DEFS = {
     id: 'buyDiscount',
     title: 'Koszt kupna lisa',
     description: '-2% kosztu lisa na poziom.',
+    shop: 'coins',
     currency: 'coins',
     cap: 35,
     baseCost: 180,
@@ -119,6 +125,7 @@ export const UPGRADE_DEFS = {
     id: 'clickBonus',
     title: 'Wartość klików',
     description: '+5% wartości kliknięcia na poziom.',
+    shop: 'coins',
     currency: 'coins',
     cap: 40,
     baseCost: 100,
@@ -128,12 +135,72 @@ export const UPGRADE_DEFS = {
     id: 'foxLimit',
     title: 'Limit lisów',
     description: 'Zwiększa limit lisów na planszy o 1.',
+    shop: 'coins',
     currency: 'coins',
     cap: 45,
     baseCost: 140,
     growth: 1.28
+  },
+  gemIncomeMultiplier: {
+    id: 'gemIncomeMultiplier',
+    title: 'Mnożnik zarobków',
+    description: 'Start 1.0x, każdy poziom dodaje +0.1x do wszystkich zarobków.',
+    shop: 'gems',
+    currency: 'gems',
+    cap: null,
+    baseCost: 16,
+    growth: 2
+  },
+  gemFoxLimit: {
+    id: 'gemFoxLimit',
+    title: 'Premium slot lisów',
+    description: '+1 maksymalny lis na planszy za każdy poziom.',
+    shop: 'gems',
+    currency: 'gems',
+    cap: 50,
+    flatCost: 50
+  },
+  tickSpeed: {
+    id: 'tickSpeed',
+    title: 'Szybkość ticku',
+    description: 'Każdy poziom skraca tick o 0.1s, aż do 1.0s.',
+    shop: 'rebirth',
+    currency: 'rebirthTokens',
+    cap: 40
+  },
+  purchaseTierChance: {
+    id: 'purchaseTierChance',
+    title: 'Szansa na wyższy tier',
+    description: '+1% szansy na tier wyżej przy zakupie lisa.',
+    shop: 'rebirth',
+    currency: 'rebirthTokens',
+    cap: 95,
+    baseCost: 2,
+    growth: 2
+  },
+  gemDropRate: {
+    id: 'gemDropRate',
+    title: 'Drop rate diamentów',
+    description: '+0.2% do szansy dropu diamentu na tick, aż do 25%.',
+    shop: 'rebirth',
+    currency: 'rebirthTokens',
+    cap: 120,
+    baseCost: 2,
+    growth: 2
   }
 };
+
+export const COIN_UPGRADE_IDS = Object.values(UPGRADE_DEFS)
+  .filter((upgrade) => upgrade.shop === 'coins')
+  .map((upgrade) => upgrade.id);
+
+export const GEM_UPGRADE_IDS = Object.values(UPGRADE_DEFS)
+  .filter((upgrade) => upgrade.shop === 'gems')
+  .map((upgrade) => upgrade.id);
+
+export const REBIRTH_UPGRADE_IDS = Object.values(UPGRADE_DEFS)
+  .filter((upgrade) => upgrade.shop === 'rebirth')
+  .map((upgrade) => upgrade.id);
 
 export const DAILY_QUEST_REWARD = 5;
 export const WEEKLY_QUEST_REWARD = 20;

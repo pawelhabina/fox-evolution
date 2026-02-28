@@ -1,11 +1,14 @@
 import {
   ALL_FOX_TIERS,
+  BASE_GEM_DROP_RATE,
+  BASE_HIGHER_TIER_CHANCE,
   BASE_MAX_TIER,
+  BASE_TICK_SECONDS,
   EVOLUTION_TYPES,
   MAX_FOXES_LIMIT,
   MAX_TIER,
+  MIN_TICK_SECONDS,
   MIN_FOXES_LIMIT,
-  TICK_SECONDS,
   TILE_SIZE,
   UPGRADE_DEFS
 } from './constants';
@@ -39,6 +42,15 @@ export function getUpgradeCost(upgradeId, level) {
     return Infinity;
   }
   const safeLevel = Math.max(0, level);
+  if (upgradeId === 'gemFoxLimit') {
+    return config.flatCost;
+  }
+  if (upgradeId === 'tickSpeed') {
+    if (safeLevel < 20) {
+      return 5 + safeLevel * 5;
+    }
+    return 110 + (safeLevel - 20) * 10;
+  }
   return Math.max(1, Math.floor(config.baseCost * config.growth ** safeLevel));
 }
 
@@ -50,12 +62,12 @@ export function getBasePurchaseTier(state) {
 export function getPassiveIncomeMultiplier(state) {
   const passiveLevel = state.upgrades.passiveIncome || 0;
   const rebirthTokens = state.currencies.rebirthTokens || 0;
-  return (1 + passiveLevel * 0.05) * (1 + rebirthTokens * 0.025);
+  return (1 + passiveLevel * 0.05) * (1 + rebirthTokens * 0.025) * getGemIncomeMultiplier(state);
 }
 
 export function getClickMultiplier(state) {
   const clickLevel = state.upgrades.clickBonus || 0;
-  return 1 + clickLevel * 0.05;
+  return (1 + clickLevel * 0.05) * getGemIncomeMultiplier(state);
 }
 
 export function getBuyDiscountMultiplier(state) {
@@ -65,8 +77,29 @@ export function getBuyDiscountMultiplier(state) {
 }
 
 export function getFoxLimit(state) {
-  const level = state.upgrades.foxLimit || 0;
-  return clamp(MIN_FOXES_LIMIT + level, MIN_FOXES_LIMIT, MAX_FOXES_LIMIT);
+  const coinLevel = state.upgrades.foxLimit || 0;
+  const gemLevel = state.upgrades.gemFoxLimit || 0;
+  return clamp(MIN_FOXES_LIMIT + coinLevel + gemLevel, MIN_FOXES_LIMIT, MAX_FOXES_LIMIT);
+}
+
+export function getGemIncomeMultiplier(state) {
+  const level = state.upgrades.gemIncomeMultiplier || 0;
+  return 1 + level * 0.1;
+}
+
+export function getTickDurationSeconds(state) {
+  const level = state.upgrades.tickSpeed || 0;
+  return clamp(BASE_TICK_SECONDS - level * 0.1, MIN_TICK_SECONDS, BASE_TICK_SECONDS);
+}
+
+export function getHigherTierChance(state) {
+  const level = state.upgrades.purchaseTierChance || 0;
+  return clamp(BASE_HIGHER_TIER_CHANCE + level * 0.01, BASE_HIGHER_TIER_CHANCE, 1);
+}
+
+export function getGemDropRate(state) {
+  const level = state.upgrades.gemDropRate || 0;
+  return clamp(BASE_GEM_DROP_RATE + level * 0.002, BASE_GEM_DROP_RATE, 0.25);
 }
 
 export function getBuyFoxCost(state) {
@@ -116,8 +149,9 @@ function getFoxSellValueWithBuffs(fox, state, waterBuffMap) {
 
 export function getExpectedCoinsPerSecond(state) {
   const waterBuffMap = buildWaterBuffMap(state);
-  const totalPerTick = state.foxes.reduce((sum, fox) => sum + getFoxIncomePerTickWithBuffs(fox, state, waterBuffMap) * 0.99, 0);
-  return totalPerTick / TICK_SECONDS;
+  const dropRate = getGemDropRate(state);
+  const totalPerTick = state.foxes.reduce((sum, fox) => sum + getFoxIncomePerTickWithBuffs(fox, state, waterBuffMap) * (1 - dropRate), 0);
+  return totalPerTick / getTickDurationSeconds(state);
 }
 
 export function buildWaterBuffMap(state) {
@@ -169,20 +203,9 @@ export function getFoxSellValueCached(fox, state, waterBuffMap) {
 }
 
 export function gemsFromDrop(dropCounter, gemDropUpgradeLevel) {
-  const nextCounter = dropCounter + 1;
-  let gems = 1;
-  const everyNthExtra = Math.max(10 - gemDropUpgradeLevel, 2);
-
-  if (nextCounter % everyNthExtra === 0) {
-    gems += 1;
-  }
-  if (gemDropUpgradeLevel >= 10 && nextCounter % 5 === 0) {
-    gems += 1;
-  }
-
   return {
-    gems,
-    nextCounter
+    gems: 1,
+    nextCounter: dropCounter + 1
   };
 }
 

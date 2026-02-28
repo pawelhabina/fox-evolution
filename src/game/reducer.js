@@ -10,7 +10,9 @@ import {
   getFoxLimit,
   getFoxClickValue,
   getFoxClickValueCached,
+  getGemDropRate,
   getFoxIncomePerTickCached,
+  getHigherTierChance,
   getFoxSellValue,
   getFoxSellValueCached,
   getRebirthTokensEarned,
@@ -20,6 +22,7 @@ import {
 } from './economy';
 import {
   BASE_MAX_TIER,
+  COIN_UPGRADE_IDS,
   EVOLUTION_COST_GEMS,
   EVOLUTION_TYPES,
   MAX_FOXES_LIMIT,
@@ -130,7 +133,7 @@ export function gameReducer(state, action) {
 
       const baseTier = getBasePurchaseTier(next);
       const roll = action.roll ?? Math.random();
-      const finalTier = baseTier < BASE_MAX_TIER && roll < 0.05 ? baseTier + 1 : baseTier;
+      const finalTier = baseTier < BASE_MAX_TIER && roll < getHigherTierChance(next) ? baseTier + 1 : baseTier;
       const pos = getSafeSpawnPosition(next.arena, action.offsetSeed ?? Math.random());
 
       const newFox = {
@@ -363,8 +366,8 @@ export function gameReducer(state, action) {
 
       next.foxes.forEach((fox) => {
         const roll = Math.random();
-        if (roll < 0.01) {
-          const drop = gemsFromDrop(gemDropCounter, 0);
+        if (roll < getGemDropRate(next)) {
+          const drop = gemsFromDrop(gemDropCounter, next.upgrades.gemDropRate || 0);
           gemDropCounter = drop.nextCounter;
           gemsGained += drop.gems;
           gemDropHits += 1;
@@ -422,6 +425,10 @@ export function gameReducer(state, action) {
       }
 
       const fresh = createInitialState(action.nowTs || Date.now());
+      const preservedUpgrades = Object.keys(next.upgrades).reduce((acc, key) => {
+        acc[key] = COIN_UPGRADE_IDS.includes(key) ? 0 : next.upgrades[key];
+        return acc;
+      }, {});
       const rebirthed = {
         ...fresh,
         currencies: {
@@ -429,7 +436,10 @@ export function gameReducer(state, action) {
           gems: next.currencies.gems,
           rebirthTokens: next.currencies.rebirthTokens + earned
         },
-        upgrades: fresh.upgrades,
+        upgrades: {
+          ...fresh.upgrades,
+          ...preservedUpgrades
+        },
         settings: next.settings,
         stats: {
           ...next.stats,
