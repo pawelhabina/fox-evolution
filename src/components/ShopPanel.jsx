@@ -14,40 +14,26 @@ import {
 } from '../game/economy';
 import { formatCompact, formatNumber, formatPercent } from '../game/format';
 import { formatCountdown, getTodayLoginRewardInfo } from '../game/quests';
-import {
-  FaCalendarAlt,
-  FaCoins,
-  FaGem,
-  FaGift,
-  FaHandPointer,
-  FaLayerGroup,
-  FaPaw,
-  FaPercent,
-  FaRedo,
-  FaStopwatch,
-  FaStore,
-  FaTasks,
-  FaBolt,
-  FaArrowUp
-} from 'react-icons/fa';
+import { FaCalendarAlt } from 'react-icons/fa';
+import GuiIcon from './GuiIcon';
 
 const TABS = ['Ulepszenia', 'Rebirth', 'Zadania'];
 const TAB_ICONS = {
-  Ulepszenia: FaLayerGroup,
-  Rebirth: FaRedo,
-  Zadania: FaTasks
+  Ulepszenia: 'upgrade',
+  Rebirth: 'rebirth',
+  Zadania: 'quest'
 };
 const UPGRADE_ICONS = {
-  basePurchaseTier: FaLayerGroup,
-  passiveIncome: FaPercent,
-  buyDiscount: FaPercent,
-  clickBonus: FaHandPointer,
-  foxLimit: FaPaw,
-  gemIncomeMultiplier: FaGem,
-  gemFoxLimit: FaPaw,
-  tickSpeed: FaStopwatch,
-  purchaseTierChance: FaArrowUp,
-  gemDropRate: FaGem
+  basePurchaseTier: 'chestT1',
+  passiveIncome: 'energy',
+  buyDiscount: 'priceDown1',
+  clickBonus: 'foxUpgrade',
+  foxLimit: 'pet',
+  gemIncomeMultiplier: 'diamondUpgrade',
+  gemFoxLimit: 'pet',
+  tickSpeed: 'time',
+  purchaseTierChance: 'random',
+  gemDropRate: 'diamond'
 };
 
 function getUpgradeGroups() {
@@ -93,16 +79,16 @@ function UpgradeCard({ state, upgrade, onBuyUpgrade }) {
   const capped = Number.isFinite(cap);
   const isMaxed = capped && level >= cap;
   const canBuy = (!capped || level < cap) && state.currencies[upgrade.currency] >= cost;
-  const UpgradeIcon = UPGRADE_ICONS[upgrade.id] || FaLayerGroup;
+  const iconName = UPGRADE_ICONS[upgrade.id] || 'upgrade';
   const currencyLabel = upgrade.currency === 'coins' ? 'monet' : upgrade.currency === 'gems' ? 'diamentów' : 'rebirth points';
-  const CurrencyIcon = upgrade.currency === 'coins' ? FaCoins : upgrade.currency === 'gems' ? FaGem : FaRedo;
+  const currencyIcon = upgrade.currency === 'coins' ? 'coin' : upgrade.currency === 'gems' ? 'diamond' : 'rebirth';
 
   return (
     <div key={upgrade.id} className="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="flex items-center gap-2 text-sm font-bold text-slate-100">
-            <UpgradeIcon />
+            <GuiIcon name={iconName} alt={upgrade.title} />
             {upgrade.title}
           </p>
           <p className="text-xs text-slate-400">{upgrade.description}</p>
@@ -113,7 +99,7 @@ function UpgradeCard({ state, upgrade, onBuyUpgrade }) {
 
       <div className="mt-2 flex items-center justify-between gap-2">
         <p className="flex items-center gap-2 text-xs text-slate-300">
-          <CurrencyIcon />
+          <GuiIcon name={currencyIcon} alt={currencyLabel} />
           {isMaxed ? 'Osiągnięto maksymalny poziom' : `Koszt: ${formatNumber(cost)} ${currencyLabel}`}
         </p>
         <button
@@ -131,11 +117,11 @@ function UpgradeCard({ state, upgrade, onBuyUpgrade }) {
   );
 }
 
-function UpgradeSection({ title, icon: Icon, accentClass, upgrades, state, onBuyUpgrade }) {
+function UpgradeSection({ title, iconName, accentClass, upgrades, state, onBuyUpgrade }) {
   return (
     <section className="space-y-2">
       <p className={`flex items-center gap-2 text-sm font-bold ${accentClass}`}>
-        <Icon />
+        <GuiIcon name={iconName} alt={title} />
         {title}
       </p>
       {upgrades.map((upgrade) => (
@@ -164,7 +150,7 @@ export default function ShopPanel({
   return (
     <aside className="panel flex h-full w-full min-h-0 max-w-sm min-w-[320px] flex-col">
       <h2 className="mb-3 flex items-center gap-2 text-lg font-black text-amber-300">
-        <FaStore />
+        <GuiIcon name="upgrade" alt="Sklep" size={18} />
         Sklep
       </h2>
 
@@ -176,10 +162,7 @@ export default function ShopPanel({
             className={`shop-tab ${activeTab === tab ? 'active' : ''}`}
             onClick={() => onChangeTab(tab)}
           >
-            {(() => {
-              const Icon = TAB_ICONS[tab];
-              return <Icon className="mr-2 inline-block" />;
-            })()}
+            <GuiIcon name={TAB_ICONS[tab]} alt={tab} className="mr-2" />
             {tab}
           </button>
         ))}
@@ -188,8 +171,8 @@ export default function ShopPanel({
       <div className="min-h-0 flex-1 overflow-y-auto pr-1">
         {activeTab === 'Ulepszenia' && (
           <div className="space-y-4 pb-2">
-            <UpgradeSection title="Ulepszenia za monety" icon={FaCoins} accentClass="text-amber-200" upgrades={coins} state={state} onBuyUpgrade={onBuyUpgrade} />
-            <UpgradeSection title="Sklep za diamenty" icon={FaGem} accentClass="text-fuchsia-200" upgrades={gems} state={state} onBuyUpgrade={onBuyUpgrade} />
+            <UpgradeSection title="Ulepszenia za monety" iconName="coin" accentClass="text-amber-200" upgrades={coins} state={state} onBuyUpgrade={onBuyUpgrade} />
+            <UpgradeSection title="Sklep za diamenty" iconName="diamondUpgrade" accentClass="text-fuchsia-200" upgrades={gems} state={state} onBuyUpgrade={onBuyUpgrade} />
           </div>
         )}
 
@@ -197,7 +180,7 @@ export default function ShopPanel({
           <div className="space-y-4 text-sm">
             <div className="rounded-xl border border-indigo-500/40 bg-indigo-500/10 p-3">
               <p className="flex items-center gap-2 font-semibold text-indigo-200">
-                <FaRedo />
+                <GuiIcon name="rebirth" alt="Rebirth" />
                 Rebirth resetuje planszę i monetowe ulepszenia.
               </p>
               <p className="mt-1 text-xs text-slate-300">Zachowujesz diamenty, rebirth tokens, sklepy premium i statystyki lifetime.</p>
@@ -222,7 +205,7 @@ export default function ShopPanel({
               </button>
             </div>
 
-            <UpgradeSection title="Sklep za rebirth points" icon={FaRedo} accentClass="text-indigo-200" upgrades={rebirth} state={state} onBuyUpgrade={onBuyUpgrade} />
+            <UpgradeSection title="Sklep za rebirth points" iconName="rebirth" accentClass="text-indigo-200" upgrades={rebirth} state={state} onBuyUpgrade={onBuyUpgrade} />
           </div>
         )}
 
@@ -230,7 +213,7 @@ export default function ShopPanel({
           <div className="space-y-4 pb-2 text-sm">
             <div className="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
               <p className="flex items-center gap-2 font-bold text-amber-200">
-                <FaGift />
+                <GuiIcon name="diamond" alt="Nagrody logowania" />
                 Nagrody za dzienne logowanie
               </p>
               <div className="mt-3 grid grid-cols-7 gap-1">
@@ -268,7 +251,7 @@ export default function ShopPanel({
 
             <div className="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
               <p className="flex items-center gap-2 font-bold text-amber-200">
-                <FaTasks />
+                <GuiIcon name="quest" alt="Zadania dzienne" />
                 Zadania dzienne
                 <span className="ml-auto text-xs font-medium text-slate-300">Reset: {formatCountdown(dailyResetInSeconds)}</span>
               </p>

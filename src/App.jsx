@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { FaCog, FaHome, FaPowerOff, FaShoppingCart } from 'react-icons/fa';
+import { FaHome, FaPowerOff } from 'react-icons/fa';
+import GuiIcon from './components/GuiIcon';
 import Arena from './components/Arena';
 import EvolutionModal from './components/EvolutionModal';
 import FoxContextMenu from './components/FoxContextMenu';
@@ -354,7 +355,7 @@ export default function App() {
           onClick={(event) => event.stopPropagation()}
         >
           <p className="mb-2 flex items-center gap-2 text-sm font-bold text-amber-300">
-            <FaCog />
+            <GuiIcon name="settings" alt="Menu gry" />
             Menu gry
           </p>
           <div className="grid gap-2">
@@ -450,7 +451,7 @@ export default function App() {
           onClick={buyFox}
           title={`Koszt: ${formatNumber(buyCost)} coins`}
         >
-          <FaShoppingCart />
+          <GuiIcon name="pet" alt="Kup lisa" size={18} />
           Kup lisa ({formatNumber(buyCost)} coins)
         </button>
       </div>

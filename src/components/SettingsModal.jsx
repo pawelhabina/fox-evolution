@@ -1,4 +1,5 @@
-import { FaCog, FaFilm, FaTimes, FaTrashAlt, FaVolumeUp } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
+import GuiIcon from './GuiIcon';
 
 export default function SettingsModal({ isOpen, settings, gameVersion, onToggleSetting, onHardReset, onClose }) {
   if (!isOpen) {
@@ -10,7 +11,7 @@ export default function SettingsModal({ isOpen, settings, gameVersion, onToggleS
       <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-4" onClick={(event) => event.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between">
           <h3 className="flex items-center gap-2 text-lg font-bold text-amber-300">
-            <FaCog />
+            <GuiIcon name="settings" alt="Ustawienia" size={18} />
             Ustawienia gry
           </h3>
           <button type="button" className="rounded border border-slate-600 p-2 text-slate-300 hover:text-white" onClick={onClose}>
@@ -24,7 +25,7 @@ export default function SettingsModal({ isOpen, settings, gameVersion, onToggleS
             className="flex items-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-left"
             onClick={() => onToggleSetting('sound')}
           >
-            <FaVolumeUp />
+            <GuiIcon name="energy" alt="Dźwięki" />
             Dźwięki: {settings.sound ? 'ON' : 'OFF'}
           </button>
           <button
@@ -32,7 +33,7 @@ export default function SettingsModal({ isOpen, settings, gameVersion, onToggleS
             className="flex items-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-left"
             onClick={() => onToggleSetting('animations')}
           >
-            <FaFilm />
+            <GuiIcon name="clock2" alt="Animacje" />
             Animacje: {settings.animations ? 'ON' : 'OFF'}
           </button>
         </div>
@@ -49,7 +50,7 @@ export default function SettingsModal({ isOpen, settings, gameVersion, onToggleS
               }
             }}
           >
-            <FaTrashAlt />
+            <GuiIcon name="foxSell" alt="Hard reset" />
             Hard reset
           </button>
         </div>

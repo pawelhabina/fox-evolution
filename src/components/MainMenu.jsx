@@ -2,21 +2,15 @@ import { formatNumber } from '../game/format';
 import {
   FaArrowLeft,
   FaClock,
-  FaCog,
-  FaCoins,
   FaDownload,
-  FaFilm,
   FaFolderOpen,
-  FaGem,
-  FaLayerGroup,
   FaPlay,
   FaPlus,
-  FaRedo,
   FaSignOutAlt,
   FaTrash,
-  FaTrophy,
-  FaVolumeUp
+  FaTrophy
 } from 'react-icons/fa';
+import GuiIcon from './GuiIcon';
 
 function RootMenu({ onContinue, onOpenLoad, onOpenRanking, onOpenSettings, onExit, hasSaves }) {
   return (
@@ -38,7 +32,7 @@ function RootMenu({ onContinue, onOpenLoad, onOpenRanking, onOpenSettings, onExi
           Ranking
         </button>
         <button type="button" className="shop-tab flex items-center justify-center gap-2" onClick={onOpenSettings}>
-          <FaCog />
+          <GuiIcon name="settings" alt="Ustawienia" />
           Ustawienia
         </button>
         <button
@@ -87,9 +81,9 @@ function LoadMenu({ slots, onLoad, onNew, onDelete, onBack }) {
                   Ostatni zapis: {new Date(slot.updatedAt).toLocaleString()}
                 </p>
                 <p className="flex items-center gap-2 text-xs text-slate-400">
-                  <FaGem />
-                  Diamenty: {formatNumber(slot.summary?.gems || 0)} | <FaRedo className="text-[10px]" /> Rebirthy:{' '}
-                  {slot.summary?.lifetimeRebirths || 0} | <FaLayerGroup className="text-[10px]" /> Najwyższy tier:{' '}
+                  <GuiIcon name="diamond" alt="Diamenty" />
+                  Diamenty: {formatNumber(slot.summary?.gems || 0)} | <GuiIcon name="rebirth" alt="Rebirthy" className="mx-1" /> Rebirthy:{' '}
+                  {slot.summary?.lifetimeRebirths || 0} | <GuiIcon name="upgrade" alt="Najwyższy tier" className="mx-1" /> Najwyższy tier:{' '}
                   {slot.summary?.highestTier ?? slot.summary?.maxTier ?? 1}
                 </p>
               </div>
@@ -149,12 +143,12 @@ function RankingMenu({ slots, onBack }) {
                 #{index + 1} {slot.name}
               </p>
               <p className="flex items-center gap-2 text-xs text-slate-400">
-                <FaRedo />
+                <GuiIcon name="rebirth" alt="Rebirthy" />
                 Rebirths: {slot.summary?.lifetimeRebirths || 0}
               </p>
             </div>
             <p className="flex items-center gap-2 text-lg font-black text-emerald-300">
-              <FaCoins />
+              <GuiIcon name="coin" alt="Coins" />
               {formatNumber(slot.summary?.lifetimeCoins || 0)} coins
             </p>
           </div>
@@ -169,7 +163,7 @@ function SettingsMenu({ settings, onToggle, onBack }) {
     <div className="panel mx-auto w-full max-w-xl p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-2xl font-bold text-amber-300">
-          <FaCog />
+          <GuiIcon name="settings" alt="Ustawienia" />
           Ustawienia
         </h2>
         <button type="button" className="shop-tab flex items-center gap-2" onClick={onBack}>
@@ -181,11 +175,11 @@ function SettingsMenu({ settings, onToggle, onBack }) {
       <p className="mb-3 text-sm text-slate-400">Domyślne ustawienia dla nowych zapisów:</p>
       <div className="grid gap-2">
         <button type="button" className="flex items-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-left" onClick={() => onToggle('defaultSound')}>
-          <FaVolumeUp />
+          <GuiIcon name="energy" alt="Sound" />
           Sound: {settings.defaultSound ? 'ON' : 'OFF'}
         </button>
         <button type="button" className="flex items-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-left" onClick={() => onToggle('defaultAnimations')}>
-          <FaFilm />
+          <GuiIcon name="clock2" alt="Animations" />
           Animations: {settings.defaultAnimations ? 'ON' : 'OFF'}
         </button>
       </div>
