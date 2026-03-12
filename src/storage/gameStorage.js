@@ -89,6 +89,13 @@ function sanitizeState(rawState, nowTs = Date.now()) {
     gemDropRate: clamp(Number(rawState.upgrades?.gemDropRate ?? rawState.upgrades?.gemDropBonus) || 0, 0, 120)
   };
 
+  const temporaryBoosts = {
+    turboTick: Math.max(0, Math.floor(Number(rawState.temporaryBoosts?.turboTick) || 0)),
+    passiveBurst: Math.max(0, Math.floor(Number(rawState.temporaryBoosts?.passiveBurst) || 0)),
+    clickFrenzy: Math.max(0, Math.floor(Number(rawState.temporaryBoosts?.clickFrenzy) || 0)),
+    buyCoupon: Math.max(0, Math.floor(Number(rawState.temporaryBoosts?.buyCoupon) || 0))
+  };
+
   const arenaWidth = Math.max(300, Math.floor(rawState.arena?.width || base.arena.width));
   const arenaHeight = Math.max(260, Math.floor(rawState.arena?.height || base.arena.height));
 
@@ -181,6 +188,7 @@ function sanitizeState(rawState, nowTs = Date.now()) {
     version: rawState.version || base.version,
     currencies,
     upgrades,
+    temporaryBoosts,
     foxes,
     purchaseCount: clampCurrency(rawState.purchaseCount ?? base.purchaseCount),
     settings: {

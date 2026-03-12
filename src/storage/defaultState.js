@@ -22,6 +22,12 @@ export function createInitialState(nowTs = Date.now()) {
       purchaseTierChance: 0,
       gemDropRate: 0
     },
+    temporaryBoosts: {
+      turboTick: 0,
+      passiveBurst: 0,
+      clickFrenzy: 0,
+      buyCoupon: 0
+    },
     purchaseCount: 0,
     settings: {
       sound: true,

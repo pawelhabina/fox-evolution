@@ -9,7 +9,7 @@ import MainMenu from './components/MainMenu';
 import SettingsModal from './components/SettingsModal';
 import ShopPanel from './components/ShopPanel';
 import ToastStack from './components/ToastStack';
-import { AUTOSAVE_SECONDS, BASE_TICK_SECONDS, EVOLUTION_COST_GEMS } from './game/constants';
+import { AUTOSAVE_SECONDS, BASE_TICK_SECONDS, EVOLUTION_COST_GEMS, TEMP_BOOST_DEFS, TEMP_BOOST_DURATION_BY_ID } from './game/constants';
 import { formatNumber } from './game/format';
 import { getBuyFoxCost, getExpectedCoinsPerSecond, getFoxLimit, getRebirthTokensEarned, getTickDurationSeconds } from './game/economy';
 import { gameReducer, ACTIONS, getFoxInfoForMenu } from './game/reducer';
@@ -422,6 +422,36 @@ export default function App() {
           rebirthPreview={rebirthPreview}
           onBuyUpgrade={(upgradeId) => {
             dispatch({ type: ACTIONS.BUY_UPGRADE, upgradeId, nowTs: Date.now() });
+          }}
+          onBuyTemporaryBoost={(boostId, durationId) => {
+            const boost = TEMP_BOOST_DEFS[boostId];
+            const duration = TEMP_BOOST_DURATION_BY_ID[durationId];
+            if (!boost || !duration) {
+              return;
+            }
+            if (state.currencies.gems < duration.cost) {
+              pushToast('Brakuje diamentow');
+              return;
+            }
+            dispatch({ type: ACTIONS.BUY_TEMP_BOOST, boostId, durationId, nowTs: Date.now() });
+            pushToast(`${boost.title}: +${duration.label}`);
+          }}
+          onBuyInstantCash={(durationId) => {
+            const duration = TEMP_BOOST_DURATION_BY_ID[durationId];
+            if (!duration) {
+              return;
+            }
+            if (state.currencies.gems < duration.cost) {
+              pushToast('Brakuje diamentow');
+              return;
+            }
+            const instantCoins = Math.floor(getExpectedCoinsPerSecond(state) * duration.seconds);
+            if (instantCoins <= 0) {
+              pushToast('Brak pasywnego income do Instant Cash');
+              return;
+            }
+            dispatch({ type: ACTIONS.BUY_INSTANT_CASH, durationId, nowTs: Date.now() });
+            pushToast(`Instant Cash: +${formatNumber(instantCoins)} coins`);
           }}
           onRebirth={() => {
             if (rebirthPreview <= 0) {

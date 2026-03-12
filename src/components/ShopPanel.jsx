@@ -1,14 +1,21 @@
 import {
   LOGIN_MONTHLY_STEP,
   LOGIN_STREAK_DAYS,
+  TEMP_BOOST_DEFS,
+  TEMP_BOOST_DURATION_OPTIONS,
   UPGRADE_DEFS
 } from '../game/constants';
 import {
   getBasePurchaseTier,
+  getBuyDiscountMultiplier,
+  getClickMultiplier,
+  getExpectedCoinsPerSecond,
   getFoxLimit,
   getGemDropRate,
   getGemIncomeMultiplier,
   getHigherTierChance,
+  getPassiveIncomeMultiplier,
+  getTemporaryBoostRemainingSeconds,
   getTickDurationSeconds,
   getUpgradeCost
 } from '../game/economy';
@@ -17,9 +24,10 @@ import { formatCountdown, getTodayLoginRewardInfo } from '../game/quests';
 import { FaCalendarAlt } from 'react-icons/fa';
 import GuiIcon from './GuiIcon';
 
-const TABS = ['Ulepszenia', 'Rebirth', 'Zadania'];
+const TABS = ['Ulepszenia', 'Boosty', 'Rebirth', 'Zadania'];
 const TAB_ICONS = {
   Ulepszenia: 'upgrade',
+  Boosty: 'time',
   Rebirth: 'rebirth',
   Zadania: 'quest'
 };
@@ -50,11 +58,11 @@ function getCurrentUpgradeValue(state, upgradeId) {
     case 'basePurchaseTier':
       return `Aktualny bazowy tier zakupu: ${getBasePurchaseTier(state)}`;
     case 'passiveIncome':
-      return `Aktualny mnożnik pasywnego income: ${formatCompact(getGemIncomeMultiplier(state) * (1 + (state.upgrades.passiveIncome || 0) * 0.05) * (1 + (state.currencies.rebirthTokens || 0) * 0.025), 2)}x`;
+      return `Aktualny mnoznik pasywnego income: ${formatCompact(getPassiveIncomeMultiplier(state), 2)}x`;
     case 'buyDiscount':
-      return `Aktualna zniżka: ${(state.upgrades.buyDiscount || 0) * 2}%`;
+      return `Aktualna znizka: ${formatCompact((1 - getBuyDiscountMultiplier(state)) * 100, 1)}%`;
     case 'clickBonus':
-      return `Aktualny mnożnik kliknięć: ${formatCompact((1 + (state.upgrades.clickBonus || 0) * 0.05) * getGemIncomeMultiplier(state), 2)}x`;
+      return `Aktualny mnoznik klikniec: ${formatCompact(getClickMultiplier(state), 2)}x`;
     case 'foxLimit':
       return `Sloty z coinów: ${state.upgrades.foxLimit || 0} | Limit łącznie: ${getFoxLimit(state)}`;
     case 'gemIncomeMultiplier':
@@ -131,6 +139,68 @@ function UpgradeSection({ title, iconName, accentClass, upgrades, state, onBuyUp
   );
 }
 
+function DurationButtons({ onBuy, currentGems, getExtraInfo }) {
+  return (
+    <div className="mt-2 grid grid-cols-2 gap-2">
+      {TEMP_BOOST_DURATION_OPTIONS.map((duration) => {
+        const canBuy = currentGems >= duration.cost;
+        return (
+          <button
+            key={duration.id}
+            type="button"
+            className="rounded-lg bg-emerald-600 px-2 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-300"
+            disabled={!canBuy}
+            onClick={() => onBuy(duration.id)}
+          >
+            <p>{duration.label}</p>
+            <p className="mt-0.5 text-[11px]">-{duration.cost} diamentow</p>
+            {typeof getExtraInfo === 'function' ? <p className="mt-0.5 text-[10px] text-emerald-100">{getExtraInfo(duration)}</p> : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function TemporaryBoostCard({ state, boost, onBuyTemporaryBoost }) {
+  const remainingSeconds = getTemporaryBoostRemainingSeconds(state, boost.id);
+  const isActive = remainingSeconds > 0;
+
+  return (
+    <div className="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+      <p className="flex items-center gap-2 text-sm font-bold text-slate-100">
+        <GuiIcon name={boost.icon} alt={boost.title} />
+        {boost.title}
+      </p>
+      <p className="text-xs text-slate-400">{boost.description}</p>
+      <p className={`mt-1 text-xs ${isActive ? 'text-emerald-300' : 'text-slate-400'}`}>
+        {isActive ? `Aktywny: ${formatCountdown(remainingSeconds)}` : 'Nieaktywny'}
+      </p>
+      <DurationButtons onBuy={(durationId) => onBuyTemporaryBoost(boost.id, durationId)} currentGems={state.currencies.gems} />
+    </div>
+  );
+}
+
+function InstantCashCard({ state, onBuyInstantCash }) {
+  const expectedPerSecond = getExpectedCoinsPerSecond(state);
+
+  return (
+    <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
+      <p className="flex items-center gap-2 text-sm font-bold text-amber-200">
+        <GuiIcon name="coin" alt="Instant Cash" />
+        Instant Cash
+      </p>
+      <p className="text-xs text-slate-300">Daje natychmiast coinow tyle, ile realnie zarobisz z pasywnego income w wybranym czasie.</p>
+      <p className="mt-1 text-xs text-amber-100">Aktualny pasywny income: {formatCompact(expectedPerSecond, 1)}/s</p>
+      <DurationButtons
+        onBuy={onBuyInstantCash}
+        currentGems={state.currencies.gems}
+        getExtraInfo={(duration) => `+${formatNumber(Math.floor(expectedPerSecond * duration.seconds))} coins`}
+      />
+    </div>
+  );
+}
+
 export default function ShopPanel({
   activeTab,
   onChangeTab,
@@ -139,6 +209,8 @@ export default function ShopPanel({
   weeklyResetInSeconds,
   rebirthPreview,
   onBuyUpgrade,
+  onBuyTemporaryBoost,
+  onBuyInstantCash,
   onRebirth,
   onClaimQuest,
   onClaimWeekly,
@@ -146,6 +218,7 @@ export default function ShopPanel({
 }) {
   const loginInfo = getTodayLoginRewardInfo(state);
   const { coins, gems, rebirth } = getUpgradeGroups();
+  const temporaryBoosts = Object.values(TEMP_BOOST_DEFS);
 
   return (
     <aside className="panel flex h-full w-full min-h-0 max-w-sm min-w-[320px] flex-col">
@@ -173,6 +246,18 @@ export default function ShopPanel({
           <div className="space-y-4 pb-2">
             <UpgradeSection title="Ulepszenia za monety" iconName="coin" accentClass="text-amber-200" upgrades={coins} state={state} onBuyUpgrade={onBuyUpgrade} />
             <UpgradeSection title="Sklep za diamenty" iconName="diamondUpgrade" accentClass="text-fuchsia-200" upgrades={gems} state={state} onBuyUpgrade={onBuyUpgrade} />
+          </div>
+        )}
+
+        {activeTab === 'Boosty' && (
+          <div className="space-y-4 pb-2">
+            <div className="rounded-xl border border-cyan-500/40 bg-cyan-500/10 p-3 text-xs text-slate-200">
+              Wszystkie boosty stackuja czas trwania. Kupuj je wielokrotnie, aby przedluzyc efekt nawet na wiele godzin.
+            </div>
+            {temporaryBoosts.map((boost) => (
+              <TemporaryBoostCard key={boost.id} state={state} boost={boost} onBuyTemporaryBoost={onBuyTemporaryBoost} />
+            ))}
+            <InstantCashCard state={state} onBuyInstantCash={onBuyInstantCash} />
           </div>
         )}
 

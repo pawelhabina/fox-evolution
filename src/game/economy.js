@@ -7,8 +7,10 @@ import {
   EVOLUTION_TYPES,
   MAX_FOXES_LIMIT,
   MAX_TIER,
+  MIN_TICK_SECONDS_WITH_BOOST,
   MIN_TICK_SECONDS,
   MIN_FOXES_LIMIT,
+  TEMP_BOOST_EFFECTS,
   TILE_SIZE,
   UPGRADE_DEFS
 } from './constants';
@@ -62,21 +64,37 @@ export function getBasePurchaseTier(state) {
   return clamp(1 + level, 1, BASE_MAX_TIER - 1);
 }
 
-export function getPassiveIncomeMultiplier(state) {
+export function isTemporaryBoostActive(state, boostId, nowTs = Date.now()) {
+  const untilTs = Number(state.temporaryBoosts?.[boostId]) || 0;
+  return untilTs > nowTs;
+}
+
+export function getTemporaryBoostRemainingSeconds(state, boostId, nowTs = Date.now()) {
+  const untilTs = Number(state.temporaryBoosts?.[boostId]) || 0;
+  return Math.max(0, Math.ceil((untilTs - nowTs) / 1000));
+}
+
+export function getPassiveIncomeMultiplier(state, nowTs = Date.now()) {
   const passiveLevel = state.upgrades.passiveIncome || 0;
   const rebirthTokens = state.currencies.rebirthTokens || 0;
-  return (1 + passiveLevel * 0.05) * (1 + rebirthTokens * 0.025) * getGemIncomeMultiplier(state);
+  const baseMultiplier = (1 + passiveLevel * 0.05) * (1 + rebirthTokens * 0.025) * getGemIncomeMultiplier(state);
+  const tempMultiplier = isTemporaryBoostActive(state, 'passiveBurst', nowTs) ? TEMP_BOOST_EFFECTS.passiveBurstMultiplier : 1;
+  return baseMultiplier * tempMultiplier;
 }
 
-export function getClickMultiplier(state) {
+export function getClickMultiplier(state, nowTs = Date.now()) {
   const clickLevel = state.upgrades.clickBonus || 0;
-  return (1 + clickLevel * 0.05) * getGemIncomeMultiplier(state);
+  const baseMultiplier = (1 + clickLevel * 0.05) * getGemIncomeMultiplier(state);
+  const tempMultiplier = isTemporaryBoostActive(state, 'clickFrenzy', nowTs) ? TEMP_BOOST_EFFECTS.clickFrenzyMultiplier : 1;
+  return baseMultiplier * tempMultiplier;
 }
 
-export function getBuyDiscountMultiplier(state) {
+export function getBuyDiscountMultiplier(state, nowTs = Date.now()) {
   const discountLevel = state.upgrades.buyDiscount || 0;
   const discount = clamp(discountLevel * 0.02, 0, 0.7);
-  return 1 - discount;
+  const baseMultiplier = 1 - discount;
+  const tempMultiplier = isTemporaryBoostActive(state, 'buyCoupon', nowTs) ? TEMP_BOOST_EFFECTS.buyCouponMultiplier : 1;
+  return baseMultiplier * tempMultiplier;
 }
 
 export function getFoxLimit(state) {
@@ -90,9 +108,12 @@ export function getGemIncomeMultiplier(state) {
   return 1 + level * 0.1;
 }
 
-export function getTickDurationSeconds(state) {
+export function getTickDurationSeconds(state, nowTs = Date.now()) {
   const level = state.upgrades.tickSpeed || 0;
-  return clamp(BASE_TICK_SECONDS - level * 0.1, MIN_TICK_SECONDS, BASE_TICK_SECONDS);
+  const baseDuration = clamp(BASE_TICK_SECONDS - level * 0.1, MIN_TICK_SECONDS, BASE_TICK_SECONDS);
+  const boostMultiplier = isTemporaryBoostActive(state, 'turboTick', nowTs) ? TEMP_BOOST_EFFECTS.turboTickMultiplier : 1;
+  const minDuration = boostMultiplier < 1 ? MIN_TICK_SECONDS_WITH_BOOST : MIN_TICK_SECONDS;
+  return clamp(baseDuration * boostMultiplier, minDuration, BASE_TICK_SECONDS);
 }
 
 export function getHigherTierChance(state) {
@@ -105,56 +126,56 @@ export function getGemDropRate(state) {
   return clamp(BASE_GEM_DROP_RATE + level * 0.002, BASE_GEM_DROP_RATE, 0.25);
 }
 
-export function getBuyFoxCost(state) {
+export function getBuyFoxCost(state, nowTs = Date.now()) {
   const purchaseCount = state.purchaseCount || 0;
   const baseCost = 25;
   const curve = Math.floor(baseCost * 1.17 ** purchaseCount);
-  return Math.max(5, Math.floor(curve * getBuyDiscountMultiplier(state)));
+  return Math.max(5, Math.floor(curve * getBuyDiscountMultiplier(state, nowTs)));
 }
 
-export function getFoxIncomePerTick(fox, state) {
+export function getFoxIncomePerTick(fox, state, nowTs = Date.now()) {
   const waterBuffMap = buildWaterBuffMap(state);
-  return getFoxIncomePerTickWithBuffs(fox, state, waterBuffMap);
+  return getFoxIncomePerTickWithBuffs(fox, state, waterBuffMap, nowTs);
 }
 
-function getFoxIncomePerTickWithBuffs(fox, state, waterBuffMap) {
+function getFoxIncomePerTickWithBuffs(fox, state, waterBuffMap, nowTs = Date.now()) {
   const tierData = getTierData(fox.tier);
   const evolutionMultiplier = getEvolutionData(fox.evolution)?.incomeMultiplier || 1;
   const waterMultiplier = getWaterBuffMultiplier(fox.id, waterBuffMap);
-  const value = tierData.baseIncomePerTick * getPassiveIncomeMultiplier(state) * evolutionMultiplier * waterMultiplier;
+  const value = tierData.baseIncomePerTick * getPassiveIncomeMultiplier(state, nowTs) * evolutionMultiplier * waterMultiplier;
   return Math.max(1, Math.floor(value));
 }
 
-export function getFoxClickValue(fox, state) {
+export function getFoxClickValue(fox, state, nowTs = Date.now()) {
   const waterBuffMap = buildWaterBuffMap(state);
-  return getFoxClickValueWithBuffs(fox, state, waterBuffMap);
+  return getFoxClickValueWithBuffs(fox, state, waterBuffMap, nowTs);
 }
 
-function getFoxClickValueWithBuffs(fox, state, waterBuffMap) {
+function getFoxClickValueWithBuffs(fox, state, waterBuffMap, nowTs = Date.now()) {
   const tierData = getTierData(fox.tier);
   const evolutionMultiplier = getEvolutionData(fox.evolution)?.clickMultiplier || 1;
   const waterMultiplier = getWaterBuffMultiplier(fox.id, waterBuffMap);
-  const value = tierData.clickValue * getClickMultiplier(state) * evolutionMultiplier * waterMultiplier;
+  const value = tierData.clickValue * getClickMultiplier(state, nowTs) * evolutionMultiplier * waterMultiplier;
   return Math.max(1, Math.floor(value));
 }
 
-export function getFoxSellValue(fox, state) {
+export function getFoxSellValue(fox, state, nowTs = Date.now()) {
   const waterBuffMap = buildWaterBuffMap(state);
-  return getFoxSellValueWithBuffs(fox, state, waterBuffMap);
+  return getFoxSellValueWithBuffs(fox, state, waterBuffMap, nowTs);
 }
 
-function getFoxSellValueWithBuffs(fox, state, waterBuffMap) {
+function getFoxSellValueWithBuffs(fox, state, waterBuffMap, nowTs = Date.now()) {
   const tierData = getTierData(fox.tier);
   const waterMultiplier = getWaterBuffMultiplier(fox.id, waterBuffMap);
-  const value = tierData.sellValue * getPassiveIncomeMultiplier(state) * waterMultiplier;
+  const value = tierData.sellValue * getPassiveIncomeMultiplier(state, nowTs) * waterMultiplier;
   return Math.max(1, Math.floor(value));
 }
 
-export function getExpectedCoinsPerSecond(state) {
+export function getExpectedCoinsPerSecond(state, nowTs = Date.now()) {
   const waterBuffMap = buildWaterBuffMap(state);
   const dropRate = getGemDropRate(state);
-  const totalPerTick = state.foxes.reduce((sum, fox) => sum + getFoxIncomePerTickWithBuffs(fox, state, waterBuffMap) * (1 - dropRate), 0);
-  return totalPerTick / getTickDurationSeconds(state);
+  const totalPerTick = state.foxes.reduce((sum, fox) => sum + getFoxIncomePerTickWithBuffs(fox, state, waterBuffMap, nowTs) * (1 - dropRate), 0);
+  return totalPerTick / getTickDurationSeconds(state, nowTs);
 }
 
 export function buildWaterBuffMap(state) {
@@ -193,16 +214,16 @@ function getWaterBuffMultiplier(foxId, waterBuffMap) {
   return 1.5 ** stackCount;
 }
 
-export function getFoxIncomePerTickCached(fox, state, waterBuffMap) {
-  return getFoxIncomePerTickWithBuffs(fox, state, waterBuffMap);
+export function getFoxIncomePerTickCached(fox, state, waterBuffMap, nowTs = Date.now()) {
+  return getFoxIncomePerTickWithBuffs(fox, state, waterBuffMap, nowTs);
 }
 
-export function getFoxClickValueCached(fox, state, waterBuffMap) {
-  return getFoxClickValueWithBuffs(fox, state, waterBuffMap);
+export function getFoxClickValueCached(fox, state, waterBuffMap, nowTs = Date.now()) {
+  return getFoxClickValueWithBuffs(fox, state, waterBuffMap, nowTs);
 }
 
-export function getFoxSellValueCached(fox, state, waterBuffMap) {
-  return getFoxSellValueWithBuffs(fox, state, waterBuffMap);
+export function getFoxSellValueCached(fox, state, waterBuffMap, nowTs = Date.now()) {
+  return getFoxSellValueWithBuffs(fox, state, waterBuffMap, nowTs);
 }
 
 export function gemsFromDrop(dropCounter, gemDropUpgradeLevel) {

@@ -1,12 +1,60 @@
 export const GAME_VERSION = '1.0.0';
 export const BASE_TICK_SECONDS = 5;
 export const MIN_TICK_SECONDS = 1;
+export const MIN_TICK_SECONDS_WITH_BOOST = 0.3;
 export const AUTOSAVE_SECONDS = 10;
 export const MIN_FOXES_LIMIT = 5;
 export const MAX_FOXES_LIMIT = 100;
 export const TILE_SIZE = 78;
 export const BASE_HIGHER_TIER_CHANCE = 0.05;
 export const BASE_GEM_DROP_RATE = 0.01;
+export const TEMP_BOOST_DURATION_OPTIONS = [
+  { id: '15m', label: '15 min', seconds: 15 * 60, cost: 20 },
+  { id: '30m', label: '30 min', seconds: 30 * 60, cost: 35 },
+  { id: '1h', label: '1h', seconds: 60 * 60, cost: 60 },
+  { id: '2h', label: '2h', seconds: 2 * 60 * 60, cost: 100 }
+];
+
+export const TEMP_BOOST_DURATION_BY_ID = TEMP_BOOST_DURATION_OPTIONS.reduce((acc, option) => {
+  acc[option.id] = option;
+  return acc;
+}, {});
+
+export const TEMP_BOOST_DEFS = {
+  turboTick: {
+    id: 'turboTick',
+    title: 'Turbo Tick',
+    description: '-30% czasu ticka',
+    icon: 'time'
+  },
+  passiveBurst: {
+    id: 'passiveBurst',
+    title: 'Zloty Deszcz',
+    description: 'x2 pasywnego income',
+    icon: 'energy'
+  },
+  clickFrenzy: {
+    id: 'clickFrenzy',
+    title: 'Furia Kliku',
+    description: 'x3 wartosci klikniecia',
+    icon: 'foxUpgrade'
+  },
+  buyCoupon: {
+    id: 'buyCoupon',
+    title: 'Kupiecki Kupon',
+    description: '-25% kosztu kupna lisa',
+    icon: 'priceDown2'
+  }
+};
+
+export const TEMP_BOOST_IDS = Object.keys(TEMP_BOOST_DEFS);
+
+export const TEMP_BOOST_EFFECTS = {
+  turboTickMultiplier: 0.7,
+  passiveBurstMultiplier: 2,
+  clickFrenzyMultiplier: 3,
+  buyCouponMultiplier: 0.75
+};
 
 const TIER_NAMES = [
   'DNA Fox',

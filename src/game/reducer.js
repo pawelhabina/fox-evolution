@@ -7,6 +7,7 @@ import {
   gemsFromDrop,
   getBasePurchaseTier,
   getBuyFoxCost,
+  getExpectedCoinsPerSecond,
   getFoxLimit,
   getFoxClickValue,
   getFoxClickValueCached,
@@ -28,6 +29,9 @@ import {
   MAX_FOXES_LIMIT,
   MAX_TIER,
   MEGA_TIER,
+  TEMP_BOOST_DEFS,
+  TEMP_BOOST_DURATION_BY_ID,
+  TEMP_BOOST_IDS,
   UPGRADE_DEFS
 } from './constants';
 import { claimDailyQuest, claimLoginReward, claimWeeklyQuest, ensureTemporalResets, refreshQuestProgress } from './quests';
@@ -43,6 +47,8 @@ export const ACTIONS = {
   SELL_FOX: 'SELL_FOX',
   EVOLVE_FOX: 'EVOLVE_FOX',
   BUY_UPGRADE: 'BUY_UPGRADE',
+  BUY_TEMP_BOOST: 'BUY_TEMP_BOOST',
+  BUY_INSTANT_CASH: 'BUY_INSTANT_CASH',
   APPLY_TICK: 'APPLY_TICK',
   CLAIM_LOGIN_REWARD: 'CLAIM_LOGIN_REWARD',
   CLAIM_DAILY: 'CLAIM_DAILY',
@@ -101,12 +107,52 @@ function clampStateCurrencies(state) {
   };
 }
 
+function normalizeTemporaryBoosts(temporaryBoosts) {
+  return TEMP_BOOST_IDS.reduce((acc, boostId) => {
+    acc[boostId] = Math.max(0, Math.floor(Number(temporaryBoosts?.[boostId]) || 0));
+    return acc;
+  }, {});
+}
+
+function pruneExpiredTemporaryBoosts(state, nowTs) {
+  const normalized = normalizeTemporaryBoosts(state.temporaryBoosts);
+  let changed = false;
+
+  const nextBoosts = TEMP_BOOST_IDS.reduce((acc, boostId) => {
+    const untilTs = normalized[boostId];
+    if (untilTs > 0 && untilTs <= nowTs) {
+      acc[boostId] = 0;
+      changed = true;
+      return acc;
+    }
+    acc[boostId] = untilTs;
+    if ((state.temporaryBoosts?.[boostId] || 0) !== untilTs) {
+      changed = true;
+    }
+    return acc;
+  }, {});
+
+  if (!state.temporaryBoosts) {
+    changed = true;
+  }
+
+  if (!changed) {
+    return state;
+  }
+
+  return {
+    ...state,
+    temporaryBoosts: nextBoosts
+  };
+}
+
 export function gameReducer(state, action) {
-  let next = ensureTemporalResets(state, action.nowTs || Date.now());
+  const nowTs = action.nowTs || Date.now();
+  let next = pruneExpiredTemporaryBoosts(ensureTemporalResets(state, nowTs), nowTs);
 
   switch (action.type) {
     case ACTIONS.INIT_FROM_SAVE:
-      return ensureTemporalResets(action.payload, action.nowTs || Date.now());
+      return pruneExpiredTemporaryBoosts(ensureTemporalResets(action.payload, nowTs), nowTs);
 
     case ACTIONS.CHECK_RESETS:
       return next;
@@ -126,7 +172,7 @@ export function gameReducer(state, action) {
       if (next.foxes.length >= getFoxLimit(next)) {
         return next;
       }
-      const cost = getBuyFoxCost(next);
+      const cost = getBuyFoxCost(next, nowTs);
       if (next.currencies.coins < cost) {
         return next;
       }
@@ -261,7 +307,7 @@ export function gameReducer(state, action) {
       if (!fox) {
         return next;
       }
-      const gain = getFoxClickValue(fox, next);
+      const gain = getFoxClickValue(fox, next, nowTs);
       const clicked = withCoinsGain(next, gain);
       const updated = {
         ...clicked,
@@ -286,7 +332,7 @@ export function gameReducer(state, action) {
       if (!fox) {
         return next;
       }
-      const gain = getFoxSellValue(fox, next);
+      const gain = getFoxSellValue(fox, next, nowTs);
       const withoutFox = {
         ...next,
         foxes: next.foxes.filter((item) => item.id !== action.id)
@@ -357,6 +403,59 @@ export function gameReducer(state, action) {
       };
     }
 
+    case ACTIONS.BUY_TEMP_BOOST: {
+      const boost = TEMP_BOOST_DEFS[action.boostId];
+      const duration = TEMP_BOOST_DURATION_BY_ID[action.durationId];
+      if (!boost || !duration) {
+        return next;
+      }
+      if (next.currencies.gems < duration.cost) {
+        return next;
+      }
+
+      const currentUntil = Number(next.temporaryBoosts?.[boost.id]) || 0;
+      const stackedFrom = currentUntil > nowTs ? currentUntil : nowTs;
+      const nextUntil = stackedFrom + duration.seconds * 1000;
+
+      return {
+        ...next,
+        currencies: {
+          ...next.currencies,
+          gems: clampCurrency(next.currencies.gems - duration.cost)
+        },
+        temporaryBoosts: {
+          ...normalizeTemporaryBoosts(next.temporaryBoosts),
+          [boost.id]: nextUntil
+        }
+      };
+    }
+
+    case ACTIONS.BUY_INSTANT_CASH: {
+      const duration = TEMP_BOOST_DURATION_BY_ID[action.durationId];
+      if (!duration) {
+        return next;
+      }
+      if (next.currencies.gems < duration.cost) {
+        return next;
+      }
+
+      const expectedPerSecond = getExpectedCoinsPerSecond(next, nowTs);
+      const instantCoins = clampCurrency(expectedPerSecond * duration.seconds);
+      if (instantCoins <= 0) {
+        return next;
+      }
+
+      const withSpentGems = {
+        ...next,
+        currencies: {
+          ...next.currencies,
+          gems: clampCurrency(next.currencies.gems - duration.cost)
+        }
+      };
+
+      return refreshQuestProgress(withCoinsGain(withSpentGems, instantCoins));
+    }
+
     case ACTIONS.APPLY_TICK: {
       let coinsGained = 0;
       let gemsGained = 0;
@@ -373,7 +472,7 @@ export function gameReducer(state, action) {
           gemDropHits += 1;
           return;
         }
-        coinsGained += getFoxIncomePerTickCached(fox, next, waterBuffMap);
+        coinsGained += getFoxIncomePerTickCached(fox, next, waterBuffMap, nowTs);
       });
 
       let updated = withCoinsGain(next, coinsGained);
@@ -424,7 +523,7 @@ export function gameReducer(state, action) {
         return next;
       }
 
-      const fresh = createInitialState(action.nowTs || Date.now());
+      const fresh = createInitialState(nowTs);
       const preservedUpgrades = Object.keys(next.upgrades).reduce((acc, key) => {
         acc[key] = COIN_UPGRADE_IDS.includes(key) ? 0 : next.upgrades[key];
         return acc;
@@ -441,6 +540,7 @@ export function gameReducer(state, action) {
           ...preservedUpgrades
         },
         settings: next.settings,
+        temporaryBoosts: normalizeTemporaryBoosts(next.temporaryBoosts),
         stats: {
           ...next.stats,
           lifetimeRebirths: clampCurrency(next.stats.lifetimeRebirths + 1)
@@ -453,7 +553,7 @@ export function gameReducer(state, action) {
     }
 
     case ACTIONS.HARD_RESET_STATE:
-      return createInitialState(action.nowTs || Date.now());
+      return createInitialState(nowTs);
 
     default:
       return next;
@@ -461,7 +561,7 @@ export function gameReducer(state, action) {
 }
 
 export function canAffordBuyFox(state) {
-  return state.currencies.coins >= getBuyFoxCost(state);
+  return state.currencies.coins >= getBuyFoxCost(state, Date.now());
 }
 
 export function canRebirth(state) {
@@ -488,11 +588,12 @@ export function getFoxInfoForMenu(state, foxId) {
 
   const tierData = getTierData(fox.tier);
   const waterBuffMap = buildWaterBuffMap(state);
+  const nowTs = Date.now();
   return {
     fox,
     tierData,
-    income: getFoxIncomePerTickCached(fox, state, waterBuffMap),
-    clickValue: getFoxClickValueCached(fox, state, waterBuffMap),
-    sellValue: getFoxSellValueCached(fox, state, waterBuffMap)
+    income: getFoxIncomePerTickCached(fox, state, waterBuffMap, nowTs),
+    clickValue: getFoxClickValueCached(fox, state, waterBuffMap, nowTs),
+    sellValue: getFoxSellValueCached(fox, state, waterBuffMap, nowTs)
   };
 }
