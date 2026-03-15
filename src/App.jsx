@@ -30,10 +30,14 @@ const DEFAULT_MENU_META = {
   lastPlayedSlotId: null,
   settings: {
     defaultSound: true,
-    defaultAnimations: true
+    defaultAnimations: true,
+    defaultMusicVolume: 70,
+    defaultSfxVolume: 80
   },
   slots: []
 };
+
+const EVENT_MODE_ENABLED = false;
 
 function roundToTenth(value) {
   return Math.round(value * 10) / 10;
@@ -62,6 +66,7 @@ export default function App() {
   const [shopTab, setShopTab] = useState('Ulepszenia');
   const [tickCountdown, setTickCountdown] = useState(BASE_TICK_SECONDS);
   const [contextMenu, setContextMenu] = useState(null);
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const [systemMenuOpen, setSystemMenuOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [evolutionTargetId, setEvolutionTargetId] = useState(null);
@@ -124,12 +129,21 @@ export default function App() {
     const fresh = createInitialState(Date.now());
     fresh.settings.sound = Boolean(saveMeta.settings.defaultSound);
     fresh.settings.animations = Boolean(saveMeta.settings.defaultAnimations);
+    fresh.settings.musicVolume = Number.isFinite(saveMeta.settings.defaultMusicVolume) ? saveMeta.settings.defaultMusicVolume : fresh.settings.musicVolume;
+    fresh.settings.sfxVolume = Number.isFinite(saveMeta.settings.defaultSfxVolume) ? saveMeta.settings.defaultSfxVolume : fresh.settings.sfxVolume;
 
     const result = await saveSlotState({ state: fresh });
     const slotId = result?.slotId || null;
     enterGameWithState(fresh, slotId);
     await refreshMenuMeta();
-  }, [enterGameWithState, refreshMenuMeta, saveMeta.settings.defaultAnimations, saveMeta.settings.defaultSound]);
+  }, [
+    enterGameWithState,
+    refreshMenuMeta,
+    saveMeta.settings.defaultAnimations,
+    saveMeta.settings.defaultMusicVolume,
+    saveMeta.settings.defaultSfxVolume,
+    saveMeta.settings.defaultSound
+  ]);
 
   useEffect(() => {
     let mounted = true;
@@ -220,6 +234,7 @@ export default function App() {
   useEffect(() => {
     function closeMenu() {
       setContextMenu(null);
+      setModeMenuOpen(false);
       setSystemMenuOpen(false);
     }
 
@@ -264,6 +279,17 @@ export default function App() {
           onToggleSettings={async (key) => {
             const nextValue = !saveMeta.settings[key];
             const updated = await updateMenuSettings({ [key]: nextValue });
+            setSaveMeta((prev) => ({
+              ...prev,
+              settings: {
+                ...prev.settings,
+                ...updated
+              }
+            }));
+          }}
+          onSetSettingsVolume={async (key, value) => {
+            const safeValue = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+            const updated = await updateMenuSettings({ [key]: safeValue });
             setSaveMeta((prev) => ({
               ...prev,
               settings: {
@@ -323,6 +349,7 @@ export default function App() {
       await saveSlotState({ slotId: currentSlotId, state: stateRef.current });
       await refreshMenuMeta();
     }
+    setModeMenuOpen(false);
     setSystemMenuOpen(false);
     setMenuView('root');
     setAppScreen('menu');
@@ -332,6 +359,7 @@ export default function App() {
     if (currentSlotId) {
       await saveSlotState({ slotId: currentSlotId, state: stateRef.current });
     }
+    setModeMenuOpen(false);
     setSystemMenuOpen(false);
     await quitGameApp();
   };
@@ -346,8 +374,61 @@ export default function App() {
         countdown={tickCountdown}
         foxCount={state.foxes.length}
         foxLimit={foxLimit}
-        onOpenSystemMenu={() => setSystemMenuOpen((prev) => !prev)}
+        onOpenModesMenu={() => {
+          setSystemMenuOpen(false);
+          setModeMenuOpen((prev) => !prev);
+        }}
+        onOpenSystemMenu={() => {
+          setModeMenuOpen(false);
+          setSystemMenuOpen((prev) => !prev);
+        }}
       />
+
+      {modeMenuOpen && (
+        <div
+          className="fixed left-5 top-24 z-40 w-64 rounded-xl border border-slate-700 bg-slate-900/95 p-3 shadow-2xl"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <p className="mb-2 flex items-center gap-2 text-sm font-bold text-amber-300">
+            <GuiIcon name="quest" alt="Menu trybów" />
+            Tryby gry
+          </p>
+          <div className="grid gap-2">
+            <button
+              type="button"
+              className="rounded-lg border border-emerald-400/80 bg-emerald-500/10 px-3 py-2 text-left text-sm text-emerald-200"
+              onClick={() => {
+                setModeMenuOpen(false);
+                pushToast('Tryb Merge jest już aktywny');
+              }}
+            >
+              Merge (aktywny)
+            </button>
+            <button
+              type="button"
+              className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm ${
+                EVENT_MODE_ENABLED ? 'border-emerald-500/70 bg-emerald-500/10 text-emerald-200' : 'border-rose-500/70 bg-rose-500/10 text-rose-200'
+              }`}
+              onClick={() => {
+                if (EVENT_MODE_ENABLED) {
+                  pushToast('Tryb Event jest włączony');
+                } else {
+                  pushToast('Tryb Event jest wyłączony');
+                }
+              }}
+            >
+              <span>Event</span>
+              <span className="font-semibold">{EVENT_MODE_ENABLED ? 'włączony' : 'wyłączony'}</span>
+            </button>
+            <button type="button" className="rounded-lg bg-slate-800/70 px-3 py-2 text-left text-sm text-slate-400" disabled>
+              Arena bosów (wkrótce)
+            </button>
+            <button type="button" className="rounded-lg bg-slate-800/70 px-3 py-2 text-left text-sm text-slate-400" disabled>
+              Minigames (wkrótce)
+            </button>
+          </div>
+        </div>
+      )}
 
       {systemMenuOpen && (
         <div
@@ -528,6 +609,9 @@ export default function App() {
         gameVersion={gameVersion}
         onToggleSetting={(key) => {
           dispatch({ type: ACTIONS.TOGGLE_SETTING, key, nowTs: Date.now() });
+        }}
+        onSetVolume={(key, value) => {
+          dispatch({ type: ACTIONS.SET_VOLUME, key, value, nowTs: Date.now() });
         }}
         onHardReset={handleHardReset}
         onClose={() => setSettingsModalOpen(false)}

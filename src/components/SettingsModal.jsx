@@ -1,10 +1,13 @@
 import { FaTimes } from 'react-icons/fa';
 import GuiIcon from './GuiIcon';
 
-export default function SettingsModal({ isOpen, settings, gameVersion, onToggleSetting, onHardReset, onClose }) {
+export default function SettingsModal({ isOpen, settings, gameVersion, onToggleSetting, onSetVolume, onHardReset, onClose }) {
   if (!isOpen) {
     return null;
   }
+
+  const musicVolume = Number.isFinite(settings.musicVolume) ? settings.musicVolume : 70;
+  const sfxVolume = Number.isFinite(settings.sfxVolume) ? settings.sfxVolume : 80;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4" onClick={onClose}>
@@ -36,6 +39,48 @@ export default function SettingsModal({ isOpen, settings, gameVersion, onToggleS
             <GuiIcon name="clock2" alt="Animacje" />
             Animacje: {settings.animations ? 'ON' : 'OFF'}
           </button>
+        </div>
+
+        <div className="mt-3 rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+          <div className="grid gap-3">
+            <label className="grid gap-1">
+              <span className="flex items-center justify-between text-sm text-slate-200">
+                <span className="flex items-center gap-2">
+                  <GuiIcon name="time" alt="Muzyka" />
+                  Muzyka
+                </span>
+                <span className="font-bold text-amber-300">{musicVolume}%</span>
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={musicVolume}
+                onChange={(event) => onSetVolume('musicVolume', Number(event.target.value))}
+                className="w-full accent-amber-400"
+              />
+            </label>
+
+            <label className="grid gap-1">
+              <span className="flex items-center justify-between text-sm text-slate-200">
+                <span className="flex items-center gap-2">
+                  <GuiIcon name="energy" alt="SFX" />
+                  SFX
+                </span>
+                <span className="font-bold text-amber-300">{sfxVolume}%</span>
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={sfxVolume}
+                onChange={(event) => onSetVolume('sfxVolume', Number(event.target.value))}
+                className="w-full accent-amber-400"
+              />
+            </label>
+          </div>
         </div>
 
         <div className="mt-4 rounded-xl border border-rose-500/40 bg-rose-500/10 p-3">

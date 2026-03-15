@@ -18,7 +18,9 @@ function createDefaultMeta() {
     lastPlayedSlotId: null,
     settings: {
       defaultSound: true,
-      defaultAnimations: true
+      defaultAnimations: true,
+      defaultMusicVolume: 70,
+      defaultSfxVolume: 80
     },
     slots: []
   };
@@ -29,6 +31,14 @@ function sanitizeMeta(meta) {
   if (!meta || typeof meta !== 'object') {
     return base;
   }
+  const parsedDefaultMusicVolume = Number(meta.settings?.defaultMusicVolume);
+  const parsedDefaultSfxVolume = Number(meta.settings?.defaultSfxVolume);
+  const safeDefaultMusicVolume = Number.isFinite(parsedDefaultMusicVolume)
+    ? clamp(Math.round(parsedDefaultMusicVolume), 0, 100)
+    : base.settings.defaultMusicVolume;
+  const safeDefaultSfxVolume = Number.isFinite(parsedDefaultSfxVolume)
+    ? clamp(Math.round(parsedDefaultSfxVolume), 0, 100)
+    : base.settings.defaultSfxVolume;
 
   const slots = Array.isArray(meta.slots)
     ? meta.slots
@@ -58,7 +68,9 @@ function sanitizeMeta(meta) {
         : slots[0]?.id || null,
     settings: {
       defaultSound: Boolean(meta.settings?.defaultSound ?? base.settings.defaultSound),
-      defaultAnimations: Boolean(meta.settings?.defaultAnimations ?? base.settings.defaultAnimations)
+      defaultAnimations: Boolean(meta.settings?.defaultAnimations ?? base.settings.defaultAnimations),
+      defaultMusicVolume: safeDefaultMusicVolume,
+      defaultSfxVolume: safeDefaultSfxVolume
     },
     slots: slots.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
   };
@@ -69,6 +81,9 @@ function sanitizeState(rawState, nowTs = Date.now()) {
   if (!rawState || typeof rawState !== 'object') {
     return base;
   }
+
+  const rawMusicVolume = Number(rawState.settings?.musicVolume);
+  const rawSfxVolume = Number(rawState.settings?.sfxVolume);
 
   const currencies = {
     coins: clampCurrency(rawState.currencies?.coins ?? base.currencies.coins),
@@ -193,7 +208,9 @@ function sanitizeState(rawState, nowTs = Date.now()) {
     purchaseCount: clampCurrency(rawState.purchaseCount ?? base.purchaseCount),
     settings: {
       sound: Boolean(rawState.settings?.sound ?? base.settings.sound),
-      animations: Boolean(rawState.settings?.animations ?? base.settings.animations)
+      animations: Boolean(rawState.settings?.animations ?? base.settings.animations),
+      musicVolume: clamp(Math.round(Number.isFinite(rawMusicVolume) ? rawMusicVolume : base.settings.musicVolume), 0, 100),
+      sfxVolume: clamp(Math.round(Number.isFinite(rawSfxVolume) ? rawSfxVolume : base.settings.sfxVolume), 0, 100)
     },
     stats,
     quests,

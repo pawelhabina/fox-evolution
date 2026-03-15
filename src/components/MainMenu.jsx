@@ -158,7 +158,10 @@ function RankingMenu({ slots, onBack }) {
   );
 }
 
-function SettingsMenu({ settings, onToggle, onBack }) {
+function SettingsMenu({ settings, onToggle, onSetVolume, onBack }) {
+  const defaultMusicVolume = Number.isFinite(settings.defaultMusicVolume) ? settings.defaultMusicVolume : 70;
+  const defaultSfxVolume = Number.isFinite(settings.defaultSfxVolume) ? settings.defaultSfxVolume : 80;
+
   return (
     <div className="panel mx-auto w-full max-w-xl p-6">
       <div className="mb-4 flex items-center justify-between">
@@ -183,11 +186,67 @@ function SettingsMenu({ settings, onToggle, onBack }) {
           Animations: {settings.defaultAnimations ? 'ON' : 'OFF'}
         </button>
       </div>
+
+      <div className="mt-3 rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+        <div className="grid gap-3">
+          <label className="grid gap-1">
+            <span className="flex items-center justify-between text-sm text-slate-200">
+              <span className="flex items-center gap-2">
+                <GuiIcon name="time" alt="Muzyka" />
+                Muzyka (domyślna)
+              </span>
+              <span className="font-bold text-amber-300">{defaultMusicVolume}%</span>
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={defaultMusicVolume}
+              onChange={(event) => onSetVolume('defaultMusicVolume', Number(event.target.value))}
+              className="w-full accent-amber-400"
+            />
+          </label>
+
+          <label className="grid gap-1">
+            <span className="flex items-center justify-between text-sm text-slate-200">
+              <span className="flex items-center gap-2">
+                <GuiIcon name="energy" alt="SFX" />
+                SFX (domyślne)
+              </span>
+              <span className="font-bold text-amber-300">{defaultSfxVolume}%</span>
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={defaultSfxVolume}
+              onChange={(event) => onSetVolume('defaultSfxVolume', Number(event.target.value))}
+              className="w-full accent-amber-400"
+            />
+          </label>
+        </div>
+      </div>
     </div>
   );
 }
 
-export default function MainMenu({ view, meta, onContinue, onOpenLoad, onOpenRanking, onOpenSettings, onExit, onBack, onLoad, onNew, onDelete, onToggleSettings }) {
+export default function MainMenu({
+  view,
+  meta,
+  onContinue,
+  onOpenLoad,
+  onOpenRanking,
+  onOpenSettings,
+  onExit,
+  onBack,
+  onLoad,
+  onNew,
+  onDelete,
+  onToggleSettings,
+  onSetSettingsVolume
+}) {
   if (view === 'load') {
     return <LoadMenu slots={meta.slots} onLoad={onLoad} onNew={onNew} onDelete={onDelete} onBack={onBack} />;
   }
@@ -195,7 +254,7 @@ export default function MainMenu({ view, meta, onContinue, onOpenLoad, onOpenRan
     return <RankingMenu slots={meta.slots} onBack={onBack} />;
   }
   if (view === 'settings') {
-    return <SettingsMenu settings={meta.settings} onToggle={onToggleSettings} onBack={onBack} />;
+    return <SettingsMenu settings={meta.settings} onToggle={onToggleSettings} onSetVolume={onSetSettingsVolume} onBack={onBack} />;
   }
 
   return (

@@ -54,9 +54,47 @@ export const ACTIONS = {
   CLAIM_DAILY: 'CLAIM_DAILY',
   CLAIM_WEEKLY: 'CLAIM_WEEKLY',
   TOGGLE_SETTING: 'TOGGLE_SETTING',
+  SET_VOLUME: 'SET_VOLUME',
   REBIRTH: 'REBIRTH',
   HARD_RESET_STATE: 'HARD_RESET_STATE'
 };
+
+const TOGGLEABLE_SETTING_KEYS = new Set(['sound', 'animations']);
+const VOLUME_SETTING_KEYS = new Set(['musicVolume', 'sfxVolume']);
+
+function normalizeVolume(value, fallback) {
+  const raw = Number(value);
+  if (!Number.isFinite(raw)) {
+    return fallback;
+  }
+  return clamp(Math.round(raw), 0, 100);
+}
+
+function normalizeSettings(settings = {}) {
+  return {
+    sound: Boolean(settings.sound ?? true),
+    animations: Boolean(settings.animations ?? true),
+    musicVolume: normalizeVolume(settings.musicVolume, 70),
+    sfxVolume: normalizeVolume(settings.sfxVolume, 80)
+  };
+}
+
+function withNormalizedSettings(state) {
+  const normalized = normalizeSettings(state.settings);
+  if (
+    state.settings?.sound === normalized.sound &&
+    state.settings?.animations === normalized.animations &&
+    state.settings?.musicVolume === normalized.musicVolume &&
+    state.settings?.sfxVolume === normalized.sfxVolume
+  ) {
+    return state;
+  }
+
+  return {
+    ...state,
+    settings: normalized
+  };
+}
 
 function withCoinsGain(state, coins) {
   const safeCoins = clampCurrency(coins);
@@ -148,11 +186,11 @@ function pruneExpiredTemporaryBoosts(state, nowTs) {
 
 export function gameReducer(state, action) {
   const nowTs = action.nowTs || Date.now();
-  let next = pruneExpiredTemporaryBoosts(ensureTemporalResets(state, nowTs), nowTs);
+  let next = withNormalizedSettings(pruneExpiredTemporaryBoosts(ensureTemporalResets(state, nowTs), nowTs));
 
   switch (action.type) {
     case ACTIONS.INIT_FROM_SAVE:
-      return pruneExpiredTemporaryBoosts(ensureTemporalResets(action.payload, nowTs), nowTs);
+      return withNormalizedSettings(pruneExpiredTemporaryBoosts(ensureTemporalResets(action.payload, nowTs), nowTs));
 
     case ACTIONS.CHECK_RESETS:
       return next;
@@ -505,7 +543,7 @@ export function gameReducer(state, action) {
       return claimWeeklyQuest(next, action.questId);
 
     case ACTIONS.TOGGLE_SETTING: {
-      if (!Object.prototype.hasOwnProperty.call(next.settings, action.key)) {
+      if (!TOGGLEABLE_SETTING_KEYS.has(action.key)) {
         return next;
       }
       return {
@@ -513,6 +551,24 @@ export function gameReducer(state, action) {
         settings: {
           ...next.settings,
           [action.key]: !next.settings[action.key]
+        }
+      };
+    }
+
+    case ACTIONS.SET_VOLUME: {
+      if (!VOLUME_SETTING_KEYS.has(action.key)) {
+        return next;
+      }
+      const fallback = action.key === 'musicVolume' ? next.settings.musicVolume : next.settings.sfxVolume;
+      const nextVolume = normalizeVolume(action.value, fallback);
+      if (next.settings[action.key] === nextVolume) {
+        return next;
+      }
+      return {
+        ...next,
+        settings: {
+          ...next.settings,
+          [action.key]: nextVolume
         }
       };
     }

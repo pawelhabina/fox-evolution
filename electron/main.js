@@ -21,7 +21,9 @@ function createDefaultMeta() {
     lastPlayedSlotId: null,
     settings: {
       defaultSound: true,
-      defaultAnimations: true
+      defaultAnimations: true,
+      defaultMusicVolume: 70,
+      defaultSfxVolume: 80
     },
     slots: []
   };
