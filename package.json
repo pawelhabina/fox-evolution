@@ -9,6 +9,8 @@
     "dev:server": "npm --prefix server run dev",
     "build:web": "vite build",
     "build": "npm run build:web && electron-builder",
+    "updates:publish": "node scripts/publish-updates.mjs",
+    "release:desktop": "npm run build && npm run updates:publish",
     "preview": "vite preview",
     "server:prisma:generate": "npm --prefix server run prisma:generate",
     "server:prisma:push": "npm --prefix server run prisma:push",
@@ -17,13 +19,17 @@
   "build": {
     "appId": "com.foxevolution.app",
     "productName": "Fox Evolution",
+    "artifactName": "Fox-Evolution-${version}-${arch}.${ext}",
     "files": [
       "dist/**/*",
       "electron/**/*",
       "package.json"
     ],
     "mac": {
-      "target": "dmg"
+      "target": [
+        "dmg",
+        "zip"
+      ]
     },
     "win": {
       "target": "nsis"
@@ -41,6 +47,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "electron-updater": "^6.6.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-icons": "^5.5.0"

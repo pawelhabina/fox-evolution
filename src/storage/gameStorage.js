@@ -669,6 +669,44 @@ export async function readGameVersion() {
   return 'dev';
 }
 
+export async function readUpdateState() {
+  const bridge = getBridge();
+  if (bridge?.getUpdateState) {
+    return bridge.getUpdateState();
+  }
+  return {
+    enabled: false,
+    status: 'disabled',
+    message: 'Updater niedostępny',
+    progress: 0,
+    updateVersion: null
+  };
+}
+
+export async function checkForGameUpdates() {
+  const bridge = getBridge();
+  if (bridge?.checkForUpdates) {
+    return bridge.checkForUpdates();
+  }
+  return null;
+}
+
+export async function installGameUpdateAndRestart() {
+  const bridge = getBridge();
+  if (bridge?.installUpdateAndRestart) {
+    return bridge.installUpdateAndRestart();
+  }
+  return false;
+}
+
+export function onGameUpdateStatus(handler) {
+  const bridge = getBridge();
+  if (bridge?.onUpdateStatus) {
+    return bridge.onUpdateStatus(handler);
+  }
+  return () => {};
+}
+
 export async function quitGameApp() {
   const bridge = getBridge();
   if (bridge?.quitApp) {

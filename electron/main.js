@@ -1,8 +1,20 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 
 let mainWindow;
+let updateCheckInterval = null;
+let updaterInitialized = false;
+const updaterState = {
+  enabled: false,
+  status: 'idle',
+  message: '',
+  progress: 0,
+  version: app.getVersion(),
+  updateVersion: null,
+  checkedAt: null
+};
 
 function getSavesDir() {
   return path.join(app.getPath('userData'), 'saves');
@@ -83,6 +95,154 @@ function buildSummary(state) {
 
 function makeSlotId() {
   return `slot-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+}
+
+function getUpdateServerUrl() {
+  const envUrl = String(process.env.UPDATE_SERVER_URL || '').trim();
+  if (envUrl) {
+    return envUrl.replace(/\/$/, '');
+  }
+
+  try {
+    const configPath = path.join(__dirname, 'update-config.json');
+    const parsed = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    const fileUrl = String(parsed?.updateServerUrl || '').trim();
+    if (fileUrl) {
+      return fileUrl.replace(/\/$/, '');
+    }
+  } catch (_error) {
+    // ignore missing/invalid config file
+  }
+
+  return '';
+}
+
+function broadcastUpdaterState() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+  mainWindow.webContents.send('app:update-status', { ...updaterState });
+}
+
+function setUpdaterState(partial) {
+  Object.assign(updaterState, partial, {
+    checkedAt: new Date().toISOString()
+  });
+  broadcastUpdaterState();
+}
+
+async function checkForUpdates() {
+  if (!updaterInitialized || !updaterState.enabled) {
+    return { ...updaterState };
+  }
+
+  try {
+    setUpdaterState({
+      status: 'checking',
+      message: 'Sprawdzanie aktualizacji...'
+    });
+    await autoUpdater.checkForUpdates();
+  } catch (error) {
+    setUpdaterState({
+      status: 'error',
+      message: error?.message || 'Nie udało się sprawdzić aktualizacji'
+    });
+  }
+  return { ...updaterState };
+}
+
+function initAutoUpdater() {
+  if (updaterInitialized) {
+    return;
+  }
+  updaterInitialized = true;
+
+  if (!app.isPackaged) {
+    setUpdaterState({
+      enabled: false,
+      status: 'disabled',
+      message: 'Auto-update działa tylko w wersji spakowanej aplikacji'
+    });
+    return;
+  }
+
+  const updateServerUrl = getUpdateServerUrl();
+  if (!updateServerUrl) {
+    setUpdaterState({
+      enabled: false,
+      status: 'disabled',
+      message: 'Brak UPDATE_SERVER_URL - aktualizacje wyłączone'
+    });
+    return;
+  }
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.allowDowngrade = false;
+  autoUpdater.setFeedURL({
+    provider: 'generic',
+    url: updateServerUrl
+  });
+
+  setUpdaterState({
+    enabled: true,
+    status: 'idle',
+    message: 'Updater gotowy'
+  });
+
+  autoUpdater.on('checking-for-update', () => {
+    setUpdaterState({
+      status: 'checking',
+      message: 'Sprawdzanie aktualizacji...'
+    });
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    setUpdaterState({
+      status: 'downloading',
+      message: 'Pobieranie aktualizacji...',
+      updateVersion: info?.version || null,
+      progress: 0
+    });
+  });
+
+  autoUpdater.on('download-progress', (progressObj) => {
+    setUpdaterState({
+      status: 'downloading',
+      message: 'Pobieranie aktualizacji...',
+      progress: Math.max(0, Math.min(100, Number(progressObj?.percent) || 0))
+    });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    setUpdaterState({
+      status: 'downloaded',
+      message: 'Aktualizacja gotowa. Zrestartuj grę, aby ją zainstalować.',
+      progress: 100,
+      updateVersion: info?.version || updaterState.updateVersion
+    });
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    setUpdaterState({
+      status: 'idle',
+      message: 'Aplikacja jest aktualna',
+      progress: 0,
+      updateVersion: null
+    });
+  });
+
+  autoUpdater.on('error', (error) => {
+    setUpdaterState({
+      status: 'error',
+      message: error?.message || 'Błąd aktualizacji'
+    });
+  });
+
+  checkForUpdates();
+  updateCheckInterval = setInterval(() => {
+    checkForUpdates();
+  }, 5 * 60 * 1000);
 }
 
 async function loadSlot(slotId) {
@@ -184,6 +344,10 @@ async function createWindow() {
   } else {
     await mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
   }
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    broadcastUpdaterState();
+  });
 }
 
 app.whenReady().then(() => {
@@ -239,12 +403,25 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('app:version', () => app.getVersion());
+  ipcMain.handle('app:update:state', () => ({ ...updaterState }));
+  ipcMain.handle('app:update:check', async () => checkForUpdates());
+  ipcMain.handle('app:update:install', async () => {
+    if (updaterState.status !== 'downloaded') {
+      return false;
+    }
+    setImmediate(() => {
+      autoUpdater.quitAndInstall();
+    });
+    return true;
+  });
   ipcMain.handle('app:quit', () => {
     app.quit();
     return true;
   });
 
-  createWindow();
+  createWindow().then(() => {
+    initAutoUpdater();
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -256,5 +433,12 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
+  }
+});
+
+app.on('before-quit', () => {
+  if (updateCheckInterval) {
+    clearInterval(updateCheckInterval);
+    updateCheckInterval = null;
   }
 });

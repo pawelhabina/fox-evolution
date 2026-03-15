@@ -1,6 +1,12 @@
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const serverRoot = path.resolve(__dirname, '../..');
 
 function required(name, fallback) {
   const value = process.env[name] ?? fallback;
@@ -50,7 +56,8 @@ export const env = {
   steamApiKey: process.env.STEAM_API_KEY || '',
   steamRealm: process.env.STEAM_REALM || '',
   steamReturnUrl: process.env.STEAM_RETURN_URL || '',
-  oauthSuccessRedirect: process.env.OAUTH_SUCCESS_REDIRECT || 'http://localhost:5173/oauth-success'
+  oauthSuccessRedirect: process.env.OAUTH_SUCCESS_REDIRECT || 'http://localhost:5173/oauth-success',
+  updatesDir: path.resolve(process.env.UPDATE_FILES_DIR || path.join(serverRoot, 'updates'))
 };
 
 export const isProduction = env.nodeEnv === 'production';

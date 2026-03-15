@@ -46,13 +46,46 @@ npm run dev:all
 
 Szczegóły backendu: [server/README.md](/Users/pravel9/Documents/fox-evolution/server/README.md)
 
+## Auto-update desktop app
+- Aplikacja Electron ma auto-update przez `electron-updater` (provider `generic`).
+- Przy starcie sprawdza update i automatycznie pobiera paczkę z serwera.
+- W trakcie gry pojawia się komunikat po pobraniu: `Zrestartuj grę i zainstaluj`.
+- Sprawdzanie wersji odbywa się cyklicznie co 5 minut.
+
+Konfiguracja:
+1. Ustaw URL feedu aktualizacji:
+   - `electron/update-config.json`:
+     ```json
+     { "updateServerUrl": "https://twoja-domena.pl/updates" }
+     ```
+   - albo zmienną środowiskową `UPDATE_SERVER_URL` (ma priorytet nad plikiem).
+2. Zbuduj release i opublikuj pliki update:
+   ```bash
+   npm run release:desktop
+   ```
+   To:
+   - buduje aplikację (`electron-builder`),
+   - kopiuje artefakty update do `server/updates`.
+3. Uruchom backend (`server`) - serwuje update pod `GET /updates/*`.
+4. Sprawdź w przeglądarce:
+   - `http://localhost:4000/updates/latest-mac.yml` (macOS)
+   - `http://localhost:4000/updates/latest.yml` (Windows)
+
+Flow nowej wersji:
+1. Podbij `version` w [package.json](/Users/pravel9/Documents/fox-evolution/package.json).
+2. Uruchom `npm run release:desktop`.
+3. Zrestartuj backend lub wrzuć nowe pliki `server/updates` na serwer.
+4. Klient dostanie update przy starcie lub maksymalnie do 5 minut.
+
 ## Build
 ```bash
 npm run build:web
 npm run build
+npm run updates:publish
 ```
 
 `npm run build` tworzy paczkę Electron (`dmg` na macOS; w konfiguracji jest też `nsis`/`AppImage` dla Windows/Linux).
+`npm run updates:publish` tylko publikuje artefakty update z `dist` do `server/updates`.
 
 ## Główne mechaniki
 - Menu główne: `Kontynuuj`, `Wczytaj grę`, `Ranking`, `Ustawienia`, `Wyjdź z gry`.

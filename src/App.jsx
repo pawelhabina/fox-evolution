@@ -22,13 +22,17 @@ import {
   getOAuthLoginUrl,
   getRemoteSlotUpdatedAt,
   hydrateSessionFromOAuthRedirect,
+  installGameUpdateAndRestart,
   isRemoteStorageEnabled,
   listSaveMeta,
   loginGameAccount,
   loadSlotStateWithMeta,
+  onGameUpdateStatus,
   logoutGameAccount,
   quitGameApp,
   readGameVersion,
+  readUpdateState,
+  checkForGameUpdates,
   refreshAuthPrincipalFromApi,
   registerGameAccount,
   saveSlotState,
@@ -83,6 +87,58 @@ function useToasts() {
   return { toasts, pushToast };
 }
 
+function UpdateOverlay({ updateState, onInstall, onCheck }) {
+  const status = updateState?.status || 'idle';
+
+  const shouldShow =
+    status === 'checking' ||
+    status === 'downloading' ||
+    status === 'downloaded' ||
+    status === 'error';
+
+  if (!shouldShow) {
+    return null;
+  }
+
+  const progress = Math.max(0, Math.min(100, Number(updateState?.progress) || 0));
+
+  return (
+    <div className="pointer-events-none fixed left-1/2 top-4 z-[120] w-[min(560px,calc(100%-2rem))] -translate-x-1/2">
+      <div className="pointer-events-auto rounded-xl border border-amber-400/50 bg-slate-950/95 p-3 shadow-2xl">
+        <p className="text-sm font-bold text-amber-300">Aktualizacja gry</p>
+        <p className="mt-1 text-sm text-slate-200">
+          {updateState?.message || (status === 'downloaded' ? 'Aktualizacja gotowa do instalacji.' : 'Sprawdzanie aktualizacji...')}
+        </p>
+
+        {status === 'downloading' && (
+          <div className="mt-2">
+            <div className="h-2 overflow-hidden rounded bg-slate-700">
+              <div className="h-full bg-amber-400 transition-all" style={{ width: `${progress}%` }} />
+            </div>
+            <p className="mt-1 text-xs text-slate-300">{progress.toFixed(1)}%</p>
+          </div>
+        )}
+
+        {status === 'downloaded' && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button type="button" className="primary-btn !px-3 !py-2 !text-sm" onClick={onInstall}>
+              Zrestartuj grę i zainstaluj
+            </button>
+          </div>
+        )}
+
+        {status === 'error' && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button type="button" className="rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100" onClick={onCheck}>
+              Spróbuj ponownie
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const remoteEnabled = isRemoteStorageEnabled();
   const [state, dispatch] = useReducer(gameReducer, createInitialState());
@@ -93,6 +149,13 @@ export default function App() {
   const [leaderboardData, setLeaderboardData] = useState(null);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState('');
+  const [updateState, setUpdateState] = useState({
+    enabled: false,
+    status: 'idle',
+    message: '',
+    progress: 0,
+    updateVersion: null
+  });
   const [currentSlotId, setCurrentSlotId] = useState(null);
   const [shopTab, setShopTab] = useState('Ulepszenia');
   const [tickCountdown, setTickCountdown] = useState(BASE_TICK_SECONDS);
@@ -105,6 +168,7 @@ export default function App() {
   const [gameVersion, setGameVersion] = useState('dev');
   const stateRef = useRef(state);
   const remoteSlotUpdatedAtRef = useRef(null);
+  const updateDownloadedToastShownRef = useRef(false);
   const { toasts, pushToast } = useToasts();
   const oauthGoogleUrl = useMemo(() => getOAuthLoginUrl('google'), [remoteEnabled]);
   const oauthSteamUrl = useMemo(() => getOAuthLoginUrl('steam'), [remoteEnabled]);
@@ -168,6 +232,24 @@ export default function App() {
       setLeaderboardLoading(false);
     }
   }, [remoteEnabled]);
+
+  const checkForUpdatesNow = useCallback(async () => {
+    try {
+      const next = await checkForGameUpdates();
+      if (next) {
+        setUpdateState((prev) => ({ ...prev, ...next }));
+      }
+    } catch (_error) {
+      // ignore
+    }
+  }, []);
+
+  const installUpdateNow = useCallback(async () => {
+    const ok = await installGameUpdateAndRestart();
+    if (!ok) {
+      pushToast('Aktualizacja nie jest jeszcze gotowa do instalacji');
+    }
+  }, [pushToast]);
 
   const enterGameWithState = useCallback((nextState, slotId, remoteUpdatedAt = null) => {
     dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: nextState, nowTs: Date.now() });
@@ -235,6 +317,34 @@ export default function App() {
       mounted = false;
     };
   }, [remoteEnabled]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    readUpdateState()
+      .then((statePayload) => {
+        if (mounted && statePayload) {
+          setUpdateState((prev) => ({ ...prev, ...statePayload }));
+        }
+      })
+      .catch(() => {
+        // ignore
+      });
+
+    const unsubscribe = onGameUpdateStatus((payload) => {
+      if (!mounted || !payload) {
+        return;
+      }
+      setUpdateState((prev) => ({ ...prev, ...payload }));
+    });
+
+    checkForUpdatesNow();
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, [checkForUpdatesNow]);
 
   useEffect(() => {
     if (!isLoaded || appScreen !== 'game') {
@@ -373,6 +483,17 @@ export default function App() {
     return () => clearInterval(remoteRefresh);
   }, [appScreen, currentSlotId, isLoaded, pushToast, remoteEnabled]);
 
+  useEffect(() => {
+    if (updateState.status === 'downloaded') {
+      if (!updateDownloadedToastShownRef.current) {
+        updateDownloadedToastShownRef.current = true;
+        pushToast('Nowa wersja gry jest gotowa. Zrestartuj grę, aby zainstalować aktualizację.');
+      }
+      return;
+    }
+    updateDownloadedToastShownRef.current = false;
+  }, [pushToast, updateState.status]);
+
   if (!isLoaded) {
     return <div className="app-shell flex items-center justify-center">Ładowanie...</div>;
   }
@@ -380,6 +501,7 @@ export default function App() {
   if (appScreen === 'menu') {
     return (
       <main className="app-shell flex min-h-screen flex-col items-center justify-center p-4">
+        <UpdateOverlay updateState={updateState} onInstall={installUpdateNow} onCheck={checkForUpdatesNow} />
         <MainMenu
           view={menuView}
           meta={saveMeta}
@@ -532,6 +654,7 @@ export default function App() {
 
   return (
     <main className="app-shell flex h-screen flex-col overflow-hidden p-4 pb-24">
+      <UpdateOverlay updateState={updateState} onInstall={installUpdateNow} onCheck={checkForUpdatesNow} />
       <Hud
         coins={state.currencies.coins}
         gems={state.currencies.gems}

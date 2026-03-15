@@ -31,6 +31,26 @@ npm run start
 
 Domyślnie API startuje na `http://localhost:4000`.
 
+## Serwer aktualizacji desktop app
+Backend hostuje pliki update pod:
+- `GET /updates/*`
+
+Źródło plików:
+- katalog `UPDATE_FILES_DIR` (domyślnie: `server/updates`)
+
+Typowy flow:
+1. W root projektu uruchom:
+   ```bash
+   npm run release:desktop
+   ```
+2. To wrzuci pliki (`latest*.yml`, `.zip`, `.dmg`, `.exe` itd.) do `server/updates`.
+3. Ustaw w kliencie Electron:
+   - `UPDATE_SERVER_URL=https://twoja-domena.pl/updates`
+   - albo `electron/update-config.json`.
+4. Zweryfikuj:
+   - `http://localhost:4000/updates/latest-mac.yml` (macOS)
+   - `http://localhost:4000/updates/latest.yml` (Windows)
+
 ## Najważniejsze endpointy
 - `POST /api/auth/register`
 - `POST /api/auth/login`

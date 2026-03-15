@@ -3,6 +3,7 @@ import express from 'express';
 import session from 'express-session';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { env } from './config/env.js';
@@ -21,6 +22,14 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const adminPublicDir = path.join(__dirname, 'admin', 'public');
+
+function setUpdateHeaders(res, filePath) {
+  if (filePath.endsWith('.yml')) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    return;
+  }
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+}
 
 app.use(
   cors({
@@ -56,6 +65,8 @@ app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/telemetry', telemetryRoutes);
 app.use('/api/admin', adminRoutes);
 
+app.use('/updates', express.static(env.updatesDir, { setHeaders: setUpdateHeaders }));
+
 app.use('/admin', express.static(adminPublicDir));
 app.get('/admin*', (_req, res) => {
   res.sendFile(path.join(adminPublicDir, 'index.html'));
@@ -72,6 +83,7 @@ app.use((error, _req, res, _next) => {
 let leaderboardInterval;
 
 async function start() {
+  await fs.promises.mkdir(env.updatesDir, { recursive: true });
   await ensureAdminUser();
   await refreshLeaderboards();
 
