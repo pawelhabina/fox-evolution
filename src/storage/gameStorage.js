@@ -1,10 +1,32 @@
 import { clamp, clampCurrency, clampFoxPosition } from '../game/economy';
 import { MAX_FOXES_LIMIT, MAX_TIER } from '../game/constants';
 import { createInitialState } from './defaultState';
+import {
+  apiRequest,
+  consumeOAuthTokensFromUrl,
+  ensureGuestSession,
+  fetchMe,
+  fetchLeaderboard,
+  getCurrentPrincipal,
+  getOAuthStartUrl,
+  isRemoteApiEnabled,
+  loginAccount,
+  logoutAccount,
+  registerAccount,
+  sendTelemetryEvents
+} from './remoteSession';
 
 const STORAGE_LEGACY_KEY = 'fox-evolution-save-v1';
 const STORAGE_META_KEY = 'fox-evolution-meta-v2';
 const STORAGE_SLOT_PREFIX = 'fox-evolution-slot-';
+
+function toUiNumber(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) {
+    return 0;
+  }
+  return clampCurrency(num);
+}
 
 function getBridge() {
   if (typeof window === 'undefined') {
@@ -260,6 +282,44 @@ function buildLocalSummary(state) {
   };
 }
 
+function buildMetaWithRemoteSlots(remoteSaves) {
+  const localMeta = loadLocalMeta();
+  const slots = (remoteSaves || []).map((save, index) => ({
+    id: save.slotId,
+    name: save.name || `Save ${index + 1}`,
+    createdAt: save.createdAt || new Date().toISOString(),
+    updatedAt: save.updatedAt || new Date().toISOString(),
+    summary: {
+      coins: toUiNumber(save.summary?.coins),
+      gems: toUiNumber(save.summary?.gems),
+      rebirthTokens: 0,
+      lifetimeCoins: toUiNumber(save.summary?.coins),
+      lifetimeRebirths: 0,
+      foxCount: 0,
+      maxTier: clamp(Number(save.summary?.topTier) || 1, 1, MAX_TIER),
+      highestTier: clamp(Number(save.summary?.topTier) || 1, 1, MAX_TIER)
+    }
+  }));
+
+  return sanitizeMeta({
+    ...localMeta,
+    lastPlayedSlotId: slots.some((slot) => slot.id === localMeta.lastPlayedSlotId) ? localMeta.lastPlayedSlotId : slots[0]?.id || null,
+    slots
+  });
+}
+
+function normalizeRemoteSaveResponse(payload) {
+  const save = payload?.save || null;
+  if (!save) {
+    return null;
+  }
+  return {
+    state: sanitizeState(save.state),
+    updatedAt: save.updatedAt || null,
+    slotId: save.slotId || null
+  };
+}
+
 function makeLocalSlotId() {
   return `slot-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 }
@@ -302,6 +362,16 @@ function migrateLegacyLocalSaveIfNeeded() {
 }
 
 export async function listSaveMeta() {
+  if (isRemoteApiEnabled()) {
+    try {
+      await ensureGuestSession();
+      const payload = await apiRequest('/api/game/saves');
+      return buildMetaWithRemoteSlots(payload?.saves || []);
+    } catch (_error) {
+      // fallback to local storage if remote API is unavailable
+    }
+  }
+
   const bridge = getBridge();
   if (bridge?.listSaves) {
     return sanitizeMeta(await bridge.listSaves());
@@ -312,6 +382,17 @@ export async function listSaveMeta() {
 }
 
 export async function loadSlotState(slotId) {
+  if (isRemoteApiEnabled()) {
+    try {
+      await ensureGuestSession();
+      const payload = await apiRequest(`/api/game/saves/${encodeURIComponent(slotId)}`);
+      const normalized = normalizeRemoteSaveResponse(payload);
+      return normalized?.state || null;
+    } catch (_error) {
+      return null;
+    }
+  }
+
   const bridge = getBridge();
   if (bridge?.loadSlot) {
     const loaded = await bridge.loadSlot(slotId);
@@ -334,6 +415,36 @@ export async function loadSlotState(slotId) {
 }
 
 export async function saveSlotState({ slotId, state, name }) {
+  if (isRemoteApiEnabled()) {
+    await ensureGuestSession();
+    const effectiveSlotId = slotId || makeLocalSlotId();
+    const payload = await apiRequest(`/api/game/saves/${encodeURIComponent(effectiveSlotId)}`, {
+      method: 'PUT',
+      body: {
+        name,
+        state
+      }
+    });
+
+    sendTelemetryEvents([
+      {
+        eventType: 'save_upsert',
+        payload: { slotId: effectiveSlotId }
+      }
+    ]);
+
+    const localMeta = loadLocalMeta();
+    writeLocalMeta({
+      ...localMeta,
+      lastPlayedSlotId: effectiveSlotId
+    });
+
+    return {
+      slotId: payload?.save?.slotId || effectiveSlotId,
+      updatedAt: payload?.save?.updatedAt || null
+    };
+  }
+
   const bridge = getBridge();
   if (bridge?.saveSlot) {
     return bridge.saveSlot({ slotId, state, name });
@@ -362,10 +473,53 @@ export async function saveSlotState({ slotId, state, name }) {
   });
 
   writeLocalMeta(nextMeta);
-  return { slotId: effectiveSlotId };
+  return { slotId: effectiveSlotId, updatedAt: now };
+}
+
+export async function loadSlotStateWithMeta(slotId) {
+  if (isRemoteApiEnabled()) {
+    try {
+      await ensureGuestSession();
+      const payload = await apiRequest(`/api/game/saves/${encodeURIComponent(slotId)}`);
+      return normalizeRemoteSaveResponse(payload);
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  const state = await loadSlotState(slotId);
+  if (!state) {
+    return null;
+  }
+  return {
+    state,
+    updatedAt: null,
+    slotId
+  };
+}
+
+export async function getRemoteSlotUpdatedAt(slotId) {
+  if (!isRemoteApiEnabled()) {
+    return null;
+  }
+
+  try {
+    await ensureGuestSession();
+    const payload = await apiRequest('/api/game/saves');
+    const found = (payload?.saves || []).find((save) => save.slotId === slotId);
+    return found?.updatedAt || null;
+  } catch (_error) {
+    return null;
+  }
 }
 
 export function saveSlotStateSync({ slotId, state, name }) {
+  if (isRemoteApiEnabled()) {
+    // No reliable synchronous network call in browser/electron renderer.
+    // Regular autosave still uses async remote save calls.
+    return { slotId: slotId || null };
+  }
+
   const bridge = getBridge();
   if (bridge?.saveSlotSync) {
     return bridge.saveSlotSync({ slotId, state, name });
@@ -413,6 +567,20 @@ export async function updateMenuSettings(settings) {
 }
 
 export async function deleteSlot(slotId) {
+  if (isRemoteApiEnabled()) {
+    await ensureGuestSession();
+    await apiRequest(`/api/game/saves/${encodeURIComponent(slotId)}`, {
+      method: 'DELETE'
+    });
+
+    const meta = loadLocalMeta();
+    writeLocalMeta({
+      ...meta,
+      lastPlayedSlotId: meta.lastPlayedSlotId === slotId ? null : meta.lastPlayedSlotId
+    });
+    return true;
+  }
+
   const bridge = getBridge();
   if (bridge?.deleteSlot) {
     return bridge.deleteSlot(slotId);
@@ -428,6 +596,69 @@ export async function deleteSlot(slotId) {
   });
   writeLocalMeta(nextMeta);
   return true;
+}
+
+export function isRemoteStorageEnabled() {
+  return isRemoteApiEnabled();
+}
+
+export function getAuthPrincipal() {
+  return getCurrentPrincipal();
+}
+
+export async function refreshAuthPrincipalFromApi() {
+  if (!isRemoteApiEnabled()) {
+    return getCurrentPrincipal();
+  }
+  const principal = await fetchMe();
+  return principal || getCurrentPrincipal();
+}
+
+export async function registerGameAccount({ email, password, displayName }) {
+  if (!isRemoteApiEnabled()) {
+    throw new Error('REMOTE_API_DISABLED');
+  }
+  return registerAccount({ email, password, displayName });
+}
+
+export async function loginGameAccount({ email, password }) {
+  if (!isRemoteApiEnabled()) {
+    throw new Error('REMOTE_API_DISABLED');
+  }
+  return loginAccount({ email, password });
+}
+
+export async function logoutGameAccount() {
+  if (!isRemoteApiEnabled()) {
+    return null;
+  }
+  return logoutAccount();
+}
+
+export function getOAuthLoginUrl(provider) {
+  if (!isRemoteApiEnabled()) {
+    return null;
+  }
+  return getOAuthStartUrl(provider);
+}
+
+export async function fetchLeaderboardCategory(category, limit = 10) {
+  if (!isRemoteApiEnabled()) {
+    return null;
+  }
+
+  return fetchLeaderboard(category, limit);
+}
+
+export function hydrateSessionFromOAuthRedirect() {
+  return consumeOAuthTokensFromUrl();
+}
+
+export async function trackTelemetryEvent(eventType, payload = {}) {
+  if (!isRemoteApiEnabled()) {
+    return false;
+  }
+  return sendTelemetryEvents([{ eventType, payload, ts: Date.now() }]);
 }
 
 export async function readGameVersion() {

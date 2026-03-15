@@ -5,9 +5,14 @@
   "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron electron/main.js\"",
+    "dev:all": "concurrently -k \"npm --prefix server run dev\" \"npm run dev\"",
+    "dev:server": "npm --prefix server run dev",
     "build:web": "vite build",
     "build": "npm run build:web && electron-builder",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server:prisma:generate": "npm --prefix server run prisma:generate",
+    "server:prisma:push": "npm --prefix server run prisma:push",
+    "server:seed:admin": "npm --prefix server run seed:admin"
   },
   "build": {
     "appId": "com.foxevolution.app",

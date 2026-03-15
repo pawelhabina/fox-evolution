@@ -17,12 +17,23 @@ import { getResetCountdowns } from './game/quests';
 import { createInitialState } from './storage/defaultState';
 import {
   deleteSlot,
+  fetchLeaderboardCategory,
+  getAuthPrincipal,
+  getOAuthLoginUrl,
+  getRemoteSlotUpdatedAt,
+  hydrateSessionFromOAuthRedirect,
+  isRemoteStorageEnabled,
   listSaveMeta,
-  loadSlotState,
+  loginGameAccount,
+  loadSlotStateWithMeta,
+  logoutGameAccount,
   quitGameApp,
   readGameVersion,
+  refreshAuthPrincipalFromApi,
+  registerGameAccount,
   saveSlotState,
   saveSlotStateSync,
+  trackTelemetryEvent,
   updateMenuSettings
 } from './storage/gameStorage';
 
@@ -43,6 +54,21 @@ function roundToTenth(value) {
   return Math.round(value * 10) / 10;
 }
 
+function isRemoteTimestampNewer(currentTs, nextTs) {
+  if (!nextTs) {
+    return false;
+  }
+  const nextMs = new Date(nextTs).getTime();
+  if (!Number.isFinite(nextMs)) {
+    return false;
+  }
+  const currentMs = currentTs ? new Date(currentTs).getTime() : 0;
+  if (!Number.isFinite(currentMs)) {
+    return true;
+  }
+  return nextMs > currentMs;
+}
+
 function useToasts() {
   const [toasts, setToasts] = useState([]);
 
@@ -58,10 +84,15 @@ function useToasts() {
 }
 
 export default function App() {
+  const remoteEnabled = isRemoteStorageEnabled();
   const [state, dispatch] = useReducer(gameReducer, createInitialState());
   const [appScreen, setAppScreen] = useState('menu');
   const [menuView, setMenuView] = useState('root');
   const [saveMeta, setSaveMeta] = useState(DEFAULT_MENU_META);
+  const [authPrincipal, setAuthPrincipal] = useState(() => getAuthPrincipal());
+  const [leaderboardData, setLeaderboardData] = useState(null);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState('');
   const [currentSlotId, setCurrentSlotId] = useState(null);
   const [shopTab, setShopTab] = useState('Ulepszenia');
   const [tickCountdown, setTickCountdown] = useState(BASE_TICK_SECONDS);
@@ -73,7 +104,10 @@ export default function App() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [gameVersion, setGameVersion] = useState('dev');
   const stateRef = useRef(state);
+  const remoteSlotUpdatedAtRef = useRef(null);
   const { toasts, pushToast } = useToasts();
+  const oauthGoogleUrl = useMemo(() => getOAuthLoginUrl('google'), [remoteEnabled]);
+  const oauthSteamUrl = useMemo(() => getOAuthLoginUrl('steam'), [remoteEnabled]);
 
   stateRef.current = state;
 
@@ -102,9 +136,43 @@ export default function App() {
     return meta;
   }, []);
 
-  const enterGameWithState = useCallback((nextState, slotId) => {
+  const refreshAuthPrincipal = useCallback(async () => {
+    const principal = await refreshAuthPrincipalFromApi();
+    setAuthPrincipal(principal);
+  }, []);
+
+  const refreshLeaderboard = useCallback(async () => {
+    if (!remoteEnabled) {
+      setLeaderboardData(null);
+      setLeaderboardError('');
+      return;
+    }
+
+    setLeaderboardLoading(true);
+    setLeaderboardError('');
+    try {
+      const [coins, gems, topTier] = await Promise.all([
+        fetchLeaderboardCategory('coins', 10),
+        fetchLeaderboardCategory('gems', 10),
+        fetchLeaderboardCategory('top_tier', 10)
+      ]);
+
+      setLeaderboardData({
+        coins,
+        gems,
+        top_tier: topTier
+      });
+    } catch (_error) {
+      setLeaderboardError('Nie udało się pobrać leaderboarda z serwera');
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  }, [remoteEnabled]);
+
+  const enterGameWithState = useCallback((nextState, slotId, remoteUpdatedAt = null) => {
     dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: nextState, nowTs: Date.now() });
     setCurrentSlotId(slotId);
+    remoteSlotUpdatedAtRef.current = remoteUpdatedAt || null;
     setShopTab('Ulepszenia');
     setTickCountdown(getTickDurationSeconds(nextState));
     setContextMenu(null);
@@ -114,13 +182,13 @@ export default function App() {
 
   const loadSlotAndStart = useCallback(
     async (slotId) => {
-      const loaded = await loadSlotState(slotId);
-      if (!loaded) {
+      const loaded = await loadSlotStateWithMeta(slotId);
+      if (!loaded?.state) {
         pushToast('Nie udało się wczytać zapisu');
         await refreshMenuMeta();
         return;
       }
-      enterGameWithState(loaded, slotId);
+      enterGameWithState(loaded.state, slotId, loaded.updatedAt);
     },
     [enterGameWithState, pushToast, refreshMenuMeta]
   );
@@ -134,7 +202,7 @@ export default function App() {
 
     const result = await saveSlotState({ state: fresh });
     const slotId = result?.slotId || null;
-    enterGameWithState(fresh, slotId);
+    enterGameWithState(fresh, slotId, result?.updatedAt || null);
     await refreshMenuMeta();
   }, [
     enterGameWithState,
@@ -149,19 +217,24 @@ export default function App() {
     let mounted = true;
 
     (async () => {
-      const [meta, version] = await Promise.all([listSaveMeta(), readGameVersion()]);
+      if (remoteEnabled) {
+        hydrateSessionFromOAuthRedirect();
+      }
+
+      const [meta, version, principal] = await Promise.all([listSaveMeta(), readGameVersion(), refreshAuthPrincipalFromApi()]);
       if (!mounted) {
         return;
       }
       setSaveMeta(meta);
       setGameVersion(version);
+      setAuthPrincipal(principal || getAuthPrincipal());
       setIsLoaded(true);
     })();
 
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [remoteEnabled]);
 
   useEffect(() => {
     if (!isLoaded || appScreen !== 'game') {
@@ -212,11 +285,32 @@ export default function App() {
     }
 
     const autosave = setInterval(() => {
-      saveSlotState({ slotId: currentSlotId, state: stateRef.current });
+      (async () => {
+        if (remoteEnabled) {
+          const remoteUpdatedAt = await getRemoteSlotUpdatedAt(currentSlotId);
+          if (isRemoteTimestampNewer(remoteSlotUpdatedAtRef.current, remoteUpdatedAt)) {
+            const latest = await loadSlotStateWithMeta(currentSlotId);
+            if (latest?.state) {
+              remoteSlotUpdatedAtRef.current = latest.updatedAt || remoteUpdatedAt;
+              dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: latest.state, nowTs: Date.now() });
+              setTickCountdown(getTickDurationSeconds(latest.state));
+              pushToast('Save został zaktualizowany na serwerze. Wczytano nowe dane.');
+            }
+            return;
+          }
+        }
+
+        const result = await saveSlotState({ slotId: currentSlotId, state: stateRef.current });
+        if (result?.updatedAt) {
+          remoteSlotUpdatedAtRef.current = result.updatedAt;
+        }
+      })().catch(() => {
+        // ignore transient autosave errors
+      });
     }, AUTOSAVE_SECONDS * 1000);
 
     return () => clearInterval(autosave);
-  }, [appScreen, currentSlotId, isLoaded]);
+  }, [appScreen, currentSlotId, isLoaded, pushToast, remoteEnabled]);
 
   useEffect(() => {
     if (!isLoaded || appScreen !== 'game' || !currentSlotId) {
@@ -242,6 +336,43 @@ export default function App() {
     return () => window.removeEventListener('click', closeMenu);
   }, []);
 
+  useEffect(() => {
+    if (!isLoaded || appScreen !== 'menu' || menuView !== 'ranking') {
+      return;
+    }
+    refreshLeaderboard();
+  }, [appScreen, isLoaded, menuView, refreshLeaderboard]);
+
+  useEffect(() => {
+    if (!remoteEnabled || !isLoaded || appScreen !== 'game' || !currentSlotId) {
+      return undefined;
+    }
+
+    const remoteRefresh = setInterval(() => {
+      getRemoteSlotUpdatedAt(currentSlotId)
+        .then(async (remoteUpdatedAt) => {
+          if (!isRemoteTimestampNewer(remoteSlotUpdatedAtRef.current, remoteUpdatedAt)) {
+            return;
+          }
+
+          const latest = await loadSlotStateWithMeta(currentSlotId);
+          if (!latest?.state) {
+            return;
+          }
+
+          remoteSlotUpdatedAtRef.current = latest.updatedAt || remoteUpdatedAt;
+          dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: latest.state, nowTs: Date.now() });
+          setTickCountdown(getTickDurationSeconds(latest.state));
+          pushToast('Wykryto zmiany save na serwerze. Odświeżono stan gry.');
+        })
+        .catch(() => {
+          // ignore polling errors
+        });
+    }, 6000);
+
+    return () => clearInterval(remoteRefresh);
+  }, [appScreen, currentSlotId, isLoaded, pushToast, remoteEnabled]);
+
   if (!isLoaded) {
     return <div className="app-shell flex items-center justify-center">Ładowanie...</div>;
   }
@@ -266,6 +397,7 @@ export default function App() {
           onOpenLoad={() => setMenuView('load')}
           onOpenRanking={() => setMenuView('ranking')}
           onOpenSettings={() => setMenuView('settings')}
+          onOpenAccount={() => setMenuView('account')}
           onExit={async () => {
             await quitGameApp();
           }}
@@ -298,6 +430,35 @@ export default function App() {
               }
             }));
           }}
+          isRemoteEnabled={remoteEnabled}
+          principal={authPrincipal}
+          leaderboardData={leaderboardData}
+          leaderboardLoading={leaderboardLoading}
+          leaderboardError={leaderboardError}
+          onRefreshLeaderboard={refreshLeaderboard}
+          onLoginAccount={async ({ email, password }) => {
+            await loginGameAccount({ email, password });
+            await refreshAuthPrincipal();
+            await refreshMenuMeta();
+            trackTelemetryEvent('auth_login', { method: 'password' });
+            pushToast('Zalogowano');
+          }}
+          onRegisterAccount={async ({ email, password, displayName }) => {
+            await registerGameAccount({ email, password, displayName });
+            await refreshAuthPrincipal();
+            await refreshMenuMeta();
+            trackTelemetryEvent('auth_register', { method: 'password' });
+            pushToast('Konto utworzone');
+          }}
+          onLogoutAccount={async () => {
+            await logoutGameAccount();
+            await refreshAuthPrincipal();
+            await refreshMenuMeta();
+            trackTelemetryEvent('auth_logout');
+            pushToast('Wylogowano');
+          }}
+          oauthGoogleUrl={oauthGoogleUrl}
+          oauthSteamUrl={oauthSteamUrl}
         />
         <p className="mt-4 text-xs text-slate-500">Wersja gry: {gameVersion}</p>
       </main>
@@ -337,7 +498,10 @@ export default function App() {
     setTickCountdown(getTickDurationSeconds(fresh));
 
     if (currentSlotId) {
-      await saveSlotState({ slotId: currentSlotId, state: fresh });
+      const saved = await saveSlotState({ slotId: currentSlotId, state: fresh });
+      if (saved?.updatedAt) {
+        remoteSlotUpdatedAtRef.current = saved.updatedAt;
+      }
       await refreshMenuMeta();
     }
 
@@ -349,6 +513,7 @@ export default function App() {
       await saveSlotState({ slotId: currentSlotId, state: stateRef.current });
       await refreshMenuMeta();
     }
+    remoteSlotUpdatedAtRef.current = null;
     setModeMenuOpen(false);
     setSystemMenuOpen(false);
     setMenuView('root');
@@ -359,6 +524,7 @@ export default function App() {
     if (currentSlotId) {
       await saveSlotState({ slotId: currentSlotId, state: stateRef.current });
     }
+    remoteSlotUpdatedAtRef.current = null;
     setModeMenuOpen(false);
     setSystemMenuOpen(false);
     await quitGameApp();

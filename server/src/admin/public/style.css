@@ -1,0 +1,90 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, system-ui, sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+body {
+  margin: 0;
+  background: #020617;
+}
+
+.shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+
+.card {
+  border: 1px solid #334155;
+  border-radius: 12px;
+  background: #0f172a;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.hidden {
+  display: none;
+}
+
+form,
+.toolbar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+input,
+button,
+textarea {
+  border: 1px solid #475569;
+  border-radius: 8px;
+  background: #0b1221;
+  color: #e2e8f0;
+  padding: 0.5rem 0.6rem;
+}
+
+textarea {
+  width: 100%;
+  min-height: 180px;
+}
+
+button {
+  cursor: pointer;
+}
+
+.panel {
+  background: #020617;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 0.75rem;
+  white-space: pre-wrap;
+}
+
+.error {
+  color: #fda4af;
+  min-height: 1.2rem;
+}
+
+.user-row {
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.user-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fox Evolution Admin</title>
+    <link rel="stylesheet" href="/admin/style.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <h1>Fox Evolution Admin</h1>
+
+      <section class="card" id="login-card">
+        <h2>Admin Login</h2>
+        <form id="login-form">
+          <label>Email <input type="email" id="email" required /></label>
+          <label>Password <input type="password" id="password" required /></label>
+          <button type="submit">Log in</button>
+        </form>
+        <p id="login-error" class="error"></p>
+      </section>
+
+      <section class="card hidden" id="dashboard-card">
+        <div class="toolbar">
+          <h2>Dashboard</h2>
+          <button id="logout-btn">Log out</button>
+        </div>
+
+        <div id="overview"></div>
+
+        <h3>Users</h3>
+        <div class="toolbar">
+          <input id="search" placeholder="Search by email/display name" />
+          <button id="search-btn">Search</button>
+        </div>
+        <div id="users"></div>
+
+        <h3>User Details</h3>
+        <pre id="user-details" class="panel">Select user</pre>
+
+        <h3>Save Editor</h3>
+        <div class="toolbar">
+          <input id="save-id" placeholder="Save ID" />
+          <button id="load-save-btn">Load save</button>
+        </div>
+        <label>
+          Save name
+          <input id="save-name" />
+        </label>
+        <label>
+          Save state JSON
+          <textarea id="save-state" rows="10"></textarea>
+        </label>
+        <button id="save-save-btn">Update save (admin)</button>
+        <p id="save-editor-msg" class="error"></p>
+
+        <h3>Audit Logs</h3>
+        <pre id="audit-logs" class="panel">Loading...</pre>
+
+        <h3>Telemetry (30 dni)</h3>
+        <pre id="telemetry-stats" class="panel">Loading...</pre>
+      </section>
+    </main>
+
+    <script src="/admin/app.js"></script>
+  </body>
+</html>

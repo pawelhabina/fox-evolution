@@ -6,8 +6,10 @@ Desktopowa, offline'owa gra merge/clicker.
 - Electron (main + preload + IPC)
 - React + Vite + Tailwind CSS
 - JavaScript (bez TypeScript)
-- Persistencja: pliki JSON slotów save w `app.getPath('userData')/saves`
-- Fallback poza Electronem: `localStorage`
+- API backend (opcjonalnie): Express + MySQL + Prisma (`server/`)
+- Persistencja:
+  - tryb online: save po API (konto lub urządzenie),
+  - fallback lokalny: pliki JSON slotów save w `app.getPath('userData')/saves` lub `localStorage`.
 
 ## Uruchomienie
 Wymagania: Node.js 18+
@@ -16,6 +18,33 @@ Wymagania: Node.js 18+
 npm install
 npm run dev
 ```
+
+## Tryb online (server authoritative save)
+1. Skonfiguruj i uruchom backend:
+
+```bash
+cd server
+npm install
+cp .env.example .env
+npm run prisma:generate
+npm run prisma:push
+npm run seed:admin
+npm run dev
+```
+
+2. W root ustaw endpoint API dla frontendu:
+
+```bash
+VITE_API_BASE_URL=http://localhost:4000 npm run dev
+```
+
+3. Opcjonalnie uruchom wszystko jedną komendą:
+
+```bash
+npm run dev:all
+```
+
+Szczegóły backendu: [server/README.md](/Users/pravel9/Documents/fox-evolution/server/README.md)
 
 ## Build
 ```bash
@@ -78,20 +107,38 @@ Rebirth zachowuje:
 Podgląd tokenów jest liczony z liczby Mega Foxów i lifetime coins (`Sklep > Rebirth`).
 
 ## Zapis stanu
-- Każdy zapis to osobny plik JSON slotu (`/saves/<slotId>.json`).
-- Metadane slotów i ustawień menu są w `/saves/meta.json`.
+- Tryb online (`VITE_API_BASE_URL` ustawione):
+  - save idzie przez `/api/game/saves/:slotId`,
+  - gość ma save przypisany do urządzenia,
+  - konto ma save w chmurze i multi-device,
+  - max 5 slotów na właściciela.
+- Tryb lokalny (fallback):
+  - pliki JSON slotów (`/saves/<slotId>.json`) + `/saves/meta.json`,
+  - poza Electronem: `localStorage`.
 - Autosave co 10s do aktualnego slotu.
-- Save na zamknięcie (`beforeunload`, sync IPC).
 - `Hard reset` resetuje stan aktualnego slotu.
+
+## Konto, leaderboard, anti-cheat
+- Konto: email+hasło, OAuth (Google/Steam - gdy skonfigurowane w backendzie), sesja gościa po `deviceId`.
+- Leaderboard globalny: `coins`, `gems`, `top_tier`.
+- Leaderboard obejmuje tylko konta zalogowane (goście nie są publikowani).
+- Top 10 + pozycja zalogowanego gracza.
+- Anti-cheat: heurystyki po stronie serwera przy zapisie; podejrzane konta/urządzenia są flagowane i usuwane z leaderboarda.
+
+## Panel admina
+- URL: `http://localhost:4000/admin`
+- Dostęp tylko dla roli `ADMIN`.
+- Funkcje: statystyki, przegląd użytkowników, flag/unflag, audit log, edycja save po stronie serwera (bez auto-flagowania).
 
 ## Struktura projektu
 - `electron/main.js` - okno, IPC, zapis JSON
 - `electron/preload.js` - bezpieczne API do renderera
+- `server/` - backend API (auth/save/leaderboard/admin/telemetry)
 - `src/game/constants.js` - dane tierów, questów, upgradeów
 - `src/game/economy.js` - koszty, mnożniki, balans
 - `src/game/quests.js` - daily/weekly + resety czasu
 - `src/game/reducer.js` - logika gry
-- `src/storage/*` - inicjalny stan + load/save/sanitize
+- `src/storage/*` - inicjalny stan + load/save/sanitize + sesja API
 - `src/components/*` - HUD, arena, sklep, context menu, modal, toasty
 - `assets/*` - placeholdery pod docelowe assety
 
