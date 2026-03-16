@@ -28,6 +28,13 @@ function toUiNumber(value) {
   return clampCurrency(num);
 }
 
+function getUiVersionFallback() {
+  if (typeof __APP_VERSION__ === 'string' && __APP_VERSION__) {
+    return __APP_VERSION__;
+  }
+  return 'dev';
+}
+
 function getBridge() {
   if (typeof window === 'undefined') {
     return null;
@@ -666,7 +673,7 @@ export async function readGameVersion() {
   if (bridge?.getVersion) {
     return bridge.getVersion();
   }
-  return 'dev';
+  return getUiVersionFallback();
 }
 
 export async function readUpdateState() {
