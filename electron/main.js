@@ -1,7 +1,13 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
-const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
+
+let autoUpdater = null;
+try {
+  ({ autoUpdater } = require('electron-updater'));
+} catch (error) {
+  console.warn('electron-updater is not available in this build:', error?.message || error);
+}
 
 let mainWindow;
 let updateCheckInterval = null;
@@ -132,7 +138,7 @@ function setUpdaterState(partial) {
 }
 
 async function checkForUpdates() {
-  if (!updaterInitialized || !updaterState.enabled) {
+  if (!updaterInitialized || !updaterState.enabled || !autoUpdater) {
     return { ...updaterState };
   }
 
@@ -156,6 +162,15 @@ function initAutoUpdater() {
     return;
   }
   updaterInitialized = true;
+
+  if (!autoUpdater) {
+    setUpdaterState({
+      enabled: false,
+      status: 'disabled',
+      message: 'Brak electron-updater w buildzie - aktualizacje wyłączone'
+    });
+    return;
+  }
 
   if (!app.isPackaged) {
     setUpdaterState({
@@ -406,7 +421,7 @@ app.whenReady().then(() => {
   ipcMain.handle('app:update:state', () => ({ ...updaterState }));
   ipcMain.handle('app:update:check', async () => checkForUpdates());
   ipcMain.handle('app:update:install', async () => {
-    if (updaterState.status !== 'downloaded') {
+    if (!autoUpdater || updaterState.status !== 'downloaded') {
       return false;
     }
     setImmediate(() => {
