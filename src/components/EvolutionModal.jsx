@@ -15,7 +15,7 @@ export default function EvolutionModal({ fox, currentGems, onSelect, onClose }) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-4">
+      <div className="pixel-frame w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-4">
         <h3 className="text-lg font-bold text-amber-300">Wybierz ewolucję Mega Foxa</h3>
         <p className="mt-1 text-sm text-slate-400">Ta decyzja jest permanentna dla tego lisa.</p>
         <p className="mt-1 text-xs text-slate-300">

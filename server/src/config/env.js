@@ -40,7 +40,7 @@ export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port,
   apiBaseUrl,
-  corsOrigins: unique(parseCsv(process.env.CORS_ORIGIN || `http://localhost:5173,${apiOrigin}`)),
+  corsOrigins: unique(parseCsv(process.env.CORS_ORIGIN || `http://localhost:5173,http://127.0.0.1:5173,${apiOrigin}`)),
   databaseUrl: required('DATABASE_URL'),
   jwtAccessSecret: required('JWT_ACCESS_SECRET', 'dev-access-secret'),
   jwtRefreshSecret: required('JWT_REFRESH_SECRET', 'dev-refresh-secret'),

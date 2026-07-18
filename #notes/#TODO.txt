@@ -5,6 +5,8 @@
 5. minigames
 6. bossy
 7. inne krainy
+8. ekwipunek (możliwość chowania lisów z planszy, tymczasowe bonusy jako potki w eq)
+9 przebudowa ui/ux (o wiele mniejszy interfejs samej gry)
 
 Funkcje sieciowe:
 - achievements

@@ -9,7 +9,15 @@ import MainMenu from './components/MainMenu';
 import SettingsModal from './components/SettingsModal';
 import ShopPanel from './components/ShopPanel';
 import ToastStack from './components/ToastStack';
-import { AUTOSAVE_SECONDS, BASE_TICK_SECONDS, EVOLUTION_COST_GEMS, TEMP_BOOST_DEFS, TEMP_BOOST_DURATION_BY_ID } from './game/constants';
+import {
+  AUTOSAVE_SECONDS,
+  BASE_MAX_TIER,
+  BASE_TICK_SECONDS,
+  EVOLUTION_COST_GEMS,
+  MAX_TIER,
+  TEMP_BOOST_DEFS,
+  TEMP_BOOST_DURATION_BY_ID
+} from './game/constants';
 import { formatNumber } from './game/format';
 import { getBuyFoxCost, getExpectedCoinsPerSecond, getFoxLimit, getRebirthTokensEarned, getTickDurationSeconds } from './game/economy';
 import { gameReducer, ACTIONS, getFoxInfoForMenu } from './game/reducer';
@@ -162,6 +170,7 @@ export default function App() {
   const [contextMenu, setContextMenu] = useState(null);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const [systemMenuOpen, setSystemMenuOpen] = useState(false);
+  const [shopCollapsed, setShopCollapsed] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [evolutionTargetId, setEvolutionTargetId] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -282,12 +291,17 @@ export default function App() {
     fresh.settings.musicVolume = Number.isFinite(saveMeta.settings.defaultMusicVolume) ? saveMeta.settings.defaultMusicVolume : fresh.settings.musicVolume;
     fresh.settings.sfxVolume = Number.isFinite(saveMeta.settings.defaultSfxVolume) ? saveMeta.settings.defaultSfxVolume : fresh.settings.sfxVolume;
 
-    const result = await saveSlotState({ state: fresh });
-    const slotId = result?.slotId || null;
-    enterGameWithState(fresh, slotId, result?.updatedAt || null);
-    await refreshMenuMeta();
+    try {
+      const result = await saveSlotState({ state: fresh });
+      const slotId = result?.slotId || null;
+      enterGameWithState(fresh, slotId, result?.updatedAt || null);
+      await refreshMenuMeta();
+    } catch (_error) {
+      pushToast('Nie udało się utworzyć zapisu gry');
+    }
   }, [
     enterGameWithState,
+    pushToast,
     refreshMenuMeta,
     saveMeta.settings.defaultAnimations,
     saveMeta.settings.defaultMusicVolume,
@@ -606,9 +620,23 @@ export default function App() {
       return;
     }
     if (source.tier !== target.tier) {
-      return;
+      return false;
     }
+
+    const sourceEvolution = source.evolution || null;
+    const targetEvolution = target.evolution || null;
+    const bothNonEvolved = !sourceEvolution && !targetEvolution;
+    const bothSameElement = sourceEvolution && sourceEvolution === targetEvolution;
+
+    if ((!bothNonEvolved && !bothSameElement) || (bothNonEvolved && target.tier >= BASE_MAX_TIER) || (bothSameElement && target.tier >= MAX_TIER)) {
+      return false;
+    }
+
     dispatch({ type: ACTIONS.MERGE_FOXES, sourceId, targetId, nowTs: Date.now() });
+    return {
+      tier: target.tier + 1,
+      evolution: bothSameElement ? targetEvolution : null
+    };
   };
 
   const handleHardReset = async () => {
@@ -653,7 +681,7 @@ export default function App() {
   };
 
   return (
-    <main className="app-shell flex h-screen flex-col overflow-hidden p-4 pb-24">
+    <main className="app-shell game-screen flex h-screen flex-col overflow-hidden">
       <UpdateOverlay updateState={updateState} onInstall={installUpdateNow} onCheck={checkForUpdatesNow} />
       <Hud
         coins={state.currencies.coins}
@@ -675,7 +703,7 @@ export default function App() {
 
       {modeMenuOpen && (
         <div
-          className="fixed left-5 top-24 z-40 w-64 rounded-xl border border-slate-700 bg-slate-900/95 p-3 shadow-2xl"
+          className="pixel-frame fixed left-5 top-24 z-40 w-64 rounded-xl border border-slate-700 bg-slate-900/95 p-3 shadow-2xl"
           onClick={(event) => event.stopPropagation()}
         >
           <p className="mb-2 flex items-center gap-2 text-sm font-bold text-amber-300">
@@ -721,7 +749,7 @@ export default function App() {
 
       {systemMenuOpen && (
         <div
-          className="fixed right-5 top-24 z-40 w-64 rounded-xl border border-slate-700 bg-slate-900/95 p-3 shadow-2xl"
+          className="pixel-frame fixed right-5 top-24 z-40 w-64 rounded-xl border border-slate-700 bg-slate-900/95 p-3 shadow-2xl"
           onClick={(event) => event.stopPropagation()}
         >
           <p className="mb-2 flex items-center gap-2 text-sm font-bold text-amber-300">
@@ -755,7 +783,7 @@ export default function App() {
         </div>
       )}
 
-      <div className="mt-4 flex min-h-0 flex-1 gap-4">
+      <div className={`game-workspace min-h-0 flex-1 ${shopCollapsed ? 'shop-is-collapsed' : ''}`}>
         <Arena
           foxes={state.foxes}
           arenaWidth={state.arena.width}
@@ -781,79 +809,86 @@ export default function App() {
               y: Math.min(event.clientY, window.innerHeight - menuHeight)
             });
           }}
+          buyCost={buyCost}
+          canBuyFox={state.currencies.coins >= buyCost && state.foxes.length < foxLimit}
+          onBuyFox={buyFox}
         />
 
-        <ShopPanel
-          activeTab={shopTab}
-          onChangeTab={setShopTab}
-          state={state}
-          dailyResetInSeconds={resetCountdowns.dailyResetInSeconds}
-          weeklyResetInSeconds={resetCountdowns.weeklyResetInSeconds}
-          rebirthPreview={rebirthPreview}
-          onBuyUpgrade={(upgradeId) => {
-            dispatch({ type: ACTIONS.BUY_UPGRADE, upgradeId, nowTs: Date.now() });
-          }}
-          onBuyTemporaryBoost={(boostId, durationId) => {
-            const boost = TEMP_BOOST_DEFS[boostId];
-            const duration = TEMP_BOOST_DURATION_BY_ID[durationId];
-            if (!boost || !duration) {
-              return;
-            }
-            if (state.currencies.gems < duration.cost) {
-              pushToast('Brakuje diamentow');
-              return;
-            }
-            dispatch({ type: ACTIONS.BUY_TEMP_BOOST, boostId, durationId, nowTs: Date.now() });
-            pushToast(`${boost.title}: +${duration.label}`);
-          }}
-          onBuyInstantCash={(durationId) => {
-            const duration = TEMP_BOOST_DURATION_BY_ID[durationId];
-            if (!duration) {
-              return;
-            }
-            if (state.currencies.gems < duration.cost) {
-              pushToast('Brakuje diamentow');
-              return;
-            }
-            const instantCoins = Math.floor(getExpectedCoinsPerSecond(state) * duration.seconds);
-            if (instantCoins <= 0) {
-              pushToast('Brak pasywnego income do Instant Cash');
-              return;
-            }
-            dispatch({ type: ACTIONS.BUY_INSTANT_CASH, durationId, nowTs: Date.now() });
-            pushToast(`Instant Cash: +${formatNumber(instantCoins)} coins`);
-          }}
-          onRebirth={() => {
-            if (rebirthPreview <= 0) {
-              pushToast('Potrzebujesz co najmniej 1 Mega Foxa');
-              return;
-            }
-            dispatch({ type: ACTIONS.REBIRTH, nowTs: Date.now() });
-            setTickCountdown(tickDuration);
-            pushToast(`Rebirth udany. +${rebirthPreview} tokens`);
-          }}
-          onClaimQuest={(questId) => {
-            dispatch({ type: ACTIONS.CLAIM_DAILY, questId, nowTs: Date.now() });
-          }}
-          onClaimWeekly={(questId) => {
-            dispatch({ type: ACTIONS.CLAIM_WEEKLY, questId, nowTs: Date.now() });
-          }}
-          onClaimLoginReward={() => {
-            dispatch({ type: ACTIONS.CLAIM_LOGIN_REWARD, nowTs: Date.now() });
-          }}
-        />
-      </div>
-
-      <div className="pointer-events-none fixed bottom-4 left-1/2 z-30 -translate-x-1/2">
-        <button
-          type="button"
-          className="primary-btn pointer-events-auto flex items-center gap-2 text-xl"
-          onClick={buyFox}
-          title={`Koszt: ${formatNumber(buyCost)} coins`}
-        >
-          <GuiIcon name="pet" alt="Kup lisa" size={18} />
-          Kup lisa ({formatNumber(buyCost)} coins)
-        </button>
+        <div className="shop-region">
+          {shopCollapsed ? (
+            <button
+              type="button"
+              className="shop-open-rail"
+              onClick={() => setShopCollapsed(false)}
+              title="Otwórz centrum rozwoju"
+              aria-label="Otwórz centrum rozwoju"
+            >
+              <GuiIcon name="upgrade" alt="" size={24} />
+              <span>Sklep</span>
+            </button>
+          ) : (
+            <ShopPanel
+              activeTab={shopTab}
+              onChangeTab={setShopTab}
+              state={state}
+              dailyResetInSeconds={resetCountdowns.dailyResetInSeconds}
+              weeklyResetInSeconds={resetCountdowns.weeklyResetInSeconds}
+              rebirthPreview={rebirthPreview}
+              onCollapse={() => setShopCollapsed(true)}
+              onBuyUpgrade={(upgradeId) => {
+                dispatch({ type: ACTIONS.BUY_UPGRADE, upgradeId, nowTs: Date.now() });
+              }}
+              onBuyTemporaryBoost={(boostId, durationId) => {
+                const boost = TEMP_BOOST_DEFS[boostId];
+                const duration = TEMP_BOOST_DURATION_BY_ID[durationId];
+                if (!boost || !duration) {
+                  return;
+                }
+                if (state.currencies.gems < duration.cost) {
+                  pushToast('Brakuje diamentow');
+                  return;
+                }
+                dispatch({ type: ACTIONS.BUY_TEMP_BOOST, boostId, durationId, nowTs: Date.now() });
+                pushToast(`${boost.title}: +${duration.label}`);
+              }}
+              onBuyInstantCash={(durationId) => {
+                const duration = TEMP_BOOST_DURATION_BY_ID[durationId];
+                if (!duration) {
+                  return;
+                }
+                if (state.currencies.gems < duration.cost) {
+                  pushToast('Brakuje diamentow');
+                  return;
+                }
+                const instantCoins = Math.floor(getExpectedCoinsPerSecond(state) * duration.seconds);
+                if (instantCoins <= 0) {
+                  pushToast('Brak pasywnego income do Instant Cash');
+                  return;
+                }
+                dispatch({ type: ACTIONS.BUY_INSTANT_CASH, durationId, nowTs: Date.now() });
+                pushToast(`Instant Cash: +${formatNumber(instantCoins)} coins`);
+              }}
+              onRebirth={() => {
+                if (rebirthPreview <= 0) {
+                  pushToast('Potrzebujesz co najmniej 1 Mega Foxa');
+                  return;
+                }
+                dispatch({ type: ACTIONS.REBIRTH, nowTs: Date.now() });
+                setTickCountdown(tickDuration);
+                pushToast(`Rebirth udany. +${rebirthPreview} tokens`);
+              }}
+              onClaimQuest={(questId) => {
+                dispatch({ type: ACTIONS.CLAIM_DAILY, questId, nowTs: Date.now() });
+              }}
+              onClaimWeekly={(questId) => {
+                dispatch({ type: ACTIONS.CLAIM_WEEKLY, questId, nowTs: Date.now() });
+              }}
+              onClaimLoginReward={() => {
+                dispatch({ type: ACTIONS.CLAIM_LOGIN_REWARD, nowTs: Date.now() });
+              }}
+            />
+          )}
+        </div>
       </div>
 
       <FoxContextMenu

@@ -388,18 +388,7 @@ export async function listSaveMeta() {
   return loadLocalMeta();
 }
 
-export async function loadSlotState(slotId) {
-  if (isRemoteApiEnabled()) {
-    try {
-      await ensureGuestSession();
-      const payload = await apiRequest(`/api/game/saves/${encodeURIComponent(slotId)}`);
-      const normalized = normalizeRemoteSaveResponse(payload);
-      return normalized?.state || null;
-    } catch (_error) {
-      return null;
-    }
-  }
-
+async function loadLocalSlotState(slotId) {
   const bridge = getBridge();
   if (bridge?.loadSlot) {
     const loaded = await bridge.loadSlot(slotId);
@@ -421,35 +410,54 @@ export async function loadSlotState(slotId) {
   }
 }
 
+export async function loadSlotState(slotId) {
+  if (isRemoteApiEnabled()) {
+    try {
+      await ensureGuestSession();
+      const payload = await apiRequest(`/api/game/saves/${encodeURIComponent(slotId)}`);
+      const normalized = normalizeRemoteSaveResponse(payload);
+      return normalized?.state || null;
+    } catch (_error) {
+      // fall through to the Electron/local save when the API is unavailable
+    }
+  }
+
+  return loadLocalSlotState(slotId);
+}
+
 export async function saveSlotState({ slotId, state, name }) {
   if (isRemoteApiEnabled()) {
-    await ensureGuestSession();
-    const effectiveSlotId = slotId || makeLocalSlotId();
-    const payload = await apiRequest(`/api/game/saves/${encodeURIComponent(effectiveSlotId)}`, {
-      method: 'PUT',
-      body: {
-        name,
-        state
-      }
-    });
+    try {
+      await ensureGuestSession();
+      const effectiveSlotId = slotId || makeLocalSlotId();
+      const payload = await apiRequest(`/api/game/saves/${encodeURIComponent(effectiveSlotId)}`, {
+        method: 'PUT',
+        body: {
+          name,
+          state
+        }
+      });
 
-    sendTelemetryEvents([
-      {
-        eventType: 'save_upsert',
-        payload: { slotId: effectiveSlotId }
-      }
-    ]);
+      sendTelemetryEvents([
+        {
+          eventType: 'save_upsert',
+          payload: { slotId: effectiveSlotId }
+        }
+      ]);
 
-    const localMeta = loadLocalMeta();
-    writeLocalMeta({
-      ...localMeta,
-      lastPlayedSlotId: effectiveSlotId
-    });
+      const localMeta = loadLocalMeta();
+      writeLocalMeta({
+        ...localMeta,
+        lastPlayedSlotId: effectiveSlotId
+      });
 
-    return {
-      slotId: payload?.save?.slotId || effectiveSlotId,
-      updatedAt: payload?.save?.updatedAt || null
-    };
+      return {
+        slotId: payload?.save?.slotId || effectiveSlotId,
+        updatedAt: payload?.save?.updatedAt || null
+      };
+    } catch (_error) {
+      // The desktop game remains playable offline and stores the save locally.
+    }
   }
 
   const bridge = getBridge();
@@ -490,11 +498,11 @@ export async function loadSlotStateWithMeta(slotId) {
       const payload = await apiRequest(`/api/game/saves/${encodeURIComponent(slotId)}`);
       return normalizeRemoteSaveResponse(payload);
     } catch (_error) {
-      return null;
+      // fall through to the Electron/local save when the API is unavailable
     }
   }
 
-  const state = await loadSlotState(slotId);
+  const state = await loadLocalSlotState(slotId);
   if (!state) {
     return null;
   }
@@ -521,12 +529,6 @@ export async function getRemoteSlotUpdatedAt(slotId) {
 }
 
 export function saveSlotStateSync({ slotId, state, name }) {
-  if (isRemoteApiEnabled()) {
-    // No reliable synchronous network call in browser/electron renderer.
-    // Regular autosave still uses async remote save calls.
-    return { slotId: slotId || null };
-  }
-
   const bridge = getBridge();
   if (bridge?.saveSlotSync) {
     return bridge.saveSlotSync({ slotId, state, name });
@@ -575,17 +577,21 @@ export async function updateMenuSettings(settings) {
 
 export async function deleteSlot(slotId) {
   if (isRemoteApiEnabled()) {
-    await ensureGuestSession();
-    await apiRequest(`/api/game/saves/${encodeURIComponent(slotId)}`, {
-      method: 'DELETE'
-    });
+    try {
+      await ensureGuestSession();
+      await apiRequest(`/api/game/saves/${encodeURIComponent(slotId)}`, {
+        method: 'DELETE'
+      });
 
-    const meta = loadLocalMeta();
-    writeLocalMeta({
-      ...meta,
-      lastPlayedSlotId: meta.lastPlayedSlotId === slotId ? null : meta.lastPlayedSlotId
-    });
-    return true;
+      const meta = loadLocalMeta();
+      writeLocalMeta({
+        ...meta,
+        lastPlayedSlotId: meta.lastPlayedSlotId === slotId ? null : meta.lastPlayedSlotId
+      });
+      return true;
+    } catch (_error) {
+      // fall through to the Electron/local save when the API is unavailable
+    }
   }
 
   const bridge = getBridge();
@@ -617,8 +623,12 @@ export async function refreshAuthPrincipalFromApi() {
   if (!isRemoteApiEnabled()) {
     return getCurrentPrincipal();
   }
-  const principal = await fetchMe();
-  return principal || getCurrentPrincipal();
+  try {
+    const principal = await fetchMe();
+    return principal || getCurrentPrincipal();
+  } catch (_error) {
+    return getCurrentPrincipal();
+  }
 }
 
 export async function registerGameAccount({ email, password, displayName }) {

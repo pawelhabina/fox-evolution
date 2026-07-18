@@ -4,7 +4,10 @@ const PRINCIPAL_KEY = 'fox-api-principal';
 const DEVICE_ID_KEY = 'fox-api-device-id';
 
 function getApiBaseUrl() {
-  return String(import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '');
+  return String(import.meta.env.VITE_API_BASE_URL || '')
+    .trim()
+    .replace(/\/api\/?$/, '')
+    .replace(/\/$/, '');
 }
 
 export function isRemoteApiEnabled() {
@@ -151,13 +154,19 @@ async function rawApiRequest(path, { method = 'GET', body, headers = {}, auth = 
     requestHeaders.Authorization = `Bearer ${session.accessToken}`;
   }
 
-  const response = await fetch(`${apiBase}${path}`, {
-    method,
-    headers: requestHeaders,
-    body: body === undefined ? undefined : JSON.stringify(body)
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-  return response;
+  try {
+    return await fetch(`${apiBase}${path}`, {
+      method,
+      headers: requestHeaders,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 async function refreshAccessToken() {

@@ -1,8 +1,5 @@
-# Assets placeholders
+# Assets
 
-Struktura przygotowana pod docelowe assety:
 - `assets/icons` - ikony aplikacji i HUD
-- `assets/sprites` - sprite'y lisów
+- `assets/sprites/foxes` - przezroczyste sprite'y 64x64 dla 15 tierów oraz trzech ewolucji żywiołowych
 - `assets/sounds` - efekty dźwiękowe
-
-Aktualnie gra używa placeholderów emoji w UI.

@@ -214,34 +214,40 @@ export default function ShopPanel({
   onRebirth,
   onClaimQuest,
   onClaimWeekly,
-  onClaimLoginReward
+  onClaimLoginReward,
+  onCollapse
 }) {
   const loginInfo = getTodayLoginRewardInfo(state);
   const { coins, gems, rebirth } = getUpgradeGroups();
   const temporaryBoosts = Object.values(TEMP_BOOST_DEFS);
 
   return (
-    <aside className="panel flex h-full w-full min-h-0 max-w-sm min-w-[320px] flex-col">
-      <h2 className="mb-3 flex items-center gap-2 text-lg font-black text-amber-300">
-        <GuiIcon name="upgrade" alt="Sklep" size={18} />
-        Sklep
-      </h2>
+    <aside className="shop-panel ui-panel-frame flex h-full w-full min-h-0 flex-col">
+      <div className="shop-heading">
+        <h2 className="flex items-center gap-2 font-black text-amber-300">
+          <GuiIcon name="upgrade" alt="Sklep" size={20} />
+          Centrum rozwoju
+        </h2>
+        <button type="button" className="shop-collapse-btn" onClick={onCollapse} title="Zwiń sklep" aria-label="Zwiń sklep">
+          <span aria-hidden="true">›</span>
+        </button>
+      </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="shop-tabs">
         {TABS.map((tab) => (
           <button
             key={tab}
             type="button"
-            className={`shop-tab ${activeTab === tab ? 'active' : ''}`}
+            className={`shop-tab shop-tab--compact ${activeTab === tab ? 'active' : ''}`}
             onClick={() => onChangeTab(tab)}
           >
-            <GuiIcon name={TAB_ICONS[tab]} alt={tab} className="mr-2" />
-            {tab}
+            <GuiIcon name={TAB_ICONS[tab]} alt="" size={18} />
+            <span>{tab}</span>
           </button>
         ))}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+      <div className="shop-scroll min-h-0 flex-1 overflow-y-auto pr-1">
         {activeTab === 'Ulepszenia' && (
           <div className="space-y-4 pb-2">
             <UpgradeSection title="Ulepszenia za monety" iconName="coin" accentClass="text-amber-200" upgrades={coins} state={state} onBuyUpgrade={onBuyUpgrade} />

@@ -11,7 +11,7 @@ export default function SettingsModal({ isOpen, settings, gameVersion, onToggleS
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-4" onClick={(event) => event.stopPropagation()}>
+      <div className="pixel-frame w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-4" onClick={(event) => event.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between">
           <h3 className="flex items-center gap-2 text-lg font-bold text-amber-300">
             <GuiIcon name="settings" alt="Ustawienia" size={18} />

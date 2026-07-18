@@ -76,7 +76,10 @@ export default function Hud({ coins, gems, rebirthTokens, coinsPerSecond, countd
           <div key={stat.id} className="hud-stat" tabIndex={0} aria-label={`${stat.label}: ${stat.value}`}>
             <div className="hud-stat-main">
               <GuiIcon name={stat.icon} alt={stat.label} size={26} className="hud-stat-icon" />
-              <span className={`hud-stat-value ${stat.tone}`}>{stat.value}</span>
+              <span className="min-w-0">
+                <span className="hud-stat-label">{stat.label}</span>
+                <span className={`hud-stat-value ${stat.tone}`}>{stat.value}</span>
+              </span>
             </div>
             <span className="hud-tooltip" role="tooltip">
               {stat.description}
