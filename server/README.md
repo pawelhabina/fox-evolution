@@ -61,6 +61,9 @@ Typowy flow:
 - `POST /api/auth/link-device`
 - `GET /api/auth/oauth/google/start`
 - `GET /api/auth/oauth/steam/start`
+- `POST /api/auth/oauth/exchange`
+- `GET /api/downloads/windows/latest`
+- `GET /download/windows`
 - `GET /api/game/saves`
 - `GET /api/game/saves/:slotId`
 - `PUT /api/game/saves/:slotId`
@@ -100,5 +103,10 @@ Możliwości:
 - edycja save bez flagowania konta.
 
 ## OAuth
-Skonfiguruj zmienne `GOOGLE_*` i `STEAM_*` w `.env`.
-Bez konfiguracji endpointy OAuth zwracają `..._NOT_CONFIGURED`.
+Skonfiguruj zmienne `GOOGLE_*` oraz `STEAM_REALM` i `STEAM_RETURN_URL` w `.env`.
+Logowanie Steam używa OpenID 2.0 i nie wymaga klucza Steam Web API. Bez wymaganej
+konfiguracji endpointy OAuth zwracają `..._NOT_CONFIGURED`.
+
+Aplikacja desktopowa uruchamia logowanie w zewnętrznej przeglądarce i wraca przez
+`fox-evolution://oauth/callback`. Serwer wymienia jednorazowy kod zabezpieczony PKCE
+na tokeny sesji; tokeny nie są umieszczane w adresie callbacku.

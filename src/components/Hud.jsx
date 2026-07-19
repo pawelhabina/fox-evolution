@@ -13,7 +13,7 @@ export default function Hud({ coins, gems, rebirthTokens, coinsPerSecond, countd
     },
     {
       id: 'cps',
-      icon: 'energy',
+      icon: 'income',
       label: 'Monety/s',
       value: formatCompact(coinsPerSecond, 1),
       tone: 'text-emerald-300',
@@ -65,7 +65,7 @@ export default function Hud({ coins, gems, rebirthTokens, coinsPerSecond, countd
           }}
           title="Menu trybów"
         >
-          <GuiIcon name="quest" alt="Menu trybów" size={30} />
+          <GuiIcon name="modes" alt="Menu trybów" size={30} />
         </button>
       </div>
 

@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { FaHome, FaPowerOff } from 'react-icons/fa';
 import GuiIcon from './components/GuiIcon';
 import Arena from './components/Arena';
 import EvolutionModal from './components/EvolutionModal';
 import FoxContextMenu from './components/FoxContextMenu';
 import Hud from './components/Hud';
 import MainMenu from './components/MainMenu';
+import PixelGridBackground from './components/PixelGridBackground';
 import SettingsModal from './components/SettingsModal';
 import ShopPanel from './components/ShopPanel';
 import ToastStack from './components/ToastStack';
+import { configureAudio, playSfx, shutdownAudio, startBackgroundMusic } from './audio/gameAudio';
 import {
   AUTOSAVE_SECONDS,
   BASE_MAX_TIER,
@@ -19,7 +20,15 @@ import {
   TEMP_BOOST_DURATION_BY_ID
 } from './game/constants';
 import { formatNumber } from './game/format';
-import { getBuyFoxCost, getExpectedCoinsPerSecond, getFoxLimit, getRebirthTokensEarned, getTickDurationSeconds } from './game/economy';
+import {
+  getBuyFoxCost,
+  getExpectedCoinsPerSecond,
+  getFoxClickValue,
+  getFoxIncomePerTick,
+  getFoxLimit,
+  getRebirthTokensEarned,
+  getTickDurationSeconds
+} from './game/economy';
 import { gameReducer, ACTIONS, getFoxInfoForMenu } from './game/reducer';
 import { getResetCountdowns } from './game/quests';
 import { createInitialState } from './storage/defaultState';
@@ -27,7 +36,8 @@ import {
   deleteSlot,
   fetchLeaderboardCategory,
   getAuthPrincipal,
-  getOAuthLoginUrl,
+  beginOAuthLogin,
+  completeOAuthLoginFromCallback,
   getRemoteSlotUpdatedAt,
   hydrateSessionFromOAuthRedirect,
   installGameUpdateAndRestart,
@@ -37,6 +47,7 @@ import {
   loadSlotStateWithMeta,
   onGameUpdateStatus,
   logoutGameAccount,
+  onOAuthLoginCallback,
   quitGameApp,
   readGameVersion,
   readUpdateState,
@@ -54,8 +65,9 @@ const DEFAULT_MENU_META = {
   settings: {
     defaultSound: true,
     defaultAnimations: true,
-    defaultMusicVolume: 70,
-    defaultSfxVolume: 80
+    defaultMusicVolume: 30,
+    defaultSfxVolume: 70,
+    audioDefaultsVersion: 2
   },
   slots: []
 };
@@ -102,6 +114,7 @@ function UpdateOverlay({ updateState, onInstall, onCheck }) {
     status === 'checking' ||
     status === 'downloading' ||
     status === 'downloaded' ||
+    status === 'installing' ||
     status === 'error';
 
   if (!shouldShow) {
@@ -135,6 +148,8 @@ function UpdateOverlay({ updateState, onInstall, onCheck }) {
           </div>
         )}
 
+        {status === 'installing' && <p className="mt-2 text-xs text-amber-200">Nie uruchamiaj instalatora ręcznie — gra zamknie się sama.</p>}
+
         {status === 'error' && (
           <div className="mt-2 flex flex-wrap gap-2">
             <button type="button" className="rounded-lg border border-slate-500 bg-slate-800 px-3 py-2 text-sm text-slate-100" onClick={onCheck}>
@@ -167,6 +182,7 @@ export default function App() {
   const [currentSlotId, setCurrentSlotId] = useState(null);
   const [shopTab, setShopTab] = useState('Ulepszenia');
   const [tickCountdown, setTickCountdown] = useState(BASE_TICK_SECONDS);
+  const [incomePulse, setIncomePulse] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const [systemMenuOpen, setSystemMenuOpen] = useState(false);
@@ -176,12 +192,10 @@ export default function App() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [gameVersion, setGameVersion] = useState('dev');
   const stateRef = useRef(state);
+  const incomePulseIdRef = useRef(0);
   const remoteSlotUpdatedAtRef = useRef(null);
   const updateDownloadedToastShownRef = useRef(false);
   const { toasts, pushToast } = useToasts();
-  const oauthGoogleUrl = useMemo(() => getOAuthLoginUrl('google'), [remoteEnabled]);
-  const oauthSteamUrl = useMemo(() => getOAuthLoginUrl('steam'), [remoteEnabled]);
-
   stateRef.current = state;
 
   const coinsPerSecond = useMemo(() => getExpectedCoinsPerSecond(state), [state]);
@@ -202,6 +216,66 @@ export default function App() {
     () => state.foxes.find((fox) => fox.id === evolutionTargetId) || null,
     [evolutionTargetId, state.foxes]
   );
+
+  const withGlobalAudioSettings = useCallback((nextState) => ({
+    ...nextState,
+    settings: {
+      ...nextState.settings,
+      sound: Boolean(saveMeta.settings.defaultSound),
+      musicVolume: Number.isFinite(saveMeta.settings.defaultMusicVolume) ? saveMeta.settings.defaultMusicVolume : 30,
+      sfxVolume: Number.isFinite(saveMeta.settings.defaultSfxVolume) ? saveMeta.settings.defaultSfxVolume : 70
+    }
+  }), [
+    saveMeta.settings.defaultMusicVolume,
+    saveMeta.settings.defaultSfxVolume,
+    saveMeta.settings.defaultSound
+  ]);
+
+  const persistGlobalAudioSettings = useCallback(async (patch) => {
+    try {
+      const updated = await updateMenuSettings({
+        ...patch,
+        audioDefaultsVersion: 2
+      });
+      setSaveMeta((previous) => ({
+        ...previous,
+        settings: {
+          ...previous.settings,
+          ...updated
+        }
+      }));
+    } catch (_error) {
+      // Keep the in-game setting responsive if persistence is temporarily unavailable.
+    }
+  }, []);
+
+  useEffect(() => {
+    const audioSettings = appScreen === 'game'
+      ? {
+          enabled: state.settings.sound,
+          musicVolume: state.settings.musicVolume,
+          sfxVolume: state.settings.sfxVolume
+        }
+      : {
+          enabled: saveMeta.settings.defaultSound,
+          musicVolume: saveMeta.settings.defaultMusicVolume,
+          sfxVolume: saveMeta.settings.defaultSfxVolume
+        };
+    configureAudio(audioSettings);
+    startBackgroundMusic();
+  }, [
+    appScreen,
+    saveMeta.settings.defaultMusicVolume,
+    saveMeta.settings.defaultSfxVolume,
+    saveMeta.settings.defaultSound,
+    state.settings.musicVolume,
+    state.settings.sfxVolume,
+    state.settings.sound
+  ]);
+
+  useEffect(() => () => {
+    shutdownAudio();
+  }, []);
 
   const refreshMenuMeta = useCallback(async () => {
     const meta = await listSaveMeta();
@@ -254,22 +328,33 @@ export default function App() {
   }, []);
 
   const installUpdateNow = useCallback(async () => {
+    if (appScreen === 'game' && currentSlotId) {
+      saveSlotStateSync({ slotId: currentSlotId, state: stateRef.current });
+      try {
+        await saveSlotState({ slotId: currentSlotId, state: stateRef.current });
+      } catch (_error) {
+        // Lokalny zapis synchroniczny został już wykonany; aktualizacja może ruszyć offline.
+      }
+    }
+
     const ok = await installGameUpdateAndRestart();
     if (!ok) {
       pushToast('Aktualizacja nie jest jeszcze gotowa do instalacji');
     }
-  }, [pushToast]);
+  }, [appScreen, currentSlotId, pushToast]);
 
   const enterGameWithState = useCallback((nextState, slotId, remoteUpdatedAt = null) => {
-    dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: nextState, nowTs: Date.now() });
+    const syncedState = withGlobalAudioSettings(nextState);
+    dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: syncedState, nowTs: Date.now() });
     setCurrentSlotId(slotId);
     remoteSlotUpdatedAtRef.current = remoteUpdatedAt || null;
     setShopTab('Ulepszenia');
-    setTickCountdown(getTickDurationSeconds(nextState));
+    setTickCountdown(getTickDurationSeconds(syncedState));
+    setIncomePulse(null);
     setContextMenu(null);
     setEvolutionTargetId(null);
     setAppScreen('game');
-  }, []);
+  }, [withGlobalAudioSettings]);
 
   const loadSlotAndStart = useCallback(
     async (slotId) => {
@@ -314,7 +399,11 @@ export default function App() {
 
     (async () => {
       if (remoteEnabled) {
-        hydrateSessionFromOAuthRedirect();
+        try {
+          await hydrateSessionFromOAuthRedirect();
+        } catch (_error) {
+          pushToast('Logowanie OAuth wygasło lub zostało anulowane');
+        }
       }
 
       const [meta, version, principal] = await Promise.all([listSaveMeta(), readGameVersion(), refreshAuthPrincipalFromApi()]);
@@ -330,7 +419,27 @@ export default function App() {
     return () => {
       mounted = false;
     };
-  }, [remoteEnabled]);
+  }, [pushToast, remoteEnabled]);
+
+  useEffect(() => {
+    if (!remoteEnabled) {
+      return () => {};
+    }
+
+    return onOAuthLoginCallback(async (callbackUrl) => {
+      try {
+        await completeOAuthLoginFromCallback(callbackUrl);
+        await refreshAuthPrincipal();
+        await refreshMenuMeta();
+        setAppScreen('menu');
+        setMenuView('account');
+        trackTelemetryEvent('auth_login', { method: 'oauth' });
+        pushToast('Zalogowano');
+      } catch (_error) {
+        pushToast('Logowanie OAuth nie powiodło się');
+      }
+    });
+  }, [pushToast, refreshAuthPrincipal, refreshMenuMeta, remoteEnabled]);
 
   useEffect(() => {
     let mounted = true;
@@ -369,7 +478,19 @@ export default function App() {
       setTickCountdown((prev) => {
         const nextCountdown = roundToTenth(prev - 0.1);
         if (nextCountdown <= 0) {
-          dispatch({ type: ACTIONS.APPLY_TICK, nowTs: Date.now() });
+          const nowTs = Date.now();
+          const currentState = stateRef.current;
+          if (currentState.settings.animations && currentState.foxes.length > 0) {
+            incomePulseIdRef.current += 1;
+            setIncomePulse({
+              id: incomePulseIdRef.current,
+              entries: currentState.foxes.map((fox) => ({
+                foxId: fox.id,
+                amount: getFoxIncomePerTick(fox, currentState, nowTs)
+              }))
+            });
+          }
+          dispatch({ type: ACTIONS.APPLY_TICK, nowTs });
           return tickDuration;
         }
         return nextCountdown;
@@ -415,9 +536,10 @@ export default function App() {
           if (isRemoteTimestampNewer(remoteSlotUpdatedAtRef.current, remoteUpdatedAt)) {
             const latest = await loadSlotStateWithMeta(currentSlotId);
             if (latest?.state) {
+              const syncedState = withGlobalAudioSettings(latest.state);
               remoteSlotUpdatedAtRef.current = latest.updatedAt || remoteUpdatedAt;
-              dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: latest.state, nowTs: Date.now() });
-              setTickCountdown(getTickDurationSeconds(latest.state));
+              dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: syncedState, nowTs: Date.now() });
+              setTickCountdown(getTickDurationSeconds(syncedState));
               pushToast('Save został zaktualizowany na serwerze. Wczytano nowe dane.');
             }
             return;
@@ -434,7 +556,7 @@ export default function App() {
     }, AUTOSAVE_SECONDS * 1000);
 
     return () => clearInterval(autosave);
-  }, [appScreen, currentSlotId, isLoaded, pushToast, remoteEnabled]);
+  }, [appScreen, currentSlotId, isLoaded, pushToast, remoteEnabled, withGlobalAudioSettings]);
 
   useEffect(() => {
     if (!isLoaded || appScreen !== 'game' || !currentSlotId) {
@@ -484,9 +606,10 @@ export default function App() {
             return;
           }
 
+          const syncedState = withGlobalAudioSettings(latest.state);
           remoteSlotUpdatedAtRef.current = latest.updatedAt || remoteUpdatedAt;
-          dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: latest.state, nowTs: Date.now() });
-          setTickCountdown(getTickDurationSeconds(latest.state));
+          dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: syncedState, nowTs: Date.now() });
+          setTickCountdown(getTickDurationSeconds(syncedState));
           pushToast('Wykryto zmiany save na serwerze. Odświeżono stan gry.');
         })
         .catch(() => {
@@ -495,7 +618,7 @@ export default function App() {
     }, 6000);
 
     return () => clearInterval(remoteRefresh);
-  }, [appScreen, currentSlotId, isLoaded, pushToast, remoteEnabled]);
+  }, [appScreen, currentSlotId, isLoaded, pushToast, remoteEnabled, withGlobalAudioSettings]);
 
   useEffect(() => {
     if (updateState.status === 'downloaded') {
@@ -514,103 +637,144 @@ export default function App() {
 
   if (appScreen === 'menu') {
     return (
-      <main className="app-shell flex min-h-screen flex-col items-center justify-center p-4">
+      <main className="app-shell main-menu-screen flex min-h-screen flex-col items-center justify-center p-4">
+        <PixelGridBackground enabled={saveMeta.settings.defaultAnimations !== false} />
         <UpdateOverlay updateState={updateState} onInstall={installUpdateNow} onCheck={checkForUpdatesNow} />
-        <MainMenu
-          view={menuView}
-          meta={saveMeta}
-          onContinue={async () => {
-            if (saveMeta.lastPlayedSlotId) {
-              await loadSlotAndStart(saveMeta.lastPlayedSlotId);
-              return;
-            }
-            if (saveMeta.slots.length > 0) {
-              await loadSlotAndStart(saveMeta.slots[0].id);
-              return;
-            }
-            await createNewGameAndStart();
-          }}
-          onOpenLoad={() => setMenuView('load')}
-          onOpenRanking={() => setMenuView('ranking')}
-          onOpenSettings={() => setMenuView('settings')}
-          onOpenAccount={() => setMenuView('account')}
-          onExit={async () => {
-            await quitGameApp();
-          }}
-          onBack={() => setMenuView('root')}
-          onLoad={loadSlotAndStart}
-          onNew={createNewGameAndStart}
-          onDelete={async (slotId) => {
-            await deleteSlot(slotId);
-            await refreshMenuMeta();
-          }}
-          onToggleSettings={async (key) => {
-            const nextValue = !saveMeta.settings[key];
-            const updated = await updateMenuSettings({ [key]: nextValue });
-            setSaveMeta((prev) => ({
-              ...prev,
-              settings: {
-                ...prev.settings,
-                ...updated
+        <div className="main-menu-content flex w-full flex-col items-center">
+          <MainMenu
+            view={menuView}
+            meta={saveMeta}
+            onContinue={async () => {
+              playSfx('ui');
+              if (saveMeta.lastPlayedSlotId) {
+                await loadSlotAndStart(saveMeta.lastPlayedSlotId);
+                return;
               }
-            }));
-          }}
-          onSetSettingsVolume={async (key, value) => {
-            const safeValue = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
-            const updated = await updateMenuSettings({ [key]: safeValue });
-            setSaveMeta((prev) => ({
-              ...prev,
-              settings: {
-                ...prev.settings,
-                ...updated
+              if (saveMeta.slots.length > 0) {
+                await loadSlotAndStart(saveMeta.slots[0].id);
+                return;
               }
-            }));
-          }}
-          isRemoteEnabled={remoteEnabled}
-          principal={authPrincipal}
-          leaderboardData={leaderboardData}
-          leaderboardLoading={leaderboardLoading}
-          leaderboardError={leaderboardError}
-          onRefreshLeaderboard={refreshLeaderboard}
-          onLoginAccount={async ({ email, password }) => {
-            await loginGameAccount({ email, password });
-            await refreshAuthPrincipal();
-            await refreshMenuMeta();
-            trackTelemetryEvent('auth_login', { method: 'password' });
-            pushToast('Zalogowano');
-          }}
-          onRegisterAccount={async ({ email, password, displayName }) => {
-            await registerGameAccount({ email, password, displayName });
-            await refreshAuthPrincipal();
-            await refreshMenuMeta();
-            trackTelemetryEvent('auth_register', { method: 'password' });
-            pushToast('Konto utworzone');
-          }}
-          onLogoutAccount={async () => {
-            await logoutGameAccount();
-            await refreshAuthPrincipal();
-            await refreshMenuMeta();
-            trackTelemetryEvent('auth_logout');
-            pushToast('Wylogowano');
-          }}
-          oauthGoogleUrl={oauthGoogleUrl}
-          oauthSteamUrl={oauthSteamUrl}
-        />
-        <p className="mt-4 text-xs text-slate-500">Wersja gry: {gameVersion}</p>
+              await createNewGameAndStart();
+            }}
+            onOpenLoad={() => {
+              playSfx('ui');
+              setMenuView('load');
+            }}
+            onOpenRanking={() => {
+              playSfx('ui');
+              setMenuView('ranking');
+            }}
+            onOpenSettings={() => {
+              playSfx('ui');
+              setMenuView('settings');
+            }}
+            onOpenAccount={() => {
+              playSfx('ui');
+              setMenuView('account');
+            }}
+            onExit={async () => {
+              await quitGameApp();
+            }}
+            onBack={() => {
+              playSfx('ui');
+              setMenuView('root');
+            }}
+            onLoad={loadSlotAndStart}
+            onNew={createNewGameAndStart}
+            onDelete={async (slotId) => {
+              await deleteSlot(slotId);
+              await refreshMenuMeta();
+            }}
+            onToggleSettings={async (key) => {
+              const nextValue = !saveMeta.settings[key];
+              const updated = await updateMenuSettings({ [key]: nextValue });
+              setSaveMeta((prev) => ({
+                ...prev,
+                settings: {
+                  ...prev.settings,
+                  ...updated
+                }
+              }));
+            }}
+            onSetSettingsVolume={async (key, value) => {
+              const safeValue = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+              const updated = await updateMenuSettings({ [key]: safeValue });
+              setSaveMeta((prev) => ({
+                ...prev,
+                settings: {
+                  ...prev.settings,
+                  ...updated
+                }
+              }));
+            }}
+            isRemoteEnabled={remoteEnabled}
+            principal={authPrincipal}
+            leaderboardData={leaderboardData}
+            leaderboardLoading={leaderboardLoading}
+            leaderboardError={leaderboardError}
+            onRefreshLeaderboard={refreshLeaderboard}
+            onLoginAccount={async ({ email, password }) => {
+              await loginGameAccount({ email, password });
+              await refreshAuthPrincipal();
+              await refreshMenuMeta();
+              trackTelemetryEvent('auth_login', { method: 'password' });
+              pushToast('Zalogowano');
+            }}
+            onRegisterAccount={async ({ email, password, displayName }) => {
+              await registerGameAccount({ email, password, displayName });
+              await refreshAuthPrincipal();
+              await refreshMenuMeta();
+              trackTelemetryEvent('auth_register', { method: 'password' });
+              pushToast('Konto utworzone');
+            }}
+            onLogoutAccount={async () => {
+              await logoutGameAccount();
+              await refreshAuthPrincipal();
+              await refreshMenuMeta();
+              trackTelemetryEvent('auth_logout');
+              pushToast('Wylogowano');
+            }}
+            onOAuthLogin={async (provider) => {
+              try {
+                await beginOAuthLogin(provider);
+                pushToast('Dokończ logowanie w przeglądarce');
+              } catch (_error) {
+                pushToast('Nie udało się uruchomić logowania');
+              }
+            }}
+          />
+          <p className="mt-4 text-xs text-slate-500">Wersja gry: {gameVersion}</p>
+        </div>
       </main>
     );
   }
 
   const buyFox = () => {
     if (state.foxes.length >= foxLimit) {
+      playSfx('error');
       pushToast('Masz za dużo lisów na planszy');
       return;
     }
     if (state.currencies.coins < buyCost) {
+      playSfx('error');
       pushToast('Brakuje coins na zakup lisa');
       return;
     }
     dispatch({ type: ACTIONS.BUY_FOX, nowTs: Date.now() });
+    playSfx('buy');
+  };
+
+  const handleFoxClick = (id) => {
+    const fox = state.foxes.find((item) => item.id === id);
+    if (!fox) {
+      return 0;
+    }
+
+    const nowTs = Date.now();
+    const gain = getFoxClickValue(fox, state, nowTs);
+    dispatch({ type: ACTIONS.CLICK_FOX, id, nowTs });
+    playSfx('click');
+    return gain;
   };
 
   const handleMerge = (sourceId, targetId) => {
@@ -620,6 +784,7 @@ export default function App() {
       return;
     }
     if (source.tier !== target.tier) {
+      playSfx('error');
       return false;
     }
 
@@ -629,10 +794,12 @@ export default function App() {
     const bothSameElement = sourceEvolution && sourceEvolution === targetEvolution;
 
     if ((!bothNonEvolved && !bothSameElement) || (bothNonEvolved && target.tier >= BASE_MAX_TIER) || (bothSameElement && target.tier >= MAX_TIER)) {
+      playSfx('error');
       return false;
     }
 
     dispatch({ type: ACTIONS.MERGE_FOXES, sourceId, targetId, nowTs: Date.now() });
+    playSfx('merge');
     return {
       tier: target.tier + 1,
       evolution: bothSameElement ? targetEvolution : null
@@ -692,10 +859,12 @@ export default function App() {
         foxCount={state.foxes.length}
         foxLimit={foxLimit}
         onOpenModesMenu={() => {
+          playSfx('ui');
           setSystemMenuOpen(false);
           setModeMenuOpen((prev) => !prev);
         }}
         onOpenSystemMenu={() => {
+          playSfx('ui');
           setModeMenuOpen(false);
           setSystemMenuOpen((prev) => !prev);
         }}
@@ -707,7 +876,7 @@ export default function App() {
           onClick={(event) => event.stopPropagation()}
         >
           <p className="mb-2 flex items-center gap-2 text-sm font-bold text-amber-300">
-            <GuiIcon name="quest" alt="Menu trybów" />
+            <GuiIcon name="modes" alt="Menu trybów" />
             Tryby gry
           </p>
           <div className="grid gap-2">
@@ -759,16 +928,17 @@ export default function App() {
           <div className="grid gap-2">
             <button
               type="button"
-              className="rounded-lg bg-slate-700 px-3 py-2 text-left text-sm"
+              className="flex items-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-left text-sm"
               onClick={() => {
                 setSettingsModalOpen(true);
                 setSystemMenuOpen(false);
               }}
             >
+              <GuiIcon name="settings" alt="" />
               Ustawienia
             </button>
             <button type="button" className="flex items-center gap-2 rounded-lg bg-indigo-600/80 px-3 py-2 text-left text-sm" onClick={goToMainMenu}>
-              <FaHome />
+              <GuiIcon name="home" alt="" />
               Wyjście do menu głównego
             </button>
             <button
@@ -776,7 +946,7 @@ export default function App() {
               className="flex items-center gap-2 rounded-lg bg-rose-700/80 px-3 py-2 text-left text-sm text-rose-100"
               onClick={exitGameFromInGame}
             >
-              <FaPowerOff />
+              <GuiIcon name="power" alt="" />
               Wyjście z gry
             </button>
           </div>
@@ -789,6 +959,7 @@ export default function App() {
           arenaWidth={state.arena.width}
           arenaHeight={state.arena.height}
           animationsEnabled={state.settings.animations}
+          incomePulse={incomePulse}
           onArenaResize={(width, height) => {
             dispatch({ type: ACTIONS.SET_ARENA_SIZE, width, height, nowTs: Date.now() });
           }}
@@ -796,9 +967,7 @@ export default function App() {
             dispatch({ type: ACTIONS.MOVE_FOX, id, x, y, nowTs: Date.now() });
           }}
           onFoxMerge={handleMerge}
-          onFoxClick={(id) => {
-            dispatch({ type: ACTIONS.CLICK_FOX, id, nowTs: Date.now() });
-          }}
+          onFoxClick={handleFoxClick}
           onFoxContextMenu={(event, foxId) => {
             event.preventDefault();
             const menuWidth = 240;
@@ -837,6 +1006,7 @@ export default function App() {
               onCollapse={() => setShopCollapsed(true)}
               onBuyUpgrade={(upgradeId) => {
                 dispatch({ type: ACTIONS.BUY_UPGRADE, upgradeId, nowTs: Date.now() });
+                playSfx('upgrade');
               }}
               onBuyTemporaryBoost={(boostId, durationId) => {
                 const boost = TEMP_BOOST_DEFS[boostId];
@@ -845,10 +1015,12 @@ export default function App() {
                   return;
                 }
                 if (state.currencies.gems < duration.cost) {
+                  playSfx('error');
                   pushToast('Brakuje diamentow');
                   return;
                 }
                 dispatch({ type: ACTIONS.BUY_TEMP_BOOST, boostId, durationId, nowTs: Date.now() });
+                playSfx('upgrade');
                 pushToast(`${boost.title}: +${duration.label}`);
               }}
               onBuyInstantCash={(durationId) => {
@@ -857,34 +1029,42 @@ export default function App() {
                   return;
                 }
                 if (state.currencies.gems < duration.cost) {
+                  playSfx('error');
                   pushToast('Brakuje diamentow');
                   return;
                 }
                 const instantCoins = Math.floor(getExpectedCoinsPerSecond(state) * duration.seconds);
                 if (instantCoins <= 0) {
+                  playSfx('error');
                   pushToast('Brak pasywnego income do Instant Cash');
                   return;
                 }
                 dispatch({ type: ACTIONS.BUY_INSTANT_CASH, durationId, nowTs: Date.now() });
+                playSfx('buy');
                 pushToast(`Instant Cash: +${formatNumber(instantCoins)} coins`);
               }}
               onRebirth={() => {
                 if (rebirthPreview <= 0) {
+                  playSfx('error');
                   pushToast('Potrzebujesz co najmniej 1 Mega Foxa');
                   return;
                 }
                 dispatch({ type: ACTIONS.REBIRTH, nowTs: Date.now() });
+                playSfx('rebirth');
                 setTickCountdown(tickDuration);
                 pushToast(`Rebirth udany. +${rebirthPreview} tokens`);
               }}
               onClaimQuest={(questId) => {
                 dispatch({ type: ACTIONS.CLAIM_DAILY, questId, nowTs: Date.now() });
+                playSfx('upgrade');
               }}
               onClaimWeekly={(questId) => {
                 dispatch({ type: ACTIONS.CLAIM_WEEKLY, questId, nowTs: Date.now() });
+                playSfx('upgrade');
               }}
               onClaimLoginReward={() => {
                 dispatch({ type: ACTIONS.CLAIM_LOGIN_REWARD, nowTs: Date.now() });
+                playSfx('buy');
               }}
             />
           )}
@@ -900,6 +1080,7 @@ export default function App() {
             return;
           }
           dispatch({ type: ACTIONS.SELL_FOX, id: contextMenu.foxId, nowTs: Date.now() });
+          playSfx('sell');
           setContextMenu(null);
         }}
         onEvolve={() => {
@@ -907,6 +1088,7 @@ export default function App() {
             return;
           }
           if (state.currencies.gems < EVOLUTION_COST_GEMS) {
+            playSfx('error');
             pushToast(`Potrzebujesz ${EVOLUTION_COST_GEMS} gems na ewolucję`);
             setContextMenu(null);
             return;
@@ -921,6 +1103,7 @@ export default function App() {
         currentGems={state.currencies.gems}
         onSelect={(evolutionId) => {
           dispatch({ type: ACTIONS.EVOLVE_FOX, id: evolutionTargetId, evolutionId, nowTs: Date.now() });
+          playSfx('evolve');
           setEvolutionTargetId(null);
           pushToast('Mega Fox ewoluowany');
         }}
@@ -932,10 +1115,17 @@ export default function App() {
         settings={state.settings}
         gameVersion={gameVersion}
         onToggleSetting={(key) => {
+          const nextValue = !state.settings[key];
           dispatch({ type: ACTIONS.TOGGLE_SETTING, key, nowTs: Date.now() });
+          if (key === 'sound') {
+            void persistGlobalAudioSettings({ defaultSound: nextValue });
+          }
         }}
         onSetVolume={(key, value) => {
-          dispatch({ type: ACTIONS.SET_VOLUME, key, value, nowTs: Date.now() });
+          const safeValue = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+          dispatch({ type: ACTIONS.SET_VOLUME, key, value: safeValue, nowTs: Date.now() });
+          const metaKey = key === 'musicVolume' ? 'defaultMusicVolume' : 'defaultSfxVolume';
+          void persistGlobalAudioSettings({ [metaKey]: safeValue });
         }}
         onHardReset={handleHardReset}
         onClose={() => setSettingsModalOpen(false)}

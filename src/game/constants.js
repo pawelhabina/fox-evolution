@@ -1,4 +1,4 @@
-export const GAME_VERSION = '1.0.0';
+export const GAME_VERSION = '1.1.4';
 export const BASE_TICK_SECONDS = 5;
 export const MIN_TICK_SECONDS = 1;
 export const MIN_TICK_SECONDS_WITH_BOOST = 0.3;
@@ -25,13 +25,13 @@ export const TEMP_BOOST_DEFS = {
     id: 'turboTick',
     title: 'Turbo Tick',
     description: '-30% czasu ticka',
-    icon: 'time'
+    icon: 'clock'
   },
   passiveBurst: {
     id: 'passiveBurst',
     title: 'Zloty Deszcz',
     description: 'x2 pasywnego income',
-    icon: 'energy'
+    icon: 'income'
   },
   clickFrenzy: {
     id: 'clickFrenzy',
@@ -74,20 +74,19 @@ const TIER_NAMES = [
   'Mega Fox'
 ];
 
-const TIER_ICONS = ['🧬', '🦊', '🟠', '🟤', '⚙️', '🥈', '🥇', '💎', '🟣', '🌌', '✨', '⚛️', '🔱', '🜂', '👑'];
+const CLICK_VALUE_RATIO = 0.45;
 
 export const FOX_TIERS = TIER_NAMES.map((name, index) => {
   const tier = index + 1;
   const baseIncomePerTick = Math.max(1, Math.round(2 * 1.85 ** index));
-  const clickValue = Math.max(1, Math.round(baseIncomePerTick * 0.6));
+  const clickValue = Math.max(1, Math.round(baseIncomePerTick * CLICK_VALUE_RATIO));
   const sellValue = Math.max(1, Math.round(baseIncomePerTick * 6.5));
   return {
     tier,
     name,
     baseIncomePerTick,
     clickValue,
-    sellValue,
-    icon: TIER_ICONS[index] || '🦊'
+    sellValue
   };
 });
 
@@ -99,9 +98,8 @@ for (let tier = 16; tier <= 30; tier += 1) {
     tier,
     name: `Elemental Fox Lv ${tier}`,
     baseIncomePerTick,
-    clickValue: Math.max(1, Math.round(baseIncomePerTick * 0.6)),
-    sellValue: Math.max(1, Math.round(baseIncomePerTick * 6.5)),
-    icon: '🌟'
+    clickValue: Math.max(1, Math.round(baseIncomePerTick * CLICK_VALUE_RATIO)),
+    sellValue: Math.max(1, Math.round(baseIncomePerTick * 6.5))
   });
   previousIncome = baseIncomePerTick;
 }
@@ -115,21 +113,21 @@ export const EVOLUTION_TYPES = {
   fire: {
     id: 'fire',
     name: 'Fire Fox',
-    icon: '🔥',
+    icon: 'fire',
     incomeMultiplier: 1,
     clickMultiplier: 1.5
   },
   electric: {
     id: 'electric',
     name: 'Electric Fox',
-    icon: '⚡',
+    icon: 'electric',
     incomeMultiplier: 1.5,
     clickMultiplier: 1
   },
   water: {
     id: 'water',
     name: 'Water Fox',
-    icon: '💧',
+    icon: 'water',
     incomeMultiplier: 1,
     clickMultiplier: 1,
     auraMultiplier: 1.5

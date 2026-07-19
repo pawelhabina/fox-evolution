@@ -1,4 +1,3 @@
-import { FaTimes } from 'react-icons/fa';
 import GuiIcon from './GuiIcon';
 
 export default function SettingsModal({ isOpen, settings, gameVersion, onToggleSetting, onSetVolume, onHardReset, onClose }) {
@@ -6,8 +5,8 @@ export default function SettingsModal({ isOpen, settings, gameVersion, onToggleS
     return null;
   }
 
-  const musicVolume = Number.isFinite(settings.musicVolume) ? settings.musicVolume : 70;
-  const sfxVolume = Number.isFinite(settings.sfxVolume) ? settings.sfxVolume : 80;
+  const musicVolume = Number.isFinite(settings.musicVolume) ? settings.musicVolume : 30;
+  const sfxVolume = Number.isFinite(settings.sfxVolume) ? settings.sfxVolume : 70;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4" onClick={onClose}>
@@ -18,7 +17,7 @@ export default function SettingsModal({ isOpen, settings, gameVersion, onToggleS
             Ustawienia gry
           </h3>
           <button type="button" className="rounded border border-slate-600 p-2 text-slate-300 hover:text-white" onClick={onClose}>
-            <FaTimes />
+            <GuiIcon name="close" alt="Zamknij" />
           </button>
         </div>
 
@@ -28,7 +27,7 @@ export default function SettingsModal({ isOpen, settings, gameVersion, onToggleS
             className="flex items-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-left"
             onClick={() => onToggleSetting('sound')}
           >
-            <GuiIcon name="energy" alt="Dźwięki" />
+            <GuiIcon name="sound" alt="Dźwięki" />
             Dźwięki: {settings.sound ? 'ON' : 'OFF'}
           </button>
           <button
@@ -36,7 +35,7 @@ export default function SettingsModal({ isOpen, settings, gameVersion, onToggleS
             className="flex items-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-left"
             onClick={() => onToggleSetting('animations')}
           >
-            <GuiIcon name="clock2" alt="Animacje" />
+            <GuiIcon name="animation" alt="Animacje" />
             Animacje: {settings.animations ? 'ON' : 'OFF'}
           </button>
         </div>
@@ -46,7 +45,7 @@ export default function SettingsModal({ isOpen, settings, gameVersion, onToggleS
             <label className="grid gap-1">
               <span className="flex items-center justify-between text-sm text-slate-200">
                 <span className="flex items-center gap-2">
-                  <GuiIcon name="time" alt="Muzyka" />
+                  <GuiIcon name="music" alt="Muzyka" />
                   Muzyka
                 </span>
                 <span className="font-bold text-amber-300">{musicVolume}%</span>
@@ -65,7 +64,7 @@ export default function SettingsModal({ isOpen, settings, gameVersion, onToggleS
             <label className="grid gap-1">
               <span className="flex items-center justify-between text-sm text-slate-200">
                 <span className="flex items-center gap-2">
-                  <GuiIcon name="energy" alt="SFX" />
+                  <GuiIcon name="sound" alt="SFX" />
                   SFX
                 </span>
                 <span className="font-bold text-amber-300">{sfxVolume}%</span>
@@ -95,7 +94,7 @@ export default function SettingsModal({ isOpen, settings, gameVersion, onToggleS
               }
             }}
           >
-            <GuiIcon name="foxSell" alt="Hard reset" />
+            <GuiIcon name="trash" alt="Hard reset" />
             Hard reset
           </button>
         </div>

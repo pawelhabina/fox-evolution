@@ -16,7 +16,6 @@ import priceDown2 from '../../assets/icons/gui/icon-price-down-2.gif';
 import quest from '../../assets/icons/gui/icon-quest.gif';
 import random from '../../assets/icons/gui/icon-random.gif';
 import rebirth from '../../assets/icons/gui/icon-rebirth.gif';
-import settings from '../../assets/icons/gui/icon-settings.gif';
 import tarcza from '../../assets/icons/gui/icon-tarcza.gif';
 import time from '../../assets/icons/gui/icon-time.gif';
 import upgrade from '../../assets/icons/gui/icon-upgrade.gif';
@@ -40,7 +39,6 @@ export const GUI_ICONS = {
   quest,
   random,
   rebirth,
-  settings,
   tarcza,
   time,
   upgrade

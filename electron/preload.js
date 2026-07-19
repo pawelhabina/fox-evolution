@@ -11,6 +11,15 @@ contextBridge.exposeInMainWorld('foxEvolution', {
   getUpdateState: () => ipcRenderer.invoke('app:update:state'),
   checkForUpdates: () => ipcRenderer.invoke('app:update:check'),
   installUpdateAndRestart: () => ipcRenderer.invoke('app:update:install'),
+  openOAuthUrl: (url) => ipcRenderer.invoke('app:oauth:open', url),
+  onOAuthCallback: (handler) => {
+    if (typeof handler !== 'function') {
+      return () => {};
+    }
+    const listener = (_event, url) => handler(url);
+    ipcRenderer.on('app:oauth-callback', listener);
+    return () => ipcRenderer.removeListener('app:oauth-callback', listener);
+  },
   onUpdateStatus: (handler) => {
     if (typeof handler !== 'function') {
       return () => {};

@@ -1,6 +1,11 @@
 import { getGuiIcon } from '../assets/guiIcons';
+import PixelIcon, { hasPixelIcon } from './PixelIcon';
 
 export default function GuiIcon({ name, alt = '', className = '', size = 16 }) {
+  if (hasPixelIcon(name)) {
+    return <PixelIcon name={name} alt={alt} className={className} size={size} />;
+  }
+
   const src = getGuiIcon(name);
   if (!src) {
     return null;

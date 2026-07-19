@@ -24,7 +24,7 @@ export default function FoxContextMenu({ menu, info, onClose, onSell, onEvolve }
           Tier: {info.fox.tier}
         </p>
         <p className="flex items-center gap-2">
-          <GuiIcon name="energy" alt="Income" />
+          <GuiIcon name="income" alt="Income" />
           Przychód na tick: {formatNumber(info.income)}
         </p>
         <p className="flex items-center gap-2">

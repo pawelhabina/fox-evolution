@@ -2,6 +2,7 @@ const ACCESS_TOKEN_KEY = 'fox-api-access-token';
 const REFRESH_TOKEN_KEY = 'fox-api-refresh-token';
 const PRINCIPAL_KEY = 'fox-api-principal';
 const DEVICE_ID_KEY = 'fox-api-device-id';
+const OAUTH_FLOW_KEY = 'fox-api-oauth-flow';
 
 function getApiBaseUrl() {
   return String(import.meta.env.VITE_API_BASE_URL || '')
@@ -108,27 +109,77 @@ function setStoredSession({ accessToken, refreshToken, principal }) {
   }
 }
 
+function bytesToBase64Url(bytes) {
+  let binary = '';
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+async function createPkcePair() {
+  const verifierBytes = new Uint8Array(48);
+  crypto.getRandomValues(verifierBytes);
+  const verifier = bytesToBase64Url(verifierBytes);
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+  return {
+    verifier,
+    challenge: bytesToBase64Url(new Uint8Array(digest))
+  };
+}
+
+function clearBrowserOAuthCallback() {
+  if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+    const nextUrl = `${window.location.origin}${window.location.pathname}`;
+    window.history.replaceState({}, '', nextUrl);
+  }
+}
+
+export async function completeOAuthLogin(callbackUrl) {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const url = new URL(callbackUrl || window.location.href);
+  const error = url.searchParams.get('error');
+  if (error) {
+    removeLocalStorage(OAUTH_FLOW_KEY);
+    clearBrowserOAuthCallback();
+    throw new Error(error);
+  }
+
+  const code = url.searchParams.get('code');
+  if (!code) {
+    return null;
+  }
+
+  const flow = parseJson(readLocalStorage(OAUTH_FLOW_KEY));
+  if (!flow?.verifier || Number(flow.createdAt) < Date.now() - 10 * 60 * 1000) {
+    removeLocalStorage(OAUTH_FLOW_KEY);
+    clearBrowserOAuthCallback();
+    throw new Error('OAUTH_FLOW_EXPIRED');
+  }
+
+  try {
+    const payload = await apiRequest('/api/auth/oauth/exchange', {
+      method: 'POST',
+      auth: false,
+      retry: false,
+      body: {
+        code,
+        codeVerifier: flow.verifier
+      }
+    });
+    setStoredSession(payload);
+    return payload.principal;
+  } finally {
+    removeLocalStorage(OAUTH_FLOW_KEY);
+    clearBrowserOAuthCallback();
+  }
+}
+
 export function consumeOAuthTokensFromUrl() {
-  if (typeof window === 'undefined' || !window.location?.search) {
-    return null;
-  }
-
-  const params = new URLSearchParams(window.location.search);
-  const accessToken = params.get('accessToken');
-  const refreshToken = params.get('refreshToken');
-  const principalType = params.get('principalType');
-
-  if (!accessToken || !refreshToken) {
-    return null;
-  }
-
-  const principal = principalType ? { type: principalType } : null;
-  setStoredSession({ accessToken, refreshToken, principal });
-
-  const nextUrl = `${window.location.origin}${window.location.pathname}`;
-  window.history.replaceState({}, '', nextUrl);
-
-  return principal;
+  return completeOAuthLogin();
 }
 
 export function getCurrentPrincipal() {
@@ -319,18 +370,53 @@ export async function fetchMe() {
   }
 }
 
-export function getOAuthStartUrl(provider) {
+export async function startOAuthLogin(provider) {
   const base = getApiBaseUrl();
   if (!base) {
-    return null;
+    throw new Error('REMOTE_API_DISABLED');
   }
   const normalized = String(provider || '').trim().toLowerCase();
-  if (!normalized) {
-    return null;
+  if (!['google', 'steam'].includes(normalized)) {
+    throw new Error('OAUTH_PROVIDER_INVALID');
   }
 
-  const redirect = `${window.location.origin}`;
-  return `${base}/api/auth/oauth/${normalized}/start?redirect=${encodeURIComponent(redirect)}`;
+  const { verifier, challenge } = await createPkcePair();
+  writeLocalStorage(
+    OAUTH_FLOW_KEY,
+    JSON.stringify({
+      provider: normalized,
+      verifier,
+      createdAt: Date.now()
+    })
+  );
+
+  const bridge = window.foxEvolution;
+  const redirect = bridge?.openOAuthUrl
+    ? 'fox-evolution://oauth/callback'
+    : `${window.location.origin}/oauth-success`;
+  const params = new URLSearchParams({
+    redirect,
+    codeChallenge: challenge
+  });
+  const startUrl = `${base}/api/auth/oauth/${normalized}/start?${params}`;
+
+  if (bridge?.openOAuthUrl) {
+    const opened = await bridge.openOAuthUrl(startUrl);
+    if (!opened) {
+      throw new Error('OAUTH_BROWSER_OPEN_FAILED');
+    }
+  } else {
+    window.location.assign(startUrl);
+  }
+  return true;
+}
+
+export function onOAuthCallback(handler) {
+  const bridge = typeof window === 'undefined' ? null : window.foxEvolution;
+  if (!bridge?.onOAuthCallback) {
+    return () => {};
+  }
+  return bridge.onOAuthCallback(handler);
 }
 
 export async function fetchLeaderboard(category, limit = 10) {

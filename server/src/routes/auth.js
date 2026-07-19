@@ -11,6 +11,12 @@ import {
   registerUser,
   revokeRefreshToken
 } from '../services/authService.js';
+import {
+  createOAuthGrant,
+  createOAuthState,
+  exchangeOAuthGrant,
+  parseOAuthState
+} from '../services/oauthFlowService.js';
 
 const router = express.Router();
 
@@ -29,26 +35,27 @@ function authPayload(session) {
   };
 }
 
-function parseRedirectState(value) {
-  if (!value) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(Buffer.from(String(value), 'base64url').toString('utf-8'));
-    return parsed?.redirect || null;
-  } catch (_error) {
-    return null;
-  }
+function readCookie(req, name) {
+  const prefix = `${name}=`;
+  const entry = String(req.headers.cookie || '')
+    .split(';')
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(prefix));
+  return entry ? decodeURIComponent(entry.slice(prefix.length)) : '';
 }
 
-function sendOauthSuccess(res, session, redirect) {
-  const target = redirect || env.oauthSuccessRedirect;
-  const url = new URL(target);
-  url.searchParams.set('accessToken', session.accessToken);
-  url.searchParams.set('refreshToken', session.refreshToken);
-  url.searchParams.set('principalType', session.principal.type);
+function sendOauthSuccess(res, session, flow) {
+  const url = new URL(flow.redirect);
+  url.searchParams.set('code', createOAuthGrant(session, flow));
   return res.redirect(url.toString());
+}
+
+function parseStartFlow(req, provider) {
+  return createOAuthState({
+    provider,
+    redirect: String(req.query.redirect || '').trim(),
+    codeChallenge: String(req.query.codeChallenge || '').trim()
+  });
 }
 
 router.post('/register', async (req, res) => {
@@ -203,8 +210,12 @@ router.get('/oauth/google/start', (req, res, next) => {
     return res.status(503).json({ error: 'GOOGLE_OAUTH_NOT_CONFIGURED' });
   }
 
-  const redirect = String(req.query.redirect || '').trim();
-  const state = redirect ? Buffer.from(JSON.stringify({ redirect }), 'utf-8').toString('base64url') : undefined;
+  let state;
+  try {
+    state = parseStartFlow(req, 'google');
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
 
   return passport.authenticate('google', {
     scope: ['profile', 'email'],
@@ -214,13 +225,19 @@ router.get('/oauth/google/start', (req, res, next) => {
 });
 
 router.get('/oauth/google/callback', (req, res, next) => {
+  let flow;
+  try {
+    flow = parseOAuthState(req.query.state, 'google');
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+
   passport.authenticate('google', { session: false }, (err, session) => {
     if (err || !session) {
       return res.status(401).json({ error: 'GOOGLE_OAUTH_FAILED' });
     }
 
-    const redirect = parseRedirectState(req.query.state);
-    return sendOauthSuccess(res, session, redirect);
+    return sendOauthSuccess(res, session, flow);
   })(req, res, next);
 });
 
@@ -229,16 +246,55 @@ router.get('/oauth/steam/start', (req, res, next) => {
     return res.status(503).json({ error: 'STEAM_OAUTH_NOT_CONFIGURED' });
   }
 
+  let state;
+  try {
+    state = parseStartFlow(req, 'steam');
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+
+  res.cookie('fox_oauth_state', state, {
+    httpOnly: true,
+    secure: env.nodeEnv === 'production',
+    sameSite: 'lax',
+    maxAge: 10 * 60 * 1000,
+    path: '/api/auth/oauth/steam'
+  });
   return passport.authenticate('steam', { session: false })(req, res, next);
 });
 
 router.get('/oauth/steam/callback', (req, res, next) => {
+  let flow;
+  try {
+    flow = parseOAuthState(readCookie(req, 'fox_oauth_state'), 'steam');
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+  res.clearCookie('fox_oauth_state', { path: '/api/auth/oauth/steam' });
+
   passport.authenticate('steam', { session: false }, (err, session) => {
     if (err || !session) {
       return res.status(401).json({ error: 'STEAM_OAUTH_FAILED' });
     }
-    return sendOauthSuccess(res, session, String(req.query.redirect || '').trim() || null);
+    return sendOauthSuccess(res, session, flow);
   })(req, res, next);
+});
+
+router.post('/oauth/exchange', (req, res) => {
+  const schema = z.object({
+    code: z.string().min(32).max(128),
+    codeVerifier: z.string().min(43).max(128)
+  });
+
+  try {
+    const parsed = schema.parse(req.body || {});
+    return res.json(authPayload(exchangeOAuthGrant(parsed.code, parsed.codeVerifier)));
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'VALIDATION_ERROR', details: error.flatten() });
+    }
+    return res.status(401).json({ error: error.message || 'OAUTH_EXCHANGE_FAILED' });
+  }
 });
 
 export default router;

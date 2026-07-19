@@ -3,16 +3,18 @@ import { MAX_FOXES_LIMIT, MAX_TIER } from '../game/constants';
 import { createInitialState } from './defaultState';
 import {
   apiRequest,
+  completeOAuthLogin,
   consumeOAuthTokensFromUrl,
   ensureGuestSession,
   fetchMe,
   fetchLeaderboard,
   getCurrentPrincipal,
-  getOAuthStartUrl,
   isRemoteApiEnabled,
   loginAccount,
   logoutAccount,
+  onOAuthCallback,
   registerAccount,
+  startOAuthLogin,
   sendTelemetryEvents
 } from './remoteSession';
 
@@ -48,8 +50,9 @@ function createDefaultMeta() {
     settings: {
       defaultSound: true,
       defaultAnimations: true,
-      defaultMusicVolume: 70,
-      defaultSfxVolume: 80
+      defaultMusicVolume: 30,
+      defaultSfxVolume: 70,
+      audioDefaultsVersion: 2
     },
     slots: []
   };
@@ -62,12 +65,11 @@ function sanitizeMeta(meta) {
   }
   const parsedDefaultMusicVolume = Number(meta.settings?.defaultMusicVolume);
   const parsedDefaultSfxVolume = Number(meta.settings?.defaultSfxVolume);
-  const safeDefaultMusicVolume = Number.isFinite(parsedDefaultMusicVolume)
-    ? clamp(Math.round(parsedDefaultMusicVolume), 0, 100)
-    : base.settings.defaultMusicVolume;
-  const safeDefaultSfxVolume = Number.isFinite(parsedDefaultSfxVolume)
-    ? clamp(Math.round(parsedDefaultSfxVolume), 0, 100)
-    : base.settings.defaultSfxVolume;
+  const usesCurrentAudioDefaults = Number(meta.settings?.audioDefaultsVersion) >= 2;
+  const candidateMusicVolume = Number.isFinite(parsedDefaultMusicVolume) ? parsedDefaultMusicVolume : base.settings.defaultMusicVolume;
+  const candidateSfxVolume = Number.isFinite(parsedDefaultSfxVolume) ? parsedDefaultSfxVolume : base.settings.defaultSfxVolume;
+  const safeDefaultMusicVolume = clamp(Math.round(!usesCurrentAudioDefaults && candidateMusicVolume === 70 ? 30 : candidateMusicVolume), 0, 100);
+  const safeDefaultSfxVolume = clamp(Math.round(!usesCurrentAudioDefaults && candidateSfxVolume === 80 ? 70 : candidateSfxVolume), 0, 100);
 
   const slots = Array.isArray(meta.slots)
     ? meta.slots
@@ -99,7 +101,8 @@ function sanitizeMeta(meta) {
       defaultSound: Boolean(meta.settings?.defaultSound ?? base.settings.defaultSound),
       defaultAnimations: Boolean(meta.settings?.defaultAnimations ?? base.settings.defaultAnimations),
       defaultMusicVolume: safeDefaultMusicVolume,
-      defaultSfxVolume: safeDefaultSfxVolume
+      defaultSfxVolume: safeDefaultSfxVolume,
+      audioDefaultsVersion: 2
     },
     slots: slots.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
   };
@@ -652,11 +655,19 @@ export async function logoutGameAccount() {
   return logoutAccount();
 }
 
-export function getOAuthLoginUrl(provider) {
+export function beginOAuthLogin(provider) {
   if (!isRemoteApiEnabled()) {
-    return null;
+    throw new Error('REMOTE_API_DISABLED');
   }
-  return getOAuthStartUrl(provider);
+  return startOAuthLogin(provider);
+}
+
+export function completeOAuthLoginFromCallback(callbackUrl) {
+  return completeOAuthLogin(callbackUrl);
+}
+
+export function onOAuthLoginCallback(handler) {
+  return onOAuthCallback(handler);
 }
 
 export async function fetchLeaderboardCategory(category, limit = 10) {
@@ -667,7 +678,7 @@ export async function fetchLeaderboardCategory(category, limit = 10) {
   return fetchLeaderboard(category, limit);
 }
 
-export function hydrateSessionFromOAuthRedirect() {
+export async function hydrateSessionFromOAuthRedirect() {
   return consumeOAuthTokensFromUrl();
 }
 

@@ -1,0 +1,18 @@
+[Unit]
+Description=Fox Evolution API
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/fox-evo/api
+EnvironmentFile=/var/www/fox-evo/api/.env
+ExecStart=/usr/bin/node src/server.js
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

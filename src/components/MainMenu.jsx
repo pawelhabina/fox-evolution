@@ -1,17 +1,5 @@
 import { useState } from 'react';
 import { formatNumber } from '../game/format';
-import {
-  FaArrowLeft,
-  FaClock,
-  FaDownload,
-  FaFolderOpen,
-  FaPlay,
-  FaPlus,
-  FaSignOutAlt,
-  FaTrash,
-  FaTrophy,
-  FaUser
-} from 'react-icons/fa';
 import GuiIcon from './GuiIcon';
 
 function RootMenu({ onContinue, onOpenLoad, onOpenRanking, onOpenSettings, onOpenAccount, onExit, hasSaves, isRemoteEnabled, principal }) {
@@ -31,20 +19,20 @@ function RootMenu({ onContinue, onOpenLoad, onOpenRanking, onOpenSettings, onOpe
 
       <div className="mt-8 grid gap-3">
         <button type="button" className="primary-btn flex items-center justify-center gap-2" onClick={onContinue}>
-          <FaPlay />
+          <GuiIcon name="play" alt="" size={20} />
           {hasSaves ? 'Kontynuuj' : 'Nowa gra'}
         </button>
         <button type="button" className="shop-tab flex items-center justify-center gap-2" onClick={onOpenLoad}>
-          <FaFolderOpen />
+          <GuiIcon name="folder" alt="" size={20} />
           Wczytaj grę
         </button>
         <button type="button" className="shop-tab flex items-center justify-center gap-2" onClick={onOpenRanking}>
-          <FaTrophy />
+          <GuiIcon name="trophy" alt="" size={20} />
           Ranking
         </button>
         {isRemoteEnabled && (
           <button type="button" className="shop-tab flex items-center justify-center gap-2" onClick={onOpenAccount}>
-            <FaUser />
+            <GuiIcon name="user" alt="" size={20} />
             Konto
           </button>
         )}
@@ -57,7 +45,7 @@ function RootMenu({ onContinue, onOpenLoad, onOpenRanking, onOpenSettings, onOpe
           className="flex items-center justify-center gap-2 rounded-lg border border-rose-400/70 bg-rose-600/25 px-4 py-2 text-rose-100"
           onClick={onExit}
         >
-          <FaSignOutAlt />
+          <GuiIcon name="power" alt="" size={20} />
           Wyjdź z gry
         </button>
       </div>
@@ -70,18 +58,18 @@ function LoadMenu({ slots, onLoad, onNew, onDelete, onBack }) {
     <div className="panel mx-auto w-full max-w-3xl p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-2xl font-bold text-amber-300">
-          <FaFolderOpen />
+          <GuiIcon name="folder" alt="" size={24} />
           Wczytaj grę
         </h2>
         <button type="button" className="shop-tab flex items-center gap-2" onClick={onBack}>
-          <FaArrowLeft />
+          <GuiIcon name="back" alt="" />
           Wstecz
         </button>
       </div>
 
       <div className="mb-4">
         <button type="button" className="primary-btn flex items-center justify-center gap-2" onClick={onNew}>
-          <FaPlus />
+          <GuiIcon name="plus" alt="" />
           Nowa gra
         </button>
       </div>
@@ -94,7 +82,7 @@ function LoadMenu({ slots, onLoad, onNew, onDelete, onBack }) {
               <div>
                 <p className="font-bold text-slate-100">{slot.name}</p>
                 <p className="flex items-center gap-2 text-xs text-slate-400">
-                  <FaClock />
+                  <GuiIcon name="clock" alt="" size={14} />
                   Ostatni zapis: {new Date(slot.updatedAt).toLocaleString()}
                 </p>
                 <p className="flex items-center gap-2 text-xs text-slate-400">
@@ -110,7 +98,7 @@ function LoadMenu({ slots, onLoad, onNew, onDelete, onBack }) {
                   className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold"
                   onClick={() => onLoad(slot.id)}
                 >
-                  <FaDownload />
+                  <GuiIcon name="download" alt="" size={14} />
                   Wczytaj
                 </button>
                 <button
@@ -123,7 +111,7 @@ function LoadMenu({ slots, onLoad, onNew, onDelete, onBack }) {
                     }
                   }}
                 >
-                  <FaTrash />
+                  <GuiIcon name="trash" alt="" size={14} />
                   Usuń
                 </button>
               </div>
@@ -172,17 +160,18 @@ function RankingMenu({ slots, onBack, isRemoteEnabled, leaderboardData, leaderbo
     <div className="panel mx-auto w-full max-w-4xl p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-2xl font-bold text-amber-300">
-          <FaTrophy />
+          <GuiIcon name="trophy" alt="" size={24} />
           Ranking
         </h2>
         <div className="flex gap-2">
           {isRemoteEnabled && (
-            <button type="button" className="shop-tab" onClick={onRefreshLeaderboard}>
+            <button type="button" className="shop-tab flex items-center gap-2" onClick={onRefreshLeaderboard}>
+              <GuiIcon name="refresh" alt="" />
               Odśwież
             </button>
           )}
           <button type="button" className="shop-tab flex items-center gap-2" onClick={onBack}>
-            <FaArrowLeft />
+            <GuiIcon name="back" alt="" />
             Wstecz
           </button>
         </div>
@@ -234,7 +223,7 @@ function RankingMenu({ slots, onBack, isRemoteEnabled, leaderboardData, leaderbo
   );
 }
 
-function AccountMenu({ principal, onBack, onRegister, onLogin, onLogout, googleUrl, steamUrl }) {
+function AccountMenu({ principal, onBack, onRegister, onLogin, onLogout, onOAuthLogin }) {
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -266,11 +255,11 @@ function AccountMenu({ principal, onBack, onRegister, onLogin, onLogout, googleU
     <div className="panel mx-auto w-full max-w-xl p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-2xl font-bold text-amber-300">
-          <FaUser />
+          <GuiIcon name="user" alt="" size={24} />
           Konto
         </h2>
         <button type="button" className="shop-tab flex items-center gap-2" onClick={onBack}>
-          <FaArrowLeft />
+          <GuiIcon name="back" alt="" />
           Wstecz
         </button>
       </div>
@@ -280,7 +269,8 @@ function AccountMenu({ principal, onBack, onRegister, onLogin, onLogout, googleU
       </div>
 
       {isUser && (
-        <button type="button" className="rounded-lg border border-rose-500/70 bg-rose-600/20 px-4 py-2 text-rose-100" onClick={onLogout}>
+        <button type="button" className="flex items-center gap-2 rounded-lg border border-rose-500/70 bg-rose-600/20 px-4 py-2 text-rose-100" onClick={onLogout}>
+          <GuiIcon name="power" alt="" />
           Wyloguj
         </button>
       )}
@@ -333,16 +323,14 @@ function AccountMenu({ principal, onBack, onRegister, onLogin, onLogout, googleU
 
           <div className="mt-4 grid gap-2">
             <p className="text-xs text-slate-400">OAuth:</p>
-            {googleUrl && (
-              <a className="shop-tab text-center" href={googleUrl}>
-                Zaloguj przez Google
-              </a>
-            )}
-            {steamUrl && (
-              <a className="shop-tab text-center" href={steamUrl}>
-                Zaloguj przez Steam
-              </a>
-            )}
+            <button type="button" className="shop-tab flex items-center justify-center gap-2 text-center" onClick={() => onOAuthLogin('google')} disabled={busy}>
+              <GuiIcon name="google" alt="" />
+              Zaloguj przez Google
+            </button>
+            <button type="button" className="shop-tab flex items-center justify-center gap-2 text-center" onClick={() => onOAuthLogin('steam')} disabled={busy}>
+              <GuiIcon name="steam" alt="" />
+              Zaloguj przez Steam
+            </button>
           </div>
         </>
       )}
@@ -351,8 +339,8 @@ function AccountMenu({ principal, onBack, onRegister, onLogin, onLogout, googleU
 }
 
 function SettingsMenu({ settings, onToggle, onSetVolume, onBack }) {
-  const defaultMusicVolume = Number.isFinite(settings.defaultMusicVolume) ? settings.defaultMusicVolume : 70;
-  const defaultSfxVolume = Number.isFinite(settings.defaultSfxVolume) ? settings.defaultSfxVolume : 80;
+  const defaultMusicVolume = Number.isFinite(settings.defaultMusicVolume) ? settings.defaultMusicVolume : 30;
+  const defaultSfxVolume = Number.isFinite(settings.defaultSfxVolume) ? settings.defaultSfxVolume : 70;
 
   return (
     <div className="panel mx-auto w-full max-w-xl p-6">
@@ -362,19 +350,19 @@ function SettingsMenu({ settings, onToggle, onSetVolume, onBack }) {
           Ustawienia
         </h2>
         <button type="button" className="shop-tab flex items-center gap-2" onClick={onBack}>
-          <FaArrowLeft />
+          <GuiIcon name="back" alt="" />
           Wstecz
         </button>
       </div>
 
-      <p className="mb-3 text-sm text-slate-400">Domyślne ustawienia dla nowych zapisów:</p>
+      <p className="mb-3 text-sm text-slate-400">Audio jest wspólne dla całej gry. Animacje są ustawieniem domyślnym nowych zapisów.</p>
       <div className="grid gap-2">
         <button type="button" className="flex items-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-left" onClick={() => onToggle('defaultSound')}>
-          <GuiIcon name="energy" alt="Sound" />
+          <GuiIcon name="sound" alt="Dźwięki" />
           Sound: {settings.defaultSound ? 'ON' : 'OFF'}
         </button>
         <button type="button" className="flex items-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-left" onClick={() => onToggle('defaultAnimations')}>
-          <GuiIcon name="clock2" alt="Animations" />
+          <GuiIcon name="animation" alt="Animacje" />
           Animations: {settings.defaultAnimations ? 'ON' : 'OFF'}
         </button>
       </div>
@@ -384,8 +372,8 @@ function SettingsMenu({ settings, onToggle, onSetVolume, onBack }) {
           <label className="grid gap-1">
             <span className="flex items-center justify-between text-sm text-slate-200">
               <span className="flex items-center gap-2">
-                <GuiIcon name="time" alt="Muzyka" />
-                Muzyka (domyślna)
+                <GuiIcon name="music" alt="Muzyka" />
+                Muzyka
               </span>
               <span className="font-bold text-amber-300">{defaultMusicVolume}%</span>
             </span>
@@ -403,8 +391,8 @@ function SettingsMenu({ settings, onToggle, onSetVolume, onBack }) {
           <label className="grid gap-1">
             <span className="flex items-center justify-between text-sm text-slate-200">
               <span className="flex items-center gap-2">
-                <GuiIcon name="energy" alt="SFX" />
-                SFX (domyślne)
+                <GuiIcon name="sound" alt="SFX" />
+                SFX
               </span>
               <span className="font-bold text-amber-300">{defaultSfxVolume}%</span>
             </span>
@@ -448,8 +436,7 @@ export default function MainMenu({
   onLoginAccount,
   onRegisterAccount,
   onLogoutAccount,
-  oauthGoogleUrl,
-  oauthSteamUrl
+  onOAuthLogin
 }) {
   if (view === 'load') {
     return <LoadMenu slots={meta.slots} onLoad={onLoad} onNew={onNew} onDelete={onDelete} onBack={onBack} />;
@@ -479,8 +466,7 @@ export default function MainMenu({
         onRegister={onRegisterAccount}
         onLogin={onLoginAccount}
         onLogout={onLogoutAccount}
-        googleUrl={oauthGoogleUrl}
-        steamUrl={oauthSteamUrl}
+        onOAuthLogin={onOAuthLogin}
       />
     );
   }

@@ -14,3 +14,18 @@ Funkcje sieciowe:
 - online saves
 - updates check on startup
 - friends (lista, bonusy)
+
+
+
+ot
+- zapisywanie się ustawień
+- dodanie więcej questów
+- osobne guziki do wyciszenia muzyki i sfx
+- lekko zwiększyć czcionkę na górnym pasku
+- naprawić problem braku możliwości przesuwania okana
+- dodać komunikat nie ma miejsca na planszy zamiast tylko wyszarzać przycisk kupna lista
+- naprawić przesuwanie się tekstów przy kupowaniu ulepszeń
+- rework/redesign menu głównego
+- dodatkowe opcje konta
+
+NADAL BŁąD INSTALATORA

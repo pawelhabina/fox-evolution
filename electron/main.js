@@ -1,6 +1,7 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { launchWindowsUpdateHandoff } = require('./updateHandoff');
 
 let autoUpdater = null;
 try {
@@ -12,6 +13,8 @@ try {
 let mainWindow;
 let updateCheckInterval = null;
 let updaterInitialized = false;
+let pendingOAuthCallback = null;
+const oauthProtocol = 'fox-evolution';
 const updaterState = {
   enabled: false,
   status: 'idle',
@@ -21,6 +24,57 @@ const updaterState = {
   updateVersion: null,
   checkedAt: null
 };
+
+function isOAuthCallbackUrl(value) {
+  try {
+    const url = new URL(String(value || ''));
+    return url.protocol === `${oauthProtocol}:` && url.hostname === 'oauth' && url.pathname === '/callback';
+  } catch (_error) {
+    return false;
+  }
+}
+
+function deliverOAuthCallback(value) {
+  if (!isOAuthCallbackUrl(value)) {
+    return;
+  }
+  pendingOAuthCallback = value;
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.show();
+    mainWindow.focus();
+    mainWindow.webContents.send('app:oauth-callback', value);
+    pendingOAuthCallback = null;
+  }
+}
+
+if (process.defaultApp && process.argv[1]) {
+  app.setAsDefaultProtocolClient(oauthProtocol, process.execPath, [path.resolve(process.argv[1])]);
+} else {
+  app.setAsDefaultProtocolClient(oauthProtocol);
+}
+
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (_event, commandLine) => {
+    const callbackUrl = commandLine.find(isOAuthCallbackUrl);
+    if (callbackUrl) {
+      deliverOAuthCallback(callbackUrl);
+    } else if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  deliverOAuthCallback(url);
+});
 
 function getSavesDir() {
   return path.join(app.getPath('userData'), 'saves');
@@ -34,17 +88,48 @@ function getSlotPath(slotId) {
   return path.join(getSavesDir(), `${slotId}.json`);
 }
 
+function getUpdateInstallLogPath() {
+  return path.join(app.getPath('userData'), 'update-install.log');
+}
+
+function appendUpdateInstallLog(message) {
+  try {
+    fs.appendFileSync(getUpdateInstallLogPath(), `${new Date().toISOString()} ${message}\n`, 'utf-8');
+  } catch (_error) {
+    // Update installation must not depend on diagnostic logging.
+  }
+}
+
 function createDefaultMeta() {
   return {
     lastPlayedSlotId: null,
     settings: {
       defaultSound: true,
       defaultAnimations: true,
-      defaultMusicVolume: 70,
-      defaultSfxVolume: 80
+      defaultMusicVolume: 30,
+      defaultSfxVolume: 70,
+      audioDefaultsVersion: 2
     },
     slots: []
   };
+}
+
+function normalizeMetaSettings(rawSettings = {}) {
+  const defaults = createDefaultMeta().settings;
+  const merged = {
+    ...defaults,
+    ...rawSettings
+  };
+  if (Number(rawSettings.audioDefaultsVersion) < 2) {
+    if (Number(rawSettings.defaultMusicVolume) === 70) {
+      merged.defaultMusicVolume = 30;
+    }
+    if (Number(rawSettings.defaultSfxVolume) === 80) {
+      merged.defaultSfxVolume = 70;
+    }
+  }
+  merged.audioDefaultsVersion = 2;
+  return merged;
 }
 
 async function ensureSavesDir() {
@@ -60,10 +145,7 @@ async function readMetaFile() {
     return {
       ...createDefaultMeta(),
       ...parsed,
-      settings: {
-        ...createDefaultMeta().settings,
-        ...(parsed.settings || {})
-      },
+      settings: normalizeMetaSettings(parsed.settings),
       slots: Array.isArray(parsed.slots) ? parsed.slots : []
     };
   } catch (error) {
@@ -192,7 +274,8 @@ function initAutoUpdater() {
   }
 
   autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.autoRunAppAfterInstall = true;
   autoUpdater.allowDowngrade = false;
   autoUpdater.setFeedURL({
     provider: 'generic',
@@ -308,10 +391,7 @@ function saveSlotSync({ slotId, state, name }) {
     meta = {
       ...meta,
       ...parsed,
-      settings: {
-        ...meta.settings,
-        ...(parsed.settings || {})
-      },
+      settings: normalizeMetaSettings(parsed.settings),
       slots: Array.isArray(parsed.slots) ? parsed.slots : []
     };
   } catch (_error) {
@@ -346,12 +426,20 @@ async function createWindow() {
     minWidth: 980,
     minHeight: 640,
     backgroundColor: '#030712',
+    autoHideMenuBar: true,
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#030712',
+      symbolColor: '#f8fafc',
+      height: 32
+    },
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false
     }
   });
+  mainWindow.removeMenu();
 
   const isDev = !app.isPackaged;
   if (isDev) {
@@ -362,6 +450,9 @@ async function createWindow() {
 
   mainWindow.webContents.on('did-finish-load', () => {
     broadcastUpdaterState();
+    if (pendingOAuthCallback) {
+      deliverOAuthCallback(pendingOAuthCallback);
+    }
   });
 }
 
@@ -424,10 +515,49 @@ app.whenReady().then(() => {
     if (!autoUpdater || updaterState.status !== 'downloaded') {
       return false;
     }
+
+    setUpdaterState({
+      status: 'installing',
+      message: 'Zapisywanie gry i bezpieczne zamykanie aplikacji...',
+      progress: 100
+    });
+
+    if (process.platform === 'win32' && autoUpdater.installerPath && fs.existsSync(autoUpdater.installerPath)) {
+      try {
+        appendUpdateInstallLog(`Preparing installer: ${path.basename(autoUpdater.installerPath)}`);
+        launchWindowsUpdateHandoff({
+          appPid: process.pid,
+          appExecutablePath: process.execPath,
+          installerPath: autoUpdater.installerPath,
+          logPath: getUpdateInstallLogPath()
+        });
+        setTimeout(() => {
+          app.quit();
+        }, 250);
+        return true;
+      } catch (error) {
+        appendUpdateInstallLog(`Handoff failed, using electron-updater fallback: ${error?.message || error}`);
+      }
+    }
+
     setImmediate(() => {
-      autoUpdater.quitAndInstall();
+      autoUpdater.quitAndInstall(false, true);
     });
     return true;
+  });
+  ipcMain.handle('app:oauth:open', async (_event, value) => {
+    try {
+      const url = new URL(String(value || ''));
+      const isAllowedHost = url.hostname === 'foxevo.mionix.pl' || url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+      const isAllowedPath = /^\/api\/auth\/oauth\/(google|steam)\/start$/.test(url.pathname);
+      if (!['https:', 'http:'].includes(url.protocol) || !isAllowedHost || !isAllowedPath) {
+        return false;
+      }
+      await shell.openExternal(url.toString());
+      return true;
+    } catch (_error) {
+      return false;
+    }
   });
   ipcMain.handle('app:quit', () => {
     app.quit();

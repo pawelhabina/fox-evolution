@@ -74,8 +74,8 @@ function normalizeSettings(settings = {}) {
   return {
     sound: Boolean(settings.sound ?? true),
     animations: Boolean(settings.animations ?? true),
-    musicVolume: normalizeVolume(settings.musicVolume, 70),
-    sfxVolume: normalizeVolume(settings.sfxVolume, 80)
+    musicVolume: normalizeVolume(settings.musicVolume, 30),
+    sfxVolume: normalizeVolume(settings.sfxVolume, 70)
   };
 }
 

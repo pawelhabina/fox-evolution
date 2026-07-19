@@ -53,10 +53,18 @@ export const env = {
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
   googleCallbackUrl: process.env.GOOGLE_CALLBACK_URL || '',
-  steamApiKey: process.env.STEAM_API_KEY || '',
   steamRealm: process.env.STEAM_REALM || '',
   steamReturnUrl: process.env.STEAM_RETURN_URL || '',
   oauthSuccessRedirect: process.env.OAUTH_SUCCESS_REDIRECT || 'http://localhost:5173/oauth-success',
+  oauthAllowedRedirects: unique(
+    parseCsv(
+      process.env.OAUTH_ALLOWED_REDIRECTS ||
+        'fox-evolution://oauth/callback,http://localhost:5173/oauth-success,http://127.0.0.1:5173/oauth-success'
+    )
+  ),
+  oauthStateSecret: required('OAUTH_STATE_SECRET', process.env.JWT_REFRESH_SECRET || 'dev-oauth-state-secret'),
+  oauthCodeTtlSeconds: Math.max(60, Math.min(600, Number(process.env.OAUTH_CODE_TTL_SECONDS || 180))),
+  trustProxy: Math.max(0, Number(process.env.TRUST_PROXY || 0)),
   updatesDir: path.resolve(process.env.UPDATE_FILES_DIR || path.join(serverRoot, 'updates'))
 };
 

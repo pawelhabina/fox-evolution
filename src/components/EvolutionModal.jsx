@@ -1,4 +1,5 @@
 import { EVOLUTION_COST_GEMS, EVOLUTION_TYPES } from '../game/constants';
+import GuiIcon from './GuiIcon';
 
 export default function EvolutionModal({ fox, currentGems, onSelect, onClose }) {
   if (!fox) {
@@ -38,8 +39,9 @@ export default function EvolutionModal({ fox, currentGems, onSelect, onClose }) 
                 }
               }}
             >
-              <p className="font-bold text-slate-100">
-                {evo.icon} {evo.name}
+              <p className="flex items-center gap-2 font-bold text-slate-100">
+                <GuiIcon name={evo.icon} alt="" size={22} />
+                {evo.name}
               </p>
               <p className="text-xs text-slate-400">{effectDescriptions[evo.id]}</p>
             </button>

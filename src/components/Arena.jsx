@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { getTierData, getEvolutionData } from '../game/economy';
+import { MEGA_TIER } from '../game/constants';
 import { formatNumber } from '../game/format';
 import { getFoxSprite } from '../assets/foxSprites';
 import GuiIcon from './GuiIcon';
@@ -47,20 +48,58 @@ export default function Arena({
   onFoxClick,
   onFoxContextMenu,
   animationsEnabled,
+  incomePulse,
   buyCost,
   canBuyFox,
   onBuyFox
 }) {
   const arenaRef = useRef(null);
   const mergeEffectIdRef = useRef(0);
+  const clickEffectIdRef = useRef(0);
   const mergeEffectTimersRef = useRef(new Set());
+  const incomeEffectTimersRef = useRef(new Set());
   const [dragging, setDragging] = useState(null);
   const [mergeEffects, setMergeEffects] = useState([]);
+  const [incomeEffects, setIncomeEffects] = useState([]);
 
   useEffect(() => () => {
     mergeEffectTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     mergeEffectTimersRef.current.clear();
+    incomeEffectTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    incomeEffectTimersRef.current.clear();
   }, []);
+
+  useEffect(() => {
+    if (!animationsEnabled || !incomePulse?.entries?.length) {
+      return;
+    }
+
+    const foxById = new Map(foxes.map((fox) => [fox.id, fox]));
+    const effects = incomePulse.entries.flatMap((entry) => {
+      const fox = foxById.get(entry.foxId);
+      if (!fox) {
+        return [];
+      }
+      return [{
+        id: `${incomePulse.id}-${entry.foxId}`,
+        batchId: incomePulse.id,
+        x: fox.x + 39,
+        y: fox.y + 8,
+        amount: entry.amount
+      }];
+    });
+
+    if (effects.length === 0) {
+      return;
+    }
+
+    setIncomeEffects((current) => [...current, ...effects]);
+    const timer = window.setTimeout(() => {
+      setIncomeEffects((current) => current.filter((effect) => effect.batchId !== incomePulse.id));
+      incomeEffectTimersRef.current.delete(timer);
+    }, 820);
+    incomeEffectTimersRef.current.add(timer);
+  }, [animationsEnabled, incomePulse]);
 
   useEffect(() => {
     const element = arenaRef.current;
@@ -111,7 +150,25 @@ export default function Arena({
       const sourceId = dragging.id;
 
       if (!dragging.moved) {
-        onFoxClick(sourceId);
+        const gain = onFoxClick(sourceId);
+        const fox = foxes.find((item) => item.id === sourceId);
+        if (animationsEnabled && gain > 0 && fox) {
+          clickEffectIdRef.current += 1;
+          const effectId = `click-${clickEffectIdRef.current}`;
+          setIncomeEffects((current) => [...current, {
+            id: effectId,
+            batchId: effectId,
+            kind: 'click',
+            x: fox.x + 39,
+            y: fox.y + 8,
+            amount: gain
+          }]);
+          const timer = window.setTimeout(() => {
+            setIncomeEffects((current) => current.filter((effect) => effect.id !== effectId));
+            incomeEffectTimersRef.current.delete(timer);
+          }, 820);
+          incomeEffectTimersRef.current.add(timer);
+        }
         setDragging(null);
         return;
       }
@@ -154,7 +211,7 @@ export default function Arena({
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
     };
-  }, [dragging, onFoxClick, onFoxMerge, onFoxMove]);
+  }, [animationsEnabled, dragging, foxes, onFoxClick, onFoxMerge, onFoxMove]);
 
   return (
     <section className="arena-shell relative flex h-full flex-1 min-h-0 flex-col overflow-hidden">
@@ -176,13 +233,14 @@ export default function Arena({
 
         {foxes.map((fox) => {
           const sprite = getFoxSprite(fox.tier, fox.evolution);
+          const evolutionReady = fox.tier === MEGA_TIER && !fox.evolution;
           return (
             <button
               key={fox.id}
               type="button"
               data-fox-id={fox.id}
-              className={`fox-tile ${dragging?.id === fox.id ? 'dragging' : ''}`}
-              title={foxLabel(fox)}
+              className={`fox-tile ${evolutionReady ? 'evolution-ready' : ''} ${dragging?.id === fox.id ? 'dragging' : ''}`}
+              title={evolutionReady ? `${foxLabel(fox)} — gotowy do ewolucji (kliknij prawym przyciskiem)` : foxLabel(fox)}
               style={{
                 left: `${fox.x}px`,
                 top: `${fox.y}px`,
@@ -208,6 +266,12 @@ export default function Arena({
             >
               <div className="pointer-events-none relative flex h-full items-center justify-center">
                 <img className="fox-sprite" src={sprite} alt={foxLabel(fox)} draggable={false} />
+                {evolutionReady && (
+                  <span className="fox-evolution-ready-marker" aria-hidden="true">
+                    <span>◆</span>
+                    EVO!
+                  </span>
+                )}
               </div>
             </button>
           );
@@ -240,6 +304,17 @@ export default function Arena({
               />
             ))}
           </div>
+        ))}
+
+        {incomeEffects.map((effect) => (
+          <span
+            key={effect.id}
+            className={`fox-income-float ${effect.kind === 'click' ? 'fox-income-float--click' : ''}`}
+            style={{ left: effect.x, top: effect.y }}
+            aria-hidden="true"
+          >
+            +{formatNumber(effect.amount)}
+          </span>
         ))}
 
         <div className="arena-buy-dock">

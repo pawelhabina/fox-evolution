@@ -21,7 +21,6 @@ import {
 } from '../game/economy';
 import { formatCompact, formatNumber, formatPercent } from '../game/format';
 import { formatCountdown, getTodayLoginRewardInfo } from '../game/quests';
-import { FaCalendarAlt } from 'react-icons/fa';
 import GuiIcon from './GuiIcon';
 
 const TABS = ['Ulepszenia', 'Boosty', 'Rebirth', 'Zadania'];
@@ -33,13 +32,13 @@ const TAB_ICONS = {
 };
 const UPGRADE_ICONS = {
   basePurchaseTier: 'chestT1',
-  passiveIncome: 'energy',
+  passiveIncome: 'income',
   buyDiscount: 'priceDown1',
   clickBonus: 'foxUpgrade',
   foxLimit: 'pet',
   gemIncomeMultiplier: 'diamondUpgrade',
   gemFoxLimit: 'pet',
-  tickSpeed: 'time',
+  tickSpeed: 'clock',
   purchaseTierChance: 'random',
   gemDropRate: 'diamond'
 };
@@ -229,7 +228,7 @@ export default function ShopPanel({
           Centrum rozwoju
         </h2>
         <button type="button" className="shop-collapse-btn" onClick={onCollapse} title="Zwiń sklep" aria-label="Zwiń sklep">
-          <span aria-hidden="true">›</span>
+          <GuiIcon name="collapse" alt="" size={18} />
         </button>
       </div>
 
@@ -371,7 +370,7 @@ export default function ShopPanel({
 
             <div className="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
               <p className="flex items-center gap-2 font-bold text-cyan-200">
-                <FaCalendarAlt />
+                <GuiIcon name="calendar" alt="Zadania tygodniowe" />
                 Zadania tygodniowe
                 <span className="ml-auto text-xs font-medium text-slate-300">Reset: {formatCountdown(weeklyResetInSeconds)}</span>
               </p>

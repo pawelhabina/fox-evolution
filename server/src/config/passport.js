@@ -3,6 +3,7 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as SteamStrategy } from 'passport-steam';
 import { env } from './env.js';
 import { loginOAuthUser } from '../services/authService.js';
+import { normalizeSteamIdentifier } from '../services/steamAuthService.js';
 
 function buildContext(req) {
   return {
@@ -41,20 +42,20 @@ if (env.googleClientId && env.googleClientSecret && env.googleCallbackUrl) {
   );
 }
 
-if (env.steamApiKey && env.steamRealm && env.steamReturnUrl) {
+if (env.steamRealm && env.steamReturnUrl) {
   passport.use(
     'steam',
     new SteamStrategy(
       {
         returnURL: env.steamReturnUrl,
         realm: env.steamRealm,
-        apiKey: env.steamApiKey,
+        profile: false,
         passReqToCallback: true
       },
       async (req, identifier, profile, done) => {
         try {
-          const steamId = profile?.id || identifier;
-          const displayName = profile?.displayName || `Steam-${steamId}`;
+          const steamId = normalizeSteamIdentifier(profile?.id || identifier);
+          const displayName = profile?.displayName || `Steam-${steamId.slice(-6)}`;
           const session = await loginOAuthUser({
             provider: 'STEAM',
             providerUserId: steamId,

@@ -5,8 +5,8 @@ export function createInitialState(nowTs = Date.now()) {
   return {
     version: GAME_VERSION,
     currencies: {
-      coins: 250000000000000,
-      gems: 10000000,
+      coins: 120,
+      gems: 0,
       rebirthTokens: 0
     },
     foxes: [],
@@ -32,8 +32,8 @@ export function createInitialState(nowTs = Date.now()) {
     settings: {
       sound: true,
       animations: true,
-      musicVolume: 70,
-      sfxVolume: 80
+      musicVolume: 30,
+      sfxVolume: 70
     },
     stats: {
       lifetimeCoinsEarned: 0,

@@ -1,7 +1,7 @@
 {
   "name": "fox-evolution",
-  "version": "1.0.0",
-  "description": "Offline desktop merge game built with Electron + React + Vite + Tailwind",
+  "version": "1.1.4",
+  "description": "Merge Fox Tycoon",
   "main": "electron/main.js",
   "scripts": {
     "dev": "node scripts/dev.mjs",
@@ -9,12 +9,16 @@
     "dev:server": "npm --prefix server run dev",
     "build:web": "vite build",
     "build": "npm run build:web && electron-builder",
+    "build:win": "npm run build:web && electron-builder --win nsis --x64 --publish never",
     "updates:publish": "node scripts/publish-updates.mjs",
-    "release:desktop": "npm run build && npm run updates:publish",
+    "release:desktop": "npm run build && npm run updates:publish && npm run nextcloud:publish",
+    "release:win:s1": "npm run build:win && npm run updates:publish && npm run deploy:s1 && npm run nextcloud:publish",
     "preview": "vite preview",
     "server:prisma:generate": "npm --prefix server run prisma:generate",
     "server:prisma:push": "npm --prefix server run prisma:push",
-    "server:seed:admin": "npm --prefix server run seed:admin"
+    "server:seed:admin": "npm --prefix server run seed:admin",
+    "deploy:s1": "node scripts/deploy-s1.mjs",
+    "nextcloud:publish": "node scripts/publish-nextcloud.mjs"
   },
   "build": {
     "appId": "com.foxevolution.app",
@@ -37,6 +41,13 @@
     },
     "linux": {
       "target": "AppImage"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "include": "build/installer.nsh"
     }
   },
   "keywords": [
@@ -45,13 +56,12 @@
     "vite",
     "merge-game"
   ],
-  "author": "",
+  "author": "Mionix Games",
   "license": "MIT",
   "dependencies": {
     "electron-updater": "^6.6.2",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-icons": "^5.5.0"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
