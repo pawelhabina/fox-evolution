@@ -1,4 +1,4 @@
-export const GAME_VERSION = '1.1.7';
+export const GAME_VERSION = '1.1.8';
 export const BASE_TICK_SECONDS = 5;
 export const MIN_TICK_SECONDS = 1;
 export const MIN_TICK_SECONDS_WITH_BOOST = 0.3;

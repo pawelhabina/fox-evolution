@@ -89,29 +89,31 @@ function UpgradeCard({ state, upgrade, onBuyUpgrade }) {
   const iconName = UPGRADE_ICONS[upgrade.id] || 'upgrade';
   const currencyLabel = upgrade.currency === 'coins' ? 'monet' : upgrade.currency === 'gems' ? 'diamentów' : 'rebirth points';
   const currencyIcon = upgrade.currency === 'coins' ? 'coin' : upgrade.currency === 'gems' ? 'diamond' : 'rebirth';
+  const currentValue = getCurrentUpgradeValue(state, upgrade.id);
+  const costLabel = isMaxed ? 'Maksymalny poziom' : `Koszt: ${formatNumber(cost)} ${currencyLabel}`;
 
   return (
-    <div key={upgrade.id} className="rounded-xl border border-slate-700 bg-slate-800/70 p-3">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="flex items-center gap-2 text-sm font-bold text-slate-100">
+    <div key={upgrade.id} className="upgrade-card rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+      <div className="upgrade-card-header">
+        <div className="upgrade-card-copy">
+          <p className="upgrade-card-title flex items-center gap-2 text-sm font-bold text-slate-100">
             <GuiIcon name={iconName} alt={upgrade.title} />
             {upgrade.title}
           </p>
-          <p className="text-xs text-slate-400">{upgrade.description}</p>
-          <p className="mt-1 text-xs text-amber-200">{getCurrentUpgradeValue(state, upgrade.id)}</p>
+          <p className="upgrade-card-description text-xs text-slate-400">{upgrade.description}</p>
         </div>
-        <p className="shrink-0 whitespace-nowrap text-xs text-slate-400">{capped ? `Lv ${level}/${cap}` : `Lv ${level}`}</p>
+        <p className="upgrade-card-level text-xs text-slate-400">{capped ? `Lv ${level}/${cap}` : `Lv ${level}`}</p>
+        <p className="upgrade-card-current mt-1 text-xs text-amber-200" title={currentValue}>{currentValue}</p>
       </div>
 
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <p className="flex items-center gap-2 text-xs text-slate-300">
+      <div className="upgrade-card-footer mt-2">
+        <p className="upgrade-card-cost flex items-center gap-2 text-xs text-slate-300" title={costLabel}>
           <GuiIcon name={currencyIcon} alt={currencyLabel} />
-          {isMaxed ? 'Osiągnięto maksymalny poziom' : `Koszt: ${formatNumber(cost)} ${currencyLabel}`}
+          <span>{costLabel}</span>
         </p>
         <button
           type="button"
-          className={`rounded-lg px-3 py-1 text-xs font-bold disabled:cursor-not-allowed ${
+          className={`upgrade-card-buy rounded-lg px-3 py-1 text-xs font-bold disabled:cursor-not-allowed ${
             isMaxed ? 'bg-amber-500 text-slate-950 disabled:bg-amber-500' : 'bg-emerald-600 disabled:bg-slate-600'
           }`}
           onClick={() => onBuyUpgrade(upgrade.id)}

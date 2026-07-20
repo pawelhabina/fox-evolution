@@ -448,6 +448,77 @@ body {
   z-index: 21;
 }
 
+.upgrade-card {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 28px;
+  min-height: 164px;
+}
+
+.upgrade-card-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px;
+  align-items: start;
+  gap: 0.5rem;
+}
+
+.upgrade-card-copy {
+  min-width: 0;
+}
+
+.upgrade-card-title {
+  min-height: 2.2em;
+  align-items: flex-start;
+}
+
+.upgrade-card-description {
+  min-height: 3em;
+}
+
+.upgrade-card-current,
+.upgrade-card-level,
+.upgrade-card-cost {
+  font-variant-numeric: tabular-nums;
+}
+
+.upgrade-card-cost > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upgrade-card-current {
+  display: -webkit-box;
+  grid-column: 1 / -1;
+  min-height: 2.4em;
+  overflow: hidden;
+  line-height: 1.2;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.upgrade-card-level {
+  width: 64px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.upgrade-card-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 52px;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.upgrade-card-cost {
+  min-width: 0;
+}
+
+.upgrade-card-buy {
+  width: 52px;
+  min-width: 52px;
+}
+
 .shop-heading {
   display: flex;
   min-height: 34px;
