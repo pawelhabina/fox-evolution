@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatNumber } from '../game/format';
+import AudioVolumeControl from './AudioVolumeControl';
 import GuiIcon from './GuiIcon';
 
 function RootMenu({ onContinue, onOpenLoad, onOpenRanking, onOpenSettings, onOpenAccount, onExit, hasSaves, isRemoteEnabled, principal }) {
@@ -341,6 +342,8 @@ function AccountMenu({ principal, onBack, onRegister, onLogin, onLogout, onOAuth
 function SettingsMenu({ settings, onToggle, onSetVolume, onBack }) {
   const defaultMusicVolume = Number.isFinite(settings.defaultMusicVolume) ? settings.defaultMusicVolume : 30;
   const defaultSfxVolume = Number.isFinite(settings.defaultSfxVolume) ? settings.defaultSfxVolume : 70;
+  const defaultMusicMuted = Boolean(settings.defaultMusicMuted);
+  const defaultSfxMuted = Boolean(settings.defaultSfxMuted);
 
   return (
     <div className="panel mx-auto w-full max-w-xl p-6">
@@ -355,7 +358,7 @@ function SettingsMenu({ settings, onToggle, onSetVolume, onBack }) {
         </button>
       </div>
 
-      <p className="mb-3 text-sm text-slate-400">Audio jest wspólne dla całej gry. Animacje są ustawieniem domyślnym nowych zapisów.</p>
+      <p className="mb-3 text-sm text-slate-400">Ustawienia są wspólne dla całej gry i zapisywane na tym urządzeniu.</p>
       <div className="grid gap-2">
         <button type="button" className="flex items-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-left" onClick={() => onToggle('defaultSound')}>
           <GuiIcon name="sound" alt="Dźwięki" />
@@ -369,43 +372,23 @@ function SettingsMenu({ settings, onToggle, onSetVolume, onBack }) {
 
       <div className="mt-3 rounded-xl border border-slate-700 bg-slate-800/70 p-3">
         <div className="grid gap-3">
-          <label className="grid gap-1">
-            <span className="flex items-center justify-between text-sm text-slate-200">
-              <span className="flex items-center gap-2">
-                <GuiIcon name="music" alt="Muzyka" />
-                Muzyka
-              </span>
-              <span className="font-bold text-amber-300">{defaultMusicVolume}%</span>
-            </span>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={1}
-              value={defaultMusicVolume}
-              onChange={(event) => onSetVolume('defaultMusicVolume', Number(event.target.value))}
-              className="w-full accent-amber-400"
-            />
-          </label>
+          <AudioVolumeControl
+            icon="music"
+            label="Muzyka"
+            volume={defaultMusicVolume}
+            muted={defaultMusicMuted}
+            onChange={(value) => onSetVolume('defaultMusicVolume', value)}
+            onToggleMute={() => onToggle('defaultMusicMuted')}
+          />
 
-          <label className="grid gap-1">
-            <span className="flex items-center justify-between text-sm text-slate-200">
-              <span className="flex items-center gap-2">
-                <GuiIcon name="sound" alt="SFX" />
-                SFX
-              </span>
-              <span className="font-bold text-amber-300">{defaultSfxVolume}%</span>
-            </span>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={1}
-              value={defaultSfxVolume}
-              onChange={(event) => onSetVolume('defaultSfxVolume', Number(event.target.value))}
-              className="w-full accent-amber-400"
-            />
-          </label>
+          <AudioVolumeControl
+            icon="sound"
+            label="SFX"
+            volume={defaultSfxVolume}
+            muted={defaultSfxMuted}
+            onChange={(value) => onSetVolume('defaultSfxVolume', value)}
+            onToggleMute={() => onToggle('defaultSfxMuted')}
+          />
         </div>
       </div>
     </div>

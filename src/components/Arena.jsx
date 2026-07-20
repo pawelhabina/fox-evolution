@@ -51,6 +51,7 @@ export default function Arena({
   incomePulse,
   buyCost,
   canBuyFox,
+  buyBlockedReason,
   onBuyFox
 }) {
   const arenaRef = useRef(null);
@@ -320,15 +321,14 @@ export default function Arena({
         <div className="arena-buy-dock">
           <button
             type="button"
-            className="buy-fox-btn"
+            className={`buy-fox-btn ${!canBuyFox ? 'buy-fox-btn--unavailable' : ''}`}
             onClick={onBuyFox}
-            disabled={!canBuyFox}
-            title={`Koszt: ${formatNumber(buyCost)} monet`}
+            title={buyBlockedReason || `Koszt: ${formatNumber(buyCost)} monet`}
           >
             <GuiIcon name="pet" alt="Kup lisa" size={24} />
             <span>
               <strong>Kup lisa</strong>
-              <small>{formatNumber(buyCost)} monet</small>
+              <small>{buyBlockedReason || `${formatNumber(buyCost)} monet`}</small>
             </span>
           </button>
         </div>

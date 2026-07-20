@@ -131,6 +131,15 @@ const ICONS = {
       <PixelRect x="7" y="9" width="2" height="2" fill={COLORS.light} />
     </>
   ),
+  mute: (
+    <>
+      <path fill={COLORS.ink} d="M2 7h7l5-5h4v8h4v4h-4v8h-4l-5-5H2V7Z" />
+      <path fill={COLORS.amber} d="M4 9h6l4-4h2v14h-2l-4-4H4V9Z" />
+      <path fill={COLORS.ink} d="M17 5h4v3h3v4h-3v3h3v4h-3v3h-4v-3h-3v-4h3v-3h-3V8h3V5Z" />
+      <path fill={COLORS.red} d="M18 7h2v3h2v1h-2v2h-2v-2h-2v-1h2V7Zm0 8h2v2h2v2h-2v-2h-2v2h-2v-2h2v-2Z" />
+      <PixelRect x="5" y="9" width="2" height="2" fill={COLORS.light} />
+    </>
+  ),
   animation: (
     <>
       <path fill={COLORS.ink} d="M9 1h6v5h5v3h3v6h-5v-4h-3v3h-3v3h-3v5H3v-6h5v-3h3v-3H9V7H5v3H1V5h3V2h5V1Z" />

@@ -52,7 +52,9 @@ function createDefaultMeta() {
       defaultAnimations: true,
       defaultMusicVolume: 30,
       defaultSfxVolume: 70,
-      audioDefaultsVersion: 2
+      defaultMusicMuted: false,
+      defaultSfxMuted: false,
+      audioDefaultsVersion: 3
     },
     slots: []
   };
@@ -102,7 +104,9 @@ function sanitizeMeta(meta) {
       defaultAnimations: Boolean(meta.settings?.defaultAnimations ?? base.settings.defaultAnimations),
       defaultMusicVolume: safeDefaultMusicVolume,
       defaultSfxVolume: safeDefaultSfxVolume,
-      audioDefaultsVersion: 2
+      defaultMusicMuted: Boolean(meta.settings?.defaultMusicMuted ?? base.settings.defaultMusicMuted),
+      defaultSfxMuted: Boolean(meta.settings?.defaultSfxMuted ?? base.settings.defaultSfxMuted),
+      audioDefaultsVersion: 3
     },
     slots: slots.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
   };
@@ -242,7 +246,9 @@ function sanitizeState(rawState, nowTs = Date.now()) {
       sound: Boolean(rawState.settings?.sound ?? base.settings.sound),
       animations: Boolean(rawState.settings?.animations ?? base.settings.animations),
       musicVolume: clamp(Math.round(Number.isFinite(rawMusicVolume) ? rawMusicVolume : base.settings.musicVolume), 0, 100),
-      sfxVolume: clamp(Math.round(Number.isFinite(rawSfxVolume) ? rawSfxVolume : base.settings.sfxVolume), 0, 100)
+      sfxVolume: clamp(Math.round(Number.isFinite(rawSfxVolume) ? rawSfxVolume : base.settings.sfxVolume), 0, 100),
+      musicMuted: Boolean(rawState.settings?.musicMuted ?? base.settings.musicMuted),
+      sfxMuted: Boolean(rawState.settings?.sfxMuted ?? base.settings.sfxMuted)
     },
     stats,
     quests,
@@ -292,8 +298,8 @@ function buildLocalSummary(state) {
   };
 }
 
-function buildMetaWithRemoteSlots(remoteSaves) {
-  const localMeta = loadLocalMeta();
+function buildMetaWithRemoteSlots(remoteSaves, deviceMeta) {
+  const localMeta = sanitizeMeta(deviceMeta || loadLocalMeta());
   const slots = (remoteSaves || []).map((save, index) => ({
     id: save.slotId,
     name: save.name || `Save ${index + 1}`,
@@ -372,23 +378,30 @@ function migrateLegacyLocalSaveIfNeeded() {
 }
 
 export async function listSaveMeta() {
+  const bridge = getBridge();
+  let deviceMeta;
+  if (bridge?.listSaves) {
+    try {
+      deviceMeta = sanitizeMeta(await bridge.listSaves());
+    } catch (_error) {
+      deviceMeta = loadLocalMeta();
+    }
+  } else {
+    migrateLegacyLocalSaveIfNeeded();
+    deviceMeta = loadLocalMeta();
+  }
+
   if (isRemoteApiEnabled()) {
     try {
       await ensureGuestSession();
       const payload = await apiRequest('/api/game/saves');
-      return buildMetaWithRemoteSlots(payload?.saves || []);
+      return buildMetaWithRemoteSlots(payload?.saves || [], deviceMeta);
     } catch (_error) {
       // fallback to local storage if remote API is unavailable
     }
   }
 
-  const bridge = getBridge();
-  if (bridge?.listSaves) {
-    return sanitizeMeta(await bridge.listSaves());
-  }
-
-  migrateLegacyLocalSaveIfNeeded();
-  return loadLocalMeta();
+  return deviceMeta;
 }
 
 async function loadLocalSlotState(slotId) {

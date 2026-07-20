@@ -30,7 +30,9 @@ let unlockListenersInstalled = false;
 let settings = {
   enabled: true,
   musicVolume: 30,
-  sfxVolume: 70
+  sfxVolume: 70,
+  musicMuted: false,
+  sfxMuted: false
 };
 const lastSfxAt = new Map();
 
@@ -81,8 +83,8 @@ function applyOutputVolumes(immediate = false) {
   if (!context) {
     return;
   }
-  const musicGain = settings.enabled ? volumeCurve(settings.musicVolume, 0.13) : 0;
-  const sfxGain = settings.enabled ? volumeCurve(settings.sfxVolume, 0.24) : 0;
+  const musicGain = settings.enabled && !settings.musicMuted ? volumeCurve(settings.musicVolume, 0.13) : 0;
+  const sfxGain = settings.enabled && !settings.sfxMuted ? volumeCurve(settings.sfxVolume, 0.24) : 0;
   setGainSmoothly(musicOutput, musicGain, immediate);
   setGainSmoothly(sfxOutput, sfxGain, immediate);
 }
@@ -174,7 +176,7 @@ function scheduleMusicStep(step, time) {
 }
 
 function scheduleMusic() {
-  if (!context || context.state !== 'running' || !musicRequested || !settings.enabled || settings.musicVolume <= 0) {
+  if (!context || context.state !== 'running' || !musicRequested || !settings.enabled || settings.musicMuted || settings.musicVolume <= 0) {
     return;
   }
   while (nextMusicStepAt < context.currentTime + MUSIC_SCHEDULE_AHEAD_SECONDS) {
@@ -185,7 +187,7 @@ function scheduleMusic() {
 }
 
 function beginMusicSequencer() {
-  if (!context || context.state !== 'running' || musicTimer || !musicRequested || !settings.enabled || settings.musicVolume <= 0) {
+  if (!context || context.state !== 'running' || musicTimer || !musicRequested || !settings.enabled || settings.musicMuted || settings.musicVolume <= 0) {
     return;
   }
   nextMusicStepAt = context.currentTime + 0.05;
@@ -233,11 +235,13 @@ export function configureAudio(nextSettings = {}) {
   settings = {
     enabled: Boolean(nextSettings.enabled ?? settings.enabled),
     musicVolume: clampVolume(nextSettings.musicVolume, settings.musicVolume),
-    sfxVolume: clampVolume(nextSettings.sfxVolume, settings.sfxVolume)
+    sfxVolume: clampVolume(nextSettings.sfxVolume, settings.sfxVolume),
+    musicMuted: Boolean(nextSettings.musicMuted ?? settings.musicMuted),
+    sfxMuted: Boolean(nextSettings.sfxMuted ?? settings.sfxMuted)
   };
   installUnlockListeners();
   applyOutputVolumes();
-  if (!settings.enabled || settings.musicVolume <= 0) {
+  if (!settings.enabled || settings.musicMuted || settings.musicVolume <= 0) {
     pauseMusicSequencer();
   } else if (context?.state === 'running') {
     beginMusicSequencer();
@@ -259,7 +263,7 @@ export function stopBackgroundMusic() {
 }
 
 function mayPlaySfx(name, minimumGapMs = 0) {
-  if (!settings.enabled || settings.sfxVolume <= 0) {
+  if (!settings.enabled || settings.sfxMuted || settings.sfxVolume <= 0) {
     return false;
   }
   const now = performance.now();
@@ -357,7 +361,9 @@ export function getAudioDebugState() {
     musicRequested,
     enabled: settings.enabled,
     musicVolume: settings.musicVolume,
-    sfxVolume: settings.sfxVolume
+    sfxVolume: settings.sfxVolume,
+    musicMuted: settings.musicMuted,
+    sfxMuted: settings.sfxMuted
   };
 }
 

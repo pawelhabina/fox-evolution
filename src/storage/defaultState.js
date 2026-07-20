@@ -33,7 +33,9 @@ export function createInitialState(nowTs = Date.now()) {
       sound: true,
       animations: true,
       musicVolume: 30,
-      sfxVolume: 70
+      sfxVolume: 70,
+      musicMuted: false,
+      sfxMuted: false
     },
     stats: {
       lifetimeCoinsEarned: 0,

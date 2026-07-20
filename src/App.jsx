@@ -67,7 +67,9 @@ const DEFAULT_MENU_META = {
     defaultAnimations: true,
     defaultMusicVolume: 30,
     defaultSfxVolume: 70,
-    audioDefaultsVersion: 2
+    defaultMusicMuted: false,
+    defaultSfxMuted: false,
+    audioDefaultsVersion: 3
   },
   slots: []
 };
@@ -217,25 +219,31 @@ export default function App() {
     [evolutionTargetId, state.foxes]
   );
 
-  const withGlobalAudioSettings = useCallback((nextState) => ({
+  const withGlobalSettings = useCallback((nextState) => ({
     ...nextState,
     settings: {
       ...nextState.settings,
       sound: Boolean(saveMeta.settings.defaultSound),
+      animations: Boolean(saveMeta.settings.defaultAnimations),
       musicVolume: Number.isFinite(saveMeta.settings.defaultMusicVolume) ? saveMeta.settings.defaultMusicVolume : 30,
-      sfxVolume: Number.isFinite(saveMeta.settings.defaultSfxVolume) ? saveMeta.settings.defaultSfxVolume : 70
+      sfxVolume: Number.isFinite(saveMeta.settings.defaultSfxVolume) ? saveMeta.settings.defaultSfxVolume : 70,
+      musicMuted: Boolean(saveMeta.settings.defaultMusicMuted),
+      sfxMuted: Boolean(saveMeta.settings.defaultSfxMuted)
     }
   }), [
+    saveMeta.settings.defaultAnimations,
+    saveMeta.settings.defaultMusicMuted,
     saveMeta.settings.defaultMusicVolume,
+    saveMeta.settings.defaultSfxMuted,
     saveMeta.settings.defaultSfxVolume,
     saveMeta.settings.defaultSound
   ]);
 
-  const persistGlobalAudioSettings = useCallback(async (patch) => {
+  const persistGlobalSettings = useCallback(async (patch) => {
     try {
       const updated = await updateMenuSettings({
         ...patch,
-        audioDefaultsVersion: 2
+        audioDefaultsVersion: 3
       });
       setSaveMeta((previous) => ({
         ...previous,
@@ -254,21 +262,29 @@ export default function App() {
       ? {
           enabled: state.settings.sound,
           musicVolume: state.settings.musicVolume,
-          sfxVolume: state.settings.sfxVolume
+          sfxVolume: state.settings.sfxVolume,
+          musicMuted: state.settings.musicMuted,
+          sfxMuted: state.settings.sfxMuted
         }
       : {
           enabled: saveMeta.settings.defaultSound,
           musicVolume: saveMeta.settings.defaultMusicVolume,
-          sfxVolume: saveMeta.settings.defaultSfxVolume
+          sfxVolume: saveMeta.settings.defaultSfxVolume,
+          musicMuted: saveMeta.settings.defaultMusicMuted,
+          sfxMuted: saveMeta.settings.defaultSfxMuted
         };
     configureAudio(audioSettings);
     startBackgroundMusic();
   }, [
     appScreen,
+    saveMeta.settings.defaultMusicMuted,
     saveMeta.settings.defaultMusicVolume,
+    saveMeta.settings.defaultSfxMuted,
     saveMeta.settings.defaultSfxVolume,
     saveMeta.settings.defaultSound,
+    state.settings.musicMuted,
     state.settings.musicVolume,
+    state.settings.sfxMuted,
     state.settings.sfxVolume,
     state.settings.sound
   ]);
@@ -344,7 +360,7 @@ export default function App() {
   }, [appScreen, currentSlotId, pushToast]);
 
   const enterGameWithState = useCallback((nextState, slotId, remoteUpdatedAt = null) => {
-    const syncedState = withGlobalAudioSettings(nextState);
+    const syncedState = withGlobalSettings(nextState);
     dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: syncedState, nowTs: Date.now() });
     setCurrentSlotId(slotId);
     remoteSlotUpdatedAtRef.current = remoteUpdatedAt || null;
@@ -354,7 +370,7 @@ export default function App() {
     setContextMenu(null);
     setEvolutionTargetId(null);
     setAppScreen('game');
-  }, [withGlobalAudioSettings]);
+  }, [withGlobalSettings]);
 
   const loadSlotAndStart = useCallback(
     async (slotId) => {
@@ -375,6 +391,8 @@ export default function App() {
     fresh.settings.animations = Boolean(saveMeta.settings.defaultAnimations);
     fresh.settings.musicVolume = Number.isFinite(saveMeta.settings.defaultMusicVolume) ? saveMeta.settings.defaultMusicVolume : fresh.settings.musicVolume;
     fresh.settings.sfxVolume = Number.isFinite(saveMeta.settings.defaultSfxVolume) ? saveMeta.settings.defaultSfxVolume : fresh.settings.sfxVolume;
+    fresh.settings.musicMuted = Boolean(saveMeta.settings.defaultMusicMuted);
+    fresh.settings.sfxMuted = Boolean(saveMeta.settings.defaultSfxMuted);
 
     try {
       const result = await saveSlotState({ state: fresh });
@@ -389,7 +407,9 @@ export default function App() {
     pushToast,
     refreshMenuMeta,
     saveMeta.settings.defaultAnimations,
+    saveMeta.settings.defaultMusicMuted,
     saveMeta.settings.defaultMusicVolume,
+    saveMeta.settings.defaultSfxMuted,
     saveMeta.settings.defaultSfxVolume,
     saveMeta.settings.defaultSound
   ]);
@@ -536,7 +556,7 @@ export default function App() {
           if (isRemoteTimestampNewer(remoteSlotUpdatedAtRef.current, remoteUpdatedAt)) {
             const latest = await loadSlotStateWithMeta(currentSlotId);
             if (latest?.state) {
-              const syncedState = withGlobalAudioSettings(latest.state);
+              const syncedState = withGlobalSettings(latest.state);
               remoteSlotUpdatedAtRef.current = latest.updatedAt || remoteUpdatedAt;
               dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: syncedState, nowTs: Date.now() });
               setTickCountdown(getTickDurationSeconds(syncedState));
@@ -556,7 +576,7 @@ export default function App() {
     }, AUTOSAVE_SECONDS * 1000);
 
     return () => clearInterval(autosave);
-  }, [appScreen, currentSlotId, isLoaded, pushToast, remoteEnabled, withGlobalAudioSettings]);
+  }, [appScreen, currentSlotId, isLoaded, pushToast, remoteEnabled, withGlobalSettings]);
 
   useEffect(() => {
     if (!isLoaded || appScreen !== 'game' || !currentSlotId) {
@@ -606,7 +626,7 @@ export default function App() {
             return;
           }
 
-          const syncedState = withGlobalAudioSettings(latest.state);
+          const syncedState = withGlobalSettings(latest.state);
           remoteSlotUpdatedAtRef.current = latest.updatedAt || remoteUpdatedAt;
           dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: syncedState, nowTs: Date.now() });
           setTickCountdown(getTickDurationSeconds(syncedState));
@@ -618,7 +638,7 @@ export default function App() {
     }, 6000);
 
     return () => clearInterval(remoteRefresh);
-  }, [appScreen, currentSlotId, isLoaded, pushToast, remoteEnabled, withGlobalAudioSettings]);
+  }, [appScreen, currentSlotId, isLoaded, pushToast, remoteEnabled, withGlobalSettings]);
 
   useEffect(() => {
     if (updateState.status === 'downloaded') {
@@ -752,7 +772,7 @@ export default function App() {
   const buyFox = () => {
     if (state.foxes.length >= foxLimit) {
       playSfx('error');
-      pushToast('Masz za dużo lisów na planszy');
+      pushToast('Nie ma miejsca na planszy');
       return;
     }
     if (state.currencies.coins < buyCost) {
@@ -980,6 +1000,13 @@ export default function App() {
           }}
           buyCost={buyCost}
           canBuyFox={state.currencies.coins >= buyCost && state.foxes.length < foxLimit}
+          buyBlockedReason={
+            state.foxes.length >= foxLimit
+              ? 'Nie ma miejsca na planszy'
+              : state.currencies.coins < buyCost
+                ? 'Za mało monet'
+                : ''
+          }
           onBuyFox={buyFox}
         />
 
@@ -1117,15 +1144,22 @@ export default function App() {
         onToggleSetting={(key) => {
           const nextValue = !state.settings[key];
           dispatch({ type: ACTIONS.TOGGLE_SETTING, key, nowTs: Date.now() });
-          if (key === 'sound') {
-            void persistGlobalAudioSettings({ defaultSound: nextValue });
+          const metaKeyBySetting = {
+            sound: 'defaultSound',
+            animations: 'defaultAnimations',
+            musicMuted: 'defaultMusicMuted',
+            sfxMuted: 'defaultSfxMuted'
+          };
+          const metaKey = metaKeyBySetting[key];
+          if (metaKey) {
+            void persistGlobalSettings({ [metaKey]: nextValue });
           }
         }}
         onSetVolume={(key, value) => {
           const safeValue = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
           dispatch({ type: ACTIONS.SET_VOLUME, key, value: safeValue, nowTs: Date.now() });
           const metaKey = key === 'musicVolume' ? 'defaultMusicVolume' : 'defaultSfxVolume';
-          void persistGlobalAudioSettings({ [metaKey]: safeValue });
+          void persistGlobalSettings({ [metaKey]: safeValue });
         }}
         onHardReset={handleHardReset}
         onClose={() => setSettingsModalOpen(false)}

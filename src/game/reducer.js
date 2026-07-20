@@ -59,7 +59,7 @@ export const ACTIONS = {
   HARD_RESET_STATE: 'HARD_RESET_STATE'
 };
 
-const TOGGLEABLE_SETTING_KEYS = new Set(['sound', 'animations']);
+const TOGGLEABLE_SETTING_KEYS = new Set(['sound', 'animations', 'musicMuted', 'sfxMuted']);
 const VOLUME_SETTING_KEYS = new Set(['musicVolume', 'sfxVolume']);
 
 function normalizeVolume(value, fallback) {
@@ -75,7 +75,9 @@ function normalizeSettings(settings = {}) {
     sound: Boolean(settings.sound ?? true),
     animations: Boolean(settings.animations ?? true),
     musicVolume: normalizeVolume(settings.musicVolume, 30),
-    sfxVolume: normalizeVolume(settings.sfxVolume, 70)
+    sfxVolume: normalizeVolume(settings.sfxVolume, 70),
+    musicMuted: Boolean(settings.musicMuted ?? false),
+    sfxMuted: Boolean(settings.sfxMuted ?? false)
   };
 }
 
@@ -85,7 +87,9 @@ function withNormalizedSettings(state) {
     state.settings?.sound === normalized.sound &&
     state.settings?.animations === normalized.animations &&
     state.settings?.musicVolume === normalized.musicVolume &&
-    state.settings?.sfxVolume === normalized.sfxVolume
+    state.settings?.sfxVolume === normalized.sfxVolume &&
+    state.settings?.musicMuted === normalized.musicMuted &&
+    state.settings?.sfxMuted === normalized.sfxMuted
   ) {
     return state;
   }

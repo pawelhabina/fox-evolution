@@ -27,3 +27,14 @@
 
   foxEvolutionStopped:
 !macroend
+
+; 1.1.5 moves the application to a clean v2 directory and a new installer GUID.
+; Cleanup runs only after the new application files and registry entries exist.
+!macro customInstall
+  StrCmp "$INSTDIR" "$LOCALAPPDATA\Programs\fox-evolution" foxEvolutionKeepLegacyDir
+    RMDir /r "$LOCALAPPDATA\Programs\fox-evolution"
+
+  foxEvolutionKeepLegacyDir:
+    DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\8f5faf51-aa0c-5a86-93f6-c690618cabd5"
+    DeleteRegKey HKCU "Software\8f5faf51-aa0c-5a86-93f6-c690618cabd5"
+!macroend

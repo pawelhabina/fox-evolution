@@ -3,6 +3,10 @@ const path = require('path');
 const fs = require('fs');
 const { launchWindowsUpdateHandoff } = require('./updateHandoff');
 
+// The v2 installer uses a clean program directory, but game data must stay in
+// the original profile so saves and settings survive the migration.
+app.setPath('userData', path.join(app.getPath('appData'), 'fox-evolution'));
+
 let autoUpdater = null;
 try {
   ({ autoUpdater } = require('electron-updater'));
@@ -108,7 +112,9 @@ function createDefaultMeta() {
       defaultAnimations: true,
       defaultMusicVolume: 30,
       defaultSfxVolume: 70,
-      audioDefaultsVersion: 2
+      defaultMusicMuted: false,
+      defaultSfxMuted: false,
+      audioDefaultsVersion: 3
     },
     slots: []
   };
@@ -128,7 +134,9 @@ function normalizeMetaSettings(rawSettings = {}) {
       merged.defaultSfxVolume = 70;
     }
   }
-  merged.audioDefaultsVersion = 2;
+  merged.defaultMusicMuted = Boolean(merged.defaultMusicMuted);
+  merged.defaultSfxMuted = Boolean(merged.defaultSfxMuted);
+  merged.audioDefaultsVersion = 3;
   return merged;
 }
 

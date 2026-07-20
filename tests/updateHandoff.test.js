@@ -10,7 +10,7 @@ test('waits for Electron before starting the downloaded installer', () => {
   const script = buildWindowsUpdateScript({
     appPid: 4321,
     appExecutablePath: 'C:\\Apps\\Fox Evolution\\Fox Evolution.exe',
-    installerPath: 'C:\\Temp\\Fox-Evolution-1.1.4-x64.exe',
+    installerPath: 'C:\\Temp\\Fox-Evolution-1.1.5-x64.exe',
     logPath: 'C:\\Users\\Player\\AppData\\Roaming\\Fox Evolution\\update-install.log'
   });
 

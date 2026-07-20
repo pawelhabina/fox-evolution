@@ -50,8 +50,22 @@ body {
   right: 140px;
   left: 0;
   z-index: 1000;
-  height: 8px;
+  height: 28px;
+  border-bottom: 2px solid #1e293b;
+  background: #030712;
   -webkit-app-region: drag;
+  -webkit-user-select: none;
+}
+
+.electron-drag-region::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  width: 44px;
+  height: 6px;
+  transform: translateX(-50%);
+  background: repeating-linear-gradient(90deg, #475569 0 4px, transparent 4px 8px);
 }
 
 #root {
@@ -107,6 +121,14 @@ body {
   gap: var(--ui-gap);
 }
 
+.electron-shell .game-screen {
+  padding-top: calc(var(--ui-pad) + 28px);
+}
+
+.electron-shell .main-menu-screen {
+  padding-top: calc(1rem + 28px);
+}
+
 .hud-strip {
   position: relative;
   z-index: 60;
@@ -119,10 +141,6 @@ body {
   border-radius: 0;
   background: #07101f;
   box-shadow: 4px 4px 0 #01030a;
-}
-
-.electron-shell .hud-strip {
-  margin-right: 140px;
 }
 
 .hud-strip::after,
@@ -237,7 +255,7 @@ body {
   display: block;
   overflow: hidden;
   font-family: 'Press Start 2P', 'Courier New', monospace;
-  font-size: clamp(0.58rem, 0.72vw, 0.82rem);
+  font-size: clamp(0.63rem, 0.77vw, 0.87rem);
   line-height: 1;
   letter-spacing: 0.01em;
   text-overflow: ellipsis;
@@ -249,7 +267,7 @@ body {
   margin-bottom: 0.2rem;
   overflow: hidden;
   color: #94a3b8;
-  font-size: clamp(0.48rem, 0.55vw, 0.62rem);
+  font-size: clamp(0.52rem, 0.59vw, 0.66rem);
   font-weight: 800;
   letter-spacing: 0.08em;
   line-height: 1;
@@ -372,17 +390,17 @@ body {
   box-shadow: inset 0 0 0 2px #451a03, 4px 4px 0 #451a03;
 }
 
-.buy-fox-btn:hover:not(:disabled) {
+.buy-fox-btn:hover:not(.buy-fox-btn--unavailable) {
   background: #b45309;
 }
 
-.buy-fox-btn:active:not(:disabled) {
+.buy-fox-btn:active:not(.buy-fox-btn--unavailable) {
   transform: translateY(3px);
   box-shadow: inset 0 0 0 2px #451a03, 2px 2px 0 #451a03;
 }
 
-.buy-fox-btn:disabled {
-  cursor: not-allowed;
+.buy-fox-btn--unavailable {
+  cursor: pointer;
   border-color: #475569;
   color: #94a3b8;
   background: #334155;
@@ -406,7 +424,7 @@ body {
   font-size: clamp(0.62rem, 0.72vw, 0.76rem);
 }
 
-.buy-fox-btn:disabled small {
+.buy-fox-btn--unavailable small {
   color: #94a3b8;
 }
 
