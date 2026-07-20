@@ -235,6 +235,7 @@ async function checkForUpdates() {
   }
 
   try {
+    appendUpdateInstallLog(`Checking for updates from ${getUpdateServerUrl()}`);
     setUpdaterState({
       status: 'checking',
       message: 'Sprawdzanie aktualizacji...'
@@ -287,6 +288,11 @@ function initAutoUpdater() {
   autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.autoRunAppAfterInstall = true;
   autoUpdater.allowDowngrade = false;
+  autoUpdater.disableDifferentialDownload = true;
+  autoUpdater.requestHeaders = {
+    'Cache-Control': 'no-cache, no-store',
+    Pragma: 'no-cache'
+  };
   autoUpdater.setFeedURL({
     provider: 'generic',
     url: updateServerUrl
@@ -297,6 +303,7 @@ function initAutoUpdater() {
     status: 'idle',
     message: 'Updater gotowy'
   });
+  appendUpdateInstallLog(`Updater initialized: app=${app.getVersion()} feed=${updateServerUrl}`);
 
   autoUpdater.on('checking-for-update', () => {
     setUpdaterState({
@@ -306,6 +313,7 @@ function initAutoUpdater() {
   });
 
   autoUpdater.on('update-available', (info) => {
+    appendUpdateInstallLog(`Update available: ${info?.version || 'unknown'}`);
     setUpdaterState({
       status: 'downloading',
       message: 'Pobieranie aktualizacji...',
@@ -323,6 +331,9 @@ function initAutoUpdater() {
   });
 
   autoUpdater.on('update-downloaded', (info) => {
+    appendUpdateInstallLog(
+      `Update downloaded: ${info?.version || updaterState.updateVersion || 'unknown'} installer=${autoUpdater.installerPath || 'missing'}`
+    );
     setUpdaterState({
       status: 'downloaded',
       message: 'Aktualizacja gotowa. Zrestartuj grę, aby ją zainstalować.',
@@ -332,6 +343,7 @@ function initAutoUpdater() {
   });
 
   autoUpdater.on('update-not-available', () => {
+    appendUpdateInstallLog(`No update available for ${app.getVersion()}`);
     setUpdaterState({
       status: 'idle',
       message: 'Aplikacja jest aktualna',
@@ -341,6 +353,7 @@ function initAutoUpdater() {
   });
 
   autoUpdater.on('error', (error) => {
+    appendUpdateInstallLog(`Updater error: ${error?.stack || error?.message || error}`);
     setUpdaterState({
       status: 'error',
       message: error?.message || 'Błąd aktualizacji'
@@ -435,6 +448,7 @@ async function createWindow() {
     height: 860,
     minWidth: 980,
     minHeight: 640,
+    icon: path.join(__dirname, '..', 'assets', 'app', 'fox-evolution-icon.png'),
     backgroundColor: '#030712',
     autoHideMenuBar: true,
     titleBarStyle: 'hidden',
@@ -543,12 +557,13 @@ app.whenReady().then(() => {
     if (process.platform === 'win32' && autoUpdater.installerPath && fs.existsSync(autoUpdater.installerPath)) {
       try {
         appendUpdateInstallLog(`Preparing installer: ${path.basename(autoUpdater.installerPath)}`);
-        launchWindowsUpdateHandoff({
+        const handoff = launchWindowsUpdateHandoff({
           appPid: process.pid,
           appExecutablePath: process.execPath,
           installerPath: autoUpdater.installerPath,
           logPath: getUpdateInstallLogPath()
         });
+        appendUpdateInstallLog(`Update helper launched: pid=${handoff.pid} script=${handoff.scriptPath}`);
         setTimeout(() => {
           app.quit();
         }, 250);
