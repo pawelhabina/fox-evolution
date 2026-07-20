@@ -1,6 +1,7 @@
 import { UserRole } from '@prisma/client';
 import { env } from '../config/env.js';
 import { prisma } from '../db.js';
+import { ensureUserProfile, serializeUserPrincipal } from './profileService.js';
 import { generateRefreshToken, hashDeviceId, hashPassword, hashToken, verifyPassword } from '../utils/crypto.js';
 import { signAccessToken } from '../utils/jwt.js';
 
@@ -48,10 +49,11 @@ async function createRefreshTokenRecord({ principalType, userId, deviceId, ipAdd
 }
 
 async function issueUserSession(user, context = {}) {
-  const accessToken = signAccessToken(createAccessPayloadForUser(user));
+  const profiledUser = await ensureUserProfile(user);
+  const accessToken = signAccessToken(createAccessPayloadForUser(profiledUser));
   const refreshToken = await createRefreshTokenRecord({
     principalType: 'USER',
-    userId: user.id,
+    userId: profiledUser.id,
     ipAddress: context.ipAddress,
     userAgent: context.userAgent
   });
@@ -59,14 +61,7 @@ async function issueUserSession(user, context = {}) {
   return {
     accessToken,
     refreshToken,
-    principal: {
-      type: 'USER',
-      id: user.id,
-      role: user.role,
-      email: user.email,
-      displayName: user.displayName,
-      flagged: user.isFlagged
-    }
+    principal: serializeUserPrincipal(profiledUser)
   };
 }
 
@@ -108,7 +103,9 @@ export async function registerUser({ email, password, displayName, deviceId, mig
     data: {
       email: normalizedEmail,
       passwordHash,
-      displayName: displayName?.trim() || displayNameFromEmail(normalizedEmail)
+      displayName: displayName?.trim() || displayNameFromEmail(normalizedEmail),
+      nicknameChangedAt: new Date(),
+      profileSetupRequired: false
     }
   });
 
@@ -165,6 +162,7 @@ export async function loginOAuthUser({ provider, providerUserId, email, displayN
       data: {
         email: normalizedEmail,
         displayName: displayName?.trim() || (normalizedEmail ? displayNameFromEmail(normalizedEmail) : `Player-${providerUserId}`),
+        profileSetupRequired: true,
         oauthIdentities: {
           create: {
             provider: providerKey,
@@ -196,8 +194,7 @@ export async function loginOAuthUser({ provider, providerUserId, email, displayN
   await prisma.user.update({
     where: { id: user.id },
     data: {
-      lastLoginAt: new Date(),
-      displayName: displayName?.trim() || user.displayName
+      lastLoginAt: new Date()
     }
   });
 
@@ -277,14 +274,8 @@ export async function getPrincipalFromJwtPayload(payload) {
     if (!user) {
       return null;
     }
-    return {
-      type: 'USER',
-      id: user.id,
-      role: user.role,
-      email: user.email,
-      displayName: user.displayName,
-      flagged: user.isFlagged
-    };
+    const profiledUser = await ensureUserProfile(user);
+    return serializeUserPrincipal(profiledUser);
   }
 
   if (payload.pt === 'DEVICE' && payload.did) {

@@ -11,11 +11,13 @@ import { disconnectDb } from './db.js';
 import adminRoutes from './routes/admin.js';
 import authRoutes from './routes/auth.js';
 import gameRoutes from './routes/game.js';
+import friendsRoutes from './routes/friends.js';
 import healthRoutes from './routes/health.js';
 import downloadsRoutes, { redirectLatestWindows } from './routes/downloads.js';
 import leaderboardRoutes from './routes/leaderboard.js';
 import telemetryRoutes from './routes/telemetry.js';
 import { ensureAdminUser } from './services/authService.js';
+import { ensureAllUserPublicIds } from './services/profileService.js';
 import { refreshLeaderboards } from './services/leaderboardService.js';
 
 const app = express();
@@ -55,6 +57,7 @@ app.use('/api/health', healthRoutes);
 app.use('/api/downloads', downloadsRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/game', gameRoutes);
+app.use('/api/friends', friendsRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/telemetry', telemetryRoutes);
 app.use('/api/admin', adminRoutes);
@@ -94,6 +97,7 @@ let leaderboardInterval;
 async function start() {
   await fs.promises.mkdir(env.updatesDir, { recursive: true });
   await ensureAdminUser();
+  await ensureAllUserPublicIds();
   await refreshLeaderboards();
 
   leaderboardInterval = setInterval(async () => {

@@ -40,6 +40,17 @@ function normalizeCodeChallenge(value) {
   return challenge;
 }
 
+function normalizeDeviceId(value) {
+  const deviceId = String(value || '').trim();
+  if (!deviceId) {
+    return null;
+  }
+  if (deviceId.length < 8 || deviceId.length > 255) {
+    throw new Error('OAUTH_DEVICE_ID_INVALID');
+  }
+  return deviceId;
+}
+
 function cleanupExpiredGrants() {
   const now = Date.now();
   for (const [code, grant] of pendingGrants.entries()) {
@@ -49,7 +60,7 @@ function cleanupExpiredGrants() {
   }
 }
 
-export function createOAuthState({ provider, redirect, codeChallenge }) {
+export function createOAuthState({ provider, redirect, codeChallenge, deviceId }) {
   const normalizedRedirect = canonicalRedirect(redirect || env.oauthSuccessRedirect);
   if (!normalizedRedirect || !allowedRedirectSet().has(normalizedRedirect)) {
     throw new Error('OAUTH_REDIRECT_NOT_ALLOWED');
@@ -59,6 +70,7 @@ export function createOAuthState({ provider, redirect, codeChallenge }) {
     provider: String(provider || '').trim().toLowerCase(),
     redirect: normalizedRedirect,
     codeChallenge: normalizeCodeChallenge(codeChallenge),
+    deviceId: normalizeDeviceId(deviceId),
     expiresAt: Date.now() + 10 * 60 * 1000,
     nonce: crypto.randomBytes(16).toString('base64url')
   };
@@ -93,7 +105,8 @@ export function parseOAuthState(value, expectedProvider) {
   return {
     provider,
     redirect,
-    codeChallenge: normalizeCodeChallenge(payload.codeChallenge)
+    codeChallenge: normalizeCodeChallenge(payload.codeChallenge),
+    deviceId: normalizeDeviceId(payload.deviceId)
   };
 }
 

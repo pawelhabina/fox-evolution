@@ -3,9 +3,11 @@ import { MAX_FOXES_LIMIT, MAX_TIER } from '../game/constants';
 import { createInitialState } from './defaultState';
 import {
   apiRequest,
+  acceptFriendRequest,
   completeOAuthLogin,
   consumeOAuthTokensFromUrl,
   ensureGuestSession,
+  fetchFriends,
   fetchMe,
   fetchLeaderboard,
   getCurrentPrincipal,
@@ -14,8 +16,12 @@ import {
   logoutAccount,
   onOAuthCallback,
   registerAccount,
+  removeFriendship,
+  searchFriends,
+  sendFriendRequest,
   startOAuthLogin,
-  sendTelemetryEvents
+  sendTelemetryEvents,
+  updateNickname
 } from './remoteSession';
 
 const STORAGE_LEGACY_KEY = 'fox-evolution-save-v1';
@@ -54,6 +60,7 @@ function createDefaultMeta() {
       defaultSfxVolume: 70,
       defaultMusicMuted: false,
       defaultSfxMuted: false,
+      defaultFullscreen: false,
       audioDefaultsVersion: 3
     },
     slots: []
@@ -106,6 +113,7 @@ function sanitizeMeta(meta) {
       defaultSfxVolume: safeDefaultSfxVolume,
       defaultMusicMuted: Boolean(meta.settings?.defaultMusicMuted ?? base.settings.defaultMusicMuted),
       defaultSfxMuted: Boolean(meta.settings?.defaultSfxMuted ?? base.settings.defaultSfxMuted),
+      defaultFullscreen: Boolean(meta.settings?.defaultFullscreen ?? base.settings.defaultFullscreen),
       audioDefaultsVersion: 3
     },
     slots: slots.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
@@ -668,6 +676,39 @@ export async function logoutGameAccount() {
   return logoutAccount();
 }
 
+export async function updateGameNickname(nickname) {
+  if (!isRemoteApiEnabled()) {
+    throw new Error('REMOTE_API_DISABLED');
+  }
+  return updateNickname(nickname);
+}
+
+export async function fetchGameFriends() {
+  if (!isRemoteApiEnabled()) {
+    return { friends: [], incoming: [], outgoing: [] };
+  }
+  return fetchFriends();
+}
+
+export async function searchGameFriends(query) {
+  if (!isRemoteApiEnabled()) {
+    return { users: [] };
+  }
+  return searchFriends(query);
+}
+
+export async function sendGameFriendRequest(targetUuid) {
+  return sendFriendRequest(targetUuid);
+}
+
+export async function acceptGameFriendRequest(friendshipId) {
+  return acceptFriendRequest(friendshipId);
+}
+
+export async function removeGameFriendship(friendshipId) {
+  return removeFriendship(friendshipId);
+}
+
 export function beginOAuthLogin(provider) {
   if (!isRemoteApiEnabled()) {
     throw new Error('REMOTE_API_DISABLED');
@@ -708,6 +749,23 @@ export async function readGameVersion() {
     return bridge.getVersion();
   }
   return getUiVersionFallback();
+}
+
+export async function setGameFullscreen(enabled) {
+  const bridge = getBridge();
+  if (bridge?.setFullscreen) {
+    return bridge.setFullscreen(Boolean(enabled));
+  }
+  try {
+    if (enabled && !document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+    } else if (!enabled && document.fullscreenElement) {
+      await document.exitFullscreen();
+    }
+    return Boolean(document.fullscreenElement);
+  } catch (_error) {
+    return false;
+  }
 }
 
 export async function readUpdateState() {

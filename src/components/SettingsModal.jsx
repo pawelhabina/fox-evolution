@@ -1,7 +1,7 @@
 import GuiIcon from './GuiIcon';
 import AudioVolumeControl from './AudioVolumeControl';
 
-export default function SettingsModal({ isOpen, settings, gameVersion, onToggleSetting, onSetVolume, onHardReset, onClose }) {
+export default function SettingsModal({ isOpen, settings, fullscreen, gameVersion, onToggleSetting, onSetVolume, onToggleFullscreen, onHardReset, onClose }) {
   if (!isOpen) {
     return null;
   }
@@ -40,6 +40,14 @@ export default function SettingsModal({ isOpen, settings, gameVersion, onToggleS
           >
             <GuiIcon name="animation" alt="Animacje" />
             Animacje: {settings.animations ? 'ON' : 'OFF'}
+          </button>
+          <button
+            type="button"
+            className="flex items-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-left"
+            onClick={onToggleFullscreen}
+          >
+            <GuiIcon name="modes" alt="Pełny ekran" />
+            Pełny ekran: {fullscreen ? 'ON' : 'OFF'}
           </button>
         </div>
 

@@ -34,7 +34,9 @@ import { getResetCountdowns } from './game/quests';
 import { createInitialState } from './storage/defaultState';
 import {
   deleteSlot,
+  acceptGameFriendRequest,
   fetchLeaderboardCategory,
+  fetchGameFriends,
   getAuthPrincipal,
   beginOAuthLogin,
   completeOAuthLoginFromCallback,
@@ -54,9 +56,14 @@ import {
   checkForGameUpdates,
   refreshAuthPrincipalFromApi,
   registerGameAccount,
+  removeGameFriendship,
   saveSlotState,
   saveSlotStateSync,
+  setGameFullscreen,
   trackTelemetryEvent,
+  searchGameFriends,
+  sendGameFriendRequest,
+  updateGameNickname,
   updateMenuSettings
 } from './storage/gameStorage';
 
@@ -69,6 +76,7 @@ const DEFAULT_MENU_META = {
     defaultSfxVolume: 70,
     defaultMusicMuted: false,
     defaultSfxMuted: false,
+    defaultFullscreen: false,
     audioDefaultsVersion: 3
   },
   slots: []
@@ -292,6 +300,12 @@ export default function App() {
   useEffect(() => () => {
     shutdownAudio();
   }, []);
+
+  useEffect(() => {
+    if (isLoaded) {
+      void setGameFullscreen(Boolean(saveMeta.settings.defaultFullscreen));
+    }
+  }, [isLoaded, saveMeta.settings.defaultFullscreen]);
 
   const refreshMenuMeta = useCallback(async () => {
     const meta = await listSaveMeta();
@@ -762,6 +776,28 @@ export default function App() {
                 pushToast('Nie udało się uruchomić logowania');
               }
             }}
+            onUpdateNickname={async (nickname) => {
+              const principal = await updateGameNickname(nickname);
+              setAuthPrincipal(principal);
+              pushToast('Nick został zapisany');
+            }}
+            onLoadFriends={fetchGameFriends}
+            onSearchFriends={searchGameFriends}
+            onSendFriendRequest={async (targetUuid) => {
+              const result = await sendGameFriendRequest(targetUuid);
+              pushToast(result?.friendship?.status === 'ACCEPTED' ? 'Dodano znajomego' : 'Wysłano zaproszenie');
+              return result;
+            }}
+            onAcceptFriendRequest={async (friendshipId) => {
+              const result = await acceptGameFriendRequest(friendshipId);
+              pushToast('Zaakceptowano zaproszenie');
+              return result;
+            }}
+            onRemoveFriendship={async (friendshipId) => {
+              const result = await removeGameFriendship(friendshipId);
+              pushToast('Lista znajomych została zaktualizowana');
+              return result;
+            }}
           />
           <p className="mt-4 text-xs text-slate-500">Wersja gry: {gameVersion}</p>
         </div>
@@ -1140,6 +1176,7 @@ export default function App() {
       <SettingsModal
         isOpen={settingsModalOpen}
         settings={state.settings}
+        fullscreen={Boolean(saveMeta.settings.defaultFullscreen)}
         gameVersion={gameVersion}
         onToggleSetting={(key) => {
           const nextValue = !state.settings[key];
@@ -1160,6 +1197,10 @@ export default function App() {
           dispatch({ type: ACTIONS.SET_VOLUME, key, value: safeValue, nowTs: Date.now() });
           const metaKey = key === 'musicVolume' ? 'defaultMusicVolume' : 'defaultSfxVolume';
           void persistGlobalSettings({ [metaKey]: safeValue });
+        }}
+        onToggleFullscreen={() => {
+          const nextValue = !saveMeta.settings.defaultFullscreen;
+          void persistGlobalSettings({ defaultFullscreen: nextValue });
         }}
         onHardReset={handleHardReset}
         onClose={() => setSettingsModalOpen(false)}

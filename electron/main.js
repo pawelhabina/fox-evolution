@@ -114,6 +114,7 @@ function createDefaultMeta() {
       defaultSfxVolume: 70,
       defaultMusicMuted: false,
       defaultSfxMuted: false,
+      defaultFullscreen: false,
       audioDefaultsVersion: 3
     },
     slots: []
@@ -136,6 +137,7 @@ function normalizeMetaSettings(rawSettings = {}) {
   }
   merged.defaultMusicMuted = Boolean(merged.defaultMusicMuted);
   merged.defaultSfxMuted = Boolean(merged.defaultSfxMuted);
+  merged.defaultFullscreen = Boolean(merged.defaultFullscreen);
   merged.audioDefaultsVersion = 3;
   return merged;
 }
@@ -467,6 +469,14 @@ async function createWindow() {
 app.whenReady().then(() => {
   ipcMain.handle('game:listSaves', async () => {
     return readMetaFile();
+  });
+
+  ipcMain.handle('app:set-fullscreen', (_event, enabled) => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      return false;
+    }
+    mainWindow.setFullScreen(Boolean(enabled));
+    return mainWindow.isFullScreen();
   });
 
   ipcMain.handle('game:loadSlot', async (_, slotId) => {

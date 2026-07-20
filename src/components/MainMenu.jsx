@@ -1,55 +1,77 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { formatNumber } from '../game/format';
 import AudioVolumeControl from './AudioVolumeControl';
 import GuiIcon from './GuiIcon';
 
-function RootMenu({ onContinue, onOpenLoad, onOpenRanking, onOpenSettings, onOpenAccount, onExit, hasSaves, isRemoteEnabled, principal }) {
+function RootMenu({ onContinue, onNew, onOpenLoad, onOpenRanking, onOpenSettings, onOpenAccount, onExit, hasSaves, isRemoteEnabled, principal }) {
+  const isUser = principal?.type === 'USER';
+
   return (
-    <div className="panel mx-auto w-full max-w-xl p-8">
-      <h1 className="text-center text-4xl font-black text-amber-300">Fox Evolution</h1>
-      <p className="mt-2 text-center text-sm text-slate-400">Offline desktop merge game</p>
-
-      {isRemoteEnabled && (
-        <div className="mt-4 rounded-lg border border-slate-700 bg-slate-800/60 p-3 text-sm text-slate-300">
-          <p>
-            Konto: <span className="font-bold text-amber-300">{principal?.type === 'USER' ? principal.displayName || principal.email || 'Zalogowany' : 'Gość'}</span>
-          </p>
-          <p className="text-xs text-slate-400">Gość ma zapis na urządzeniu. Konto odblokowuje chmurę między urządzeniami i leaderboard.</p>
+    <div className="panel main-menu-panel mx-auto w-full max-w-5xl p-7">
+      <section className="main-menu-hero">
+        <div className="main-menu-brand-mark" aria-hidden="true">
+          <GuiIcon name="pet" alt="" size={64} />
         </div>
-      )}
+        <p className="main-menu-kicker">PIXEL MERGE TYCOON</p>
+        <h1 className="main-menu-title">Fox Evolution</h1>
+        <p className="main-menu-tagline">Kupuj, łącz, zarabiaj i ulepszaj lisy.</p>
+        <div className="main-menu-feature-list" aria-label="Najważniejsze elementy gry">
+          <span>15 tierów</span>
+          <span>3 ewolucje</span>
+          <span>Rebirth</span>
+        </div>
 
-      <div className="mt-8 grid gap-3">
-        <button type="button" className="primary-btn flex items-center justify-center gap-2" onClick={onContinue}>
-          <GuiIcon name="play" alt="" size={20} />
-          {hasSaves ? 'Kontynuuj' : 'Nowa gra'}
-        </button>
-        <button type="button" className="shop-tab flex items-center justify-center gap-2" onClick={onOpenLoad}>
-          <GuiIcon name="folder" alt="" size={20} />
-          Wczytaj grę
-        </button>
-        <button type="button" className="shop-tab flex items-center justify-center gap-2" onClick={onOpenRanking}>
-          <GuiIcon name="trophy" alt="" size={20} />
-          Ranking
-        </button>
         {isRemoteEnabled && (
-          <button type="button" className="shop-tab flex items-center justify-center gap-2" onClick={onOpenAccount}>
-            <GuiIcon name="user" alt="" size={20} />
-            Konto
+          <button type="button" className="main-menu-profile-card" onClick={onOpenAccount}>
+            <GuiIcon name="user" alt="Profil" size={28} />
+            <span className="min-w-0">
+              <strong>{isUser ? principal.displayName : 'Grasz jako gość'}</strong>
+              <small>{isUser ? 'Zapisy przypisane do konta' : 'Zaloguj się, aby synchronizować zapisy'}</small>
+            </span>
+            <span className={`main-menu-online-dot ${isUser ? 'is-online' : ''}`} aria-hidden="true" />
           </button>
         )}
-        <button type="button" className="shop-tab flex items-center justify-center gap-2" onClick={onOpenSettings}>
-          <GuiIcon name="settings" alt="Ustawienia" />
-          Ustawienia
+      </section>
+
+      <section className="main-menu-actions" aria-label="Menu główne">
+        <p className="main-menu-section-label">GRA</p>
+        {hasSaves && (
+          <button type="button" className="primary-btn main-menu-action main-menu-action--primary" onClick={onContinue}>
+            <GuiIcon name="play" alt="" size={22} />
+            <span><strong>Kontynuuj</strong><small>Wróć do ostatniego zapisu</small></span>
+          </button>
+        )}
+        <button type="button" className={`${hasSaves ? 'shop-tab' : 'primary-btn'} main-menu-action`} onClick={onNew}>
+          <GuiIcon name="plus" alt="" size={21} />
+          <span><strong>Nowa gra</strong><small>Utwórz osobny zapis</small></span>
         </button>
-        <button
-          type="button"
-          className="flex items-center justify-center gap-2 rounded-lg border border-rose-400/70 bg-rose-600/25 px-4 py-2 text-rose-100"
-          onClick={onExit}
-        >
-          <GuiIcon name="power" alt="" size={20} />
+        <button type="button" className="shop-tab main-menu-action" onClick={onOpenLoad}>
+          <GuiIcon name="folder" alt="" size={20} />
+          <span><strong>Wczytaj grę</strong><small>{hasSaves ? 'Wybierz lub usuń zapis' : 'Brak zapisów'}</small></span>
+        </button>
+
+        <div className="main-menu-secondary-grid">
+          <button type="button" className="shop-tab main-menu-square-action" onClick={onOpenRanking}>
+            <GuiIcon name="trophy" alt="" size={20} />
+            Ranking
+          </button>
+          {isRemoteEnabled && (
+            <button type="button" className="shop-tab main-menu-square-action" onClick={onOpenAccount}>
+              <GuiIcon name="user" alt="" size={20} />
+              Konto i znajomi
+            </button>
+          )}
+          <button type="button" className="shop-tab main-menu-square-action" onClick={onOpenSettings}>
+            <GuiIcon name="settings" alt="Ustawienia" size={20} />
+            Ustawienia
+          </button>
+        </div>
+
+        <button type="button" className="main-menu-exit" onClick={onExit}>
+          <GuiIcon name="power" alt="" size={17} />
           Wyjdź z gry
         </button>
-      </div>
+      </section>
     </div>
   );
 }
@@ -224,15 +246,90 @@ function RankingMenu({ slots, onBack, isRemoteEnabled, leaderboardData, leaderbo
   );
 }
 
-function AccountMenu({ principal, onBack, onRegister, onLogin, onLogout, onOAuthLogin }) {
+function FriendRow({ item, actionLabel, onAction, danger = false }) {
+  return (
+    <div className="friend-row">
+      <GuiIcon name="user" alt="" size={20} />
+      <span className="min-w-0 flex-1">
+        <strong>{item.user.displayName}</strong>
+        <small>{item.user.uuid}</small>
+      </span>
+      {actionLabel && (
+        <button type="button" className={danger ? 'friend-action friend-action--danger' : 'friend-action'} onClick={onAction}>
+          {actionLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function AccountMenu({
+  principal,
+  onBack,
+  onRegister,
+  onLogin,
+  onLogout,
+  onOAuthLogin,
+  onUpdateNickname,
+  onLoadFriends,
+  onSearchFriends,
+  onSendFriendRequest,
+  onAcceptFriendRequest,
+  onRemoveFriendship
+}) {
   const [mode, setMode] = useState('login');
+  const [accountTab, setAccountTab] = useState('profile');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [nicknameDraft, setNicknameDraft] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [nowTs, setNowTs] = useState(Date.now());
+  const [friendsData, setFriendsData] = useState({ friends: [], incoming: [], outgoing: [] });
+  const [friendsLoading, setFriendsLoading] = useState(false);
+  const [friendQuery, setFriendQuery] = useState('');
+  const [friendResults, setFriendResults] = useState([]);
+  const [friendError, setFriendError] = useState('');
 
   const isUser = principal?.type === 'USER';
+  const nicknameAvailableAt = principal?.nicknameChangeAvailableAt ? new Date(principal.nicknameChangeAvailableAt).getTime() : 0;
+  const nicknameAvailable = Boolean(principal?.profileSetupRequired) || !nicknameAvailableAt || nicknameAvailableAt <= nowTs;
+
+  useEffect(() => {
+    setNicknameDraft(principal?.displayName || '');
+  }, [principal?.displayName]);
+
+  useEffect(() => {
+    if (!isUser) {
+      return undefined;
+    }
+    const timer = window.setInterval(() => setNowTs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [isUser]);
+
+  async function refreshFriends() {
+    if (!isUser) {
+      return;
+    }
+    setFriendsLoading(true);
+    setFriendError('');
+    try {
+      setFriendsData(await onLoadFriends());
+    } catch (_error) {
+      setFriendError('Nie udało się pobrać listy znajomych.');
+    } finally {
+      setFriendsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (isUser && accountTab === 'friends') {
+      void refreshFriends();
+    }
+    // Funkcja korzysta z aktualnych propsów, a przeładowanie ma następować tylko po zmianie zakładki lub konta.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountTab, isUser, principal?.id]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -252,12 +349,59 @@ function AccountMenu({ principal, onBack, onRegister, onLogin, onLogout, onOAuth
     }
   }
 
+  async function handleNicknameSubmit(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      await onUpdateNickname(nicknameDraft);
+    } catch (_error) {
+      setError('Nie udało się zmienić nicku. Użyj 2–24 liter, cyfr, spacji, _ lub -.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleFriendSearch(event) {
+    event.preventDefault();
+    if (friendQuery.trim().length < 2) {
+      return;
+    }
+    setFriendsLoading(true);
+    setFriendError('');
+    try {
+      const payload = await onSearchFriends(friendQuery);
+      setFriendResults(payload.users || []);
+    } catch (_error) {
+      setFriendError('Nie udało się wyszukać graczy.');
+    } finally {
+      setFriendsLoading(false);
+    }
+  }
+
+  async function runFriendAction(action) {
+    setFriendsLoading(true);
+    setFriendError('');
+    try {
+      await action();
+      await refreshFriends();
+      if (friendQuery.trim().length >= 2) {
+        const payload = await onSearchFriends(friendQuery);
+        setFriendResults(payload.users || []);
+      }
+    } catch (_error) {
+      setFriendError('Nie udało się wykonać operacji na liście znajomych.');
+    } finally {
+      setFriendsLoading(false);
+    }
+  }
+
   return (
-    <div className="panel mx-auto w-full max-w-xl p-6">
+    <div className="panel account-panel mx-auto w-full max-w-3xl p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-2xl font-bold text-amber-300">
           <GuiIcon name="user" alt="" size={24} />
-          Konto
+          Konto gracza
         </h2>
         <button type="button" className="shop-tab flex items-center gap-2" onClick={onBack}>
           <GuiIcon name="back" alt="" />
@@ -265,15 +409,127 @@ function AccountMenu({ principal, onBack, onRegister, onLogin, onLogout, onOAuth
         </button>
       </div>
 
-      <div className="mb-3 rounded-lg border border-slate-700 bg-slate-800/70 p-3 text-sm text-slate-200">
-        Status: <span className="font-bold text-amber-300">{isUser ? principal.displayName || principal.email || 'Zalogowany' : 'Gość'}</span>
+      <div className="account-status-card">
+        <GuiIcon name="user" alt="" size={28} />
+        <span className="min-w-0 flex-1">
+          <strong>{isUser ? principal.displayName || principal.email || 'Zalogowany' : 'Grasz jako gość'}</strong>
+          <small>{isUser ? 'Chmura zapisów i funkcje społecznościowe są aktywne' : 'Zaloguj się, aby przypisać zapisy do konta'}</small>
+        </span>
       </div>
 
       {isUser && (
-        <button type="button" className="flex items-center gap-2 rounded-lg border border-rose-500/70 bg-rose-600/20 px-4 py-2 text-rose-100" onClick={onLogout}>
-          <GuiIcon name="power" alt="" />
-          Wyloguj
-        </button>
+        <div className="account-tabs">
+          <button type="button" className={accountTab === 'profile' ? 'active' : ''} onClick={() => setAccountTab('profile')}>Profil</button>
+          <button type="button" className={accountTab === 'friends' ? 'active' : ''} onClick={() => setAccountTab('friends')}>
+            Znajomi{friendsData.incoming.length > 0 ? ` (${friendsData.incoming.length})` : ''}
+          </button>
+        </div>
+      )}
+
+      {isUser && accountTab === 'profile' && (
+        <div className="grid gap-3">
+          {principal.profileSetupRequired && (
+            <div className="account-onboarding">
+              <strong>Ustaw swój nick</strong>
+              <span>To nazwa widoczna w rankingu i na liście znajomych.</span>
+            </div>
+          )}
+
+          <div className="account-identity-grid">
+            <div><small>Nick</small><strong>{principal.displayName}</strong></div>
+            <div><small>UUID konta</small><strong className="account-uuid">{principal.uuid || 'nadawanie…'}</strong></div>
+            <div><small>Email</small><strong>{principal.email || 'konto zewnętrzne'}</strong></div>
+            <div><small>Zapisy</small><strong>Przechowywane na koncie</strong></div>
+          </div>
+
+          <form className="account-nickname-form" onSubmit={handleNicknameSubmit}>
+            <label htmlFor="account-nickname">Nick gracza</label>
+            <div>
+              <input
+                id="account-nickname"
+                type="text"
+                minLength={2}
+                maxLength={24}
+                value={nicknameDraft}
+                onChange={(event) => setNicknameDraft(event.target.value)}
+                required
+              />
+              <button type="submit" className="primary-btn" disabled={busy || !nicknameAvailable}>Zapisz nick</button>
+            </div>
+            <small>
+              {nicknameAvailable
+                ? 'Nick można zmienić raz na 15 minut.'
+                : `Następna zmiana: ${new Date(nicknameAvailableAt).toLocaleTimeString()}`}
+            </small>
+          </form>
+
+          {error && <p className="text-sm text-rose-300">{error}</p>}
+          <button type="button" className="account-logout" onClick={onLogout}>
+            <GuiIcon name="power" alt="" />
+            Wyloguj
+          </button>
+        </div>
+      )}
+
+      {isUser && accountTab === 'friends' && (
+        <div className="friends-panel">
+          <div className="friends-intro">
+            <strong>Lista znajomych</strong>
+            <span>Fundament pod odwiedzanie plansz i przyszłe boostowanie lisów.</span>
+          </div>
+          <form className="friend-search" onSubmit={handleFriendSearch}>
+            <input value={friendQuery} onChange={(event) => setFriendQuery(event.target.value)} placeholder="Wpisz nick lub UUID gracza" minLength={2} />
+            <button type="submit" className="primary-btn" disabled={friendsLoading}>Szukaj</button>
+          </form>
+
+          {friendError && <p className="text-sm text-rose-300">{friendError}</p>}
+          {friendResults.length > 0 && (
+            <section className="friend-section">
+              <h3>Wyniki wyszukiwania</h3>
+              {friendResults.map((user) => (
+                <div className="friend-row" key={user.uuid}>
+                  <GuiIcon name="user" alt="" size={20} />
+                  <span className="min-w-0 flex-1"><strong>{user.displayName}</strong><small>{user.uuid}</small></span>
+                  <button
+                    type="button"
+                    className="friend-action"
+                    disabled={Boolean(user.friendshipStatus)}
+                    onClick={() => runFriendAction(() => onSendFriendRequest(user.uuid))}
+                  >
+                    {user.friendshipStatus === 'ACCEPTED' ? 'Znajomy' : user.friendshipStatus === 'PENDING' ? 'Wysłano' : 'Dodaj'}
+                  </button>
+                </div>
+              ))}
+            </section>
+          )}
+
+          {friendsData.incoming.length > 0 && (
+            <section className="friend-section">
+              <h3>Zaproszenia</h3>
+              {friendsData.incoming.map((item) => (
+                <FriendRow key={item.id} item={item} actionLabel="Akceptuj" onAction={() => runFriendAction(() => onAcceptFriendRequest(item.id))} />
+              ))}
+            </section>
+          )}
+
+          {friendsData.outgoing.length > 0 && (
+            <section className="friend-section">
+              <h3>Oczekujące</h3>
+              {friendsData.outgoing.map((item) => (
+                <FriendRow key={item.id} item={item} actionLabel="Anuluj" danger onAction={() => runFriendAction(() => onRemoveFriendship(item.id))} />
+              ))}
+            </section>
+          )}
+
+          <section className="friend-section">
+            <h3>Twoi znajomi ({friendsData.friends.length})</h3>
+            {!friendsLoading && friendsData.friends.length === 0 && <p className="text-sm text-slate-400">Nie masz jeszcze znajomych.</p>}
+            {friendsData.friends.map((item) => (
+              <FriendRow key={item.id} item={item} actionLabel="Usuń" danger onAction={() => runFriendAction(() => onRemoveFriendship(item.id))} />
+            ))}
+          </section>
+          {friendsLoading && <p className="text-sm text-slate-300">Ładowanie…</p>}
+        </div>
       )}
 
       {!isUser && (
@@ -309,9 +565,12 @@ function AccountMenu({ principal, onBack, onRegister, onLogin, onLogout, onOAuth
               <input
                 type="text"
                 className="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2"
-                placeholder="Nick (opcjonalnie)"
+                placeholder="Nick gracza"
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
+                minLength={2}
+                maxLength={24}
+                required
               />
             )}
 
@@ -359,19 +618,25 @@ function SettingsMenu({ settings, onToggle, onSetVolume, onBack }) {
       </div>
 
       <p className="mb-3 text-sm text-slate-400">Ustawienia są wspólne dla całej gry i zapisywane na tym urządzeniu.</p>
+      <p className="settings-section-title">OBRAZ I INTERFEJS</p>
       <div className="grid gap-2">
-        <button type="button" className="flex items-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-left" onClick={() => onToggle('defaultSound')}>
-          <GuiIcon name="sound" alt="Dźwięki" />
-          Sound: {settings.defaultSound ? 'ON' : 'OFF'}
-        </button>
         <button type="button" className="flex items-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-left" onClick={() => onToggle('defaultAnimations')}>
           <GuiIcon name="animation" alt="Animacje" />
-          Animations: {settings.defaultAnimations ? 'ON' : 'OFF'}
+          Animacje: {settings.defaultAnimations ? 'ON' : 'OFF'}
+        </button>
+        <button type="button" className="flex items-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-left" onClick={() => onToggle('defaultFullscreen')}>
+          <GuiIcon name="modes" alt="Pełny ekran" />
+          Pełny ekran: {settings.defaultFullscreen ? 'ON' : 'OFF'}
         </button>
       </div>
 
       <div className="mt-3 rounded-xl border border-slate-700 bg-slate-800/70 p-3">
+        <p className="settings-section-title">DŹWIĘK</p>
         <div className="grid gap-3">
+          <button type="button" className="flex items-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-left" onClick={() => onToggle('defaultSound')}>
+            <GuiIcon name="sound" alt="Dźwięki" />
+            Dźwięki: {settings.defaultSound ? 'ON' : 'OFF'}
+          </button>
           <AudioVolumeControl
             icon="music"
             label="Muzyka"
@@ -419,7 +684,13 @@ export default function MainMenu({
   onLoginAccount,
   onRegisterAccount,
   onLogoutAccount,
-  onOAuthLogin
+  onOAuthLogin,
+  onUpdateNickname,
+  onLoadFriends,
+  onSearchFriends,
+  onSendFriendRequest,
+  onAcceptFriendRequest,
+  onRemoveFriendship
 }) {
   if (view === 'load') {
     return <LoadMenu slots={meta.slots} onLoad={onLoad} onNew={onNew} onDelete={onDelete} onBack={onBack} />;
@@ -450,6 +721,12 @@ export default function MainMenu({
         onLogin={onLoginAccount}
         onLogout={onLogoutAccount}
         onOAuthLogin={onOAuthLogin}
+        onUpdateNickname={onUpdateNickname}
+        onLoadFriends={onLoadFriends}
+        onSearchFriends={onSearchFriends}
+        onSendFriendRequest={onSendFriendRequest}
+        onAcceptFriendRequest={onAcceptFriendRequest}
+        onRemoveFriendship={onRemoveFriendship}
       />
     );
   }
@@ -457,6 +734,7 @@ export default function MainMenu({
   return (
     <RootMenu
       onContinue={onContinue}
+      onNew={onNew}
       onOpenLoad={onOpenLoad}
       onOpenRanking={onOpenRanking}
       onOpenSettings={onOpenSettings}

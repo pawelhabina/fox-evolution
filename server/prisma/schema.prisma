@@ -33,50 +33,75 @@ enum FlagSource {
   ADMIN
 }
 
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
 model User {
-  id              String            @id @default(cuid())
-  email           String?           @unique
-  passwordHash    String?
-  displayName     String
-  role            UserRole          @default(USER)
-  isFlagged       Boolean           @default(false)
-  flagReason      String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  lastLoginAt     DateTime?
-  oauthIdentities OAuthIdentity[]
-  saves           GameSave[]
-  refreshTokens   RefreshToken[]
-  flags           CheatFlag[]       @relation("UserFlags")
-  adminCreatedFlags CheatFlag[]     @relation("AdminCreatedFlags")
-  deviceLinks     UserDeviceLink[]
-  auditLogs       AuditLog[]        @relation("AdminAuditLogs")
-  leaderboardRows LeaderboardEntry[]
-  telemetryEvents TelemetryEvent[]
+  id                     String             @id @default(cuid())
+  publicId               String?            @unique
+  email                  String?            @unique
+  passwordHash           String?
+  displayName            String
+  nicknameChangedAt      DateTime?
+  profileSetupRequired   Boolean            @default(false)
+  role                   UserRole           @default(USER)
+  isFlagged              Boolean            @default(false)
+  flagReason             String?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  lastLoginAt            DateTime?
+  oauthIdentities        OAuthIdentity[]
+  saves                  GameSave[]
+  refreshTokens          RefreshToken[]
+  flags                  CheatFlag[]        @relation("UserFlags")
+  adminCreatedFlags      CheatFlag[]        @relation("AdminCreatedFlags")
+  deviceLinks            UserDeviceLink[]
+  auditLogs              AuditLog[]         @relation("AdminAuditLogs")
+  leaderboardRows        LeaderboardEntry[]
+  telemetryEvents        TelemetryEvent[]
+  sentFriendRequests     Friendship[]       @relation("FriendshipRequester")
+  receivedFriendRequests Friendship[]       @relation("FriendshipAddressee")
+}
+
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  requester   User             @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee   User             @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([requesterId, status])
+  @@index([addresseeId, status])
 }
 
 model Device {
-  id            String         @id @default(cuid())
-  deviceKeyHash String         @unique
-  label         String?
-  isFlagged     Boolean        @default(false)
-  flagReason    String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  saves         GameSave[]
-  refreshTokens RefreshToken[]
-  flags         CheatFlag[]    @relation("DeviceFlags")
-  userLinks     UserDeviceLink[]
+  id              String           @id @default(cuid())
+  deviceKeyHash   String           @unique
+  label           String?
+  isFlagged       Boolean          @default(false)
+  flagReason      String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  saves           GameSave[]
+  refreshTokens   RefreshToken[]
+  flags           CheatFlag[]      @relation("DeviceFlags")
+  userLinks       UserDeviceLink[]
   telemetryEvents TelemetryEvent[]
 }
 
 model UserDeviceLink {
-  id        String   @id @default(cuid())
-  userId    String
-  deviceId  String
-  linkedAt  DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  id       String   @id @default(cuid())
+  userId   String
+  deviceId String
+  linkedAt DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device   Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
   @@unique([userId, deviceId])
 }
@@ -93,19 +118,19 @@ model OAuthIdentity {
 }
 
 model RefreshToken {
-  id              String        @id @default(cuid())
-  tokenHash       String        @unique
-  principalType   PrincipalType
-  userId          String?
-  deviceId        String?
-  expiresAt       DateTime
-  revokedAt       DateTime?
-  replacedById    String?
-  ipAddress       String?
-  userAgent       String?
-  createdAt       DateTime      @default(now())
-  user            User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  device          Device?       @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  id            String        @id @default(cuid())
+  tokenHash     String        @unique
+  principalType PrincipalType
+  userId        String?
+  deviceId      String?
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  replacedById  String?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime      @default(now())
+  user          User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device        Device?       @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 }
 
 model GameSave {
@@ -134,14 +159,14 @@ model GameSave {
 }
 
 model CheatFlag {
-  id        String     @id @default(cuid())
-  source    FlagSource
-  reason    String
-  score     Int
-  userId    String?
-  deviceId  String?
-  adminId   String?
-  createdAt DateTime   @default(now())
+  id         String     @id @default(cuid())
+  source     FlagSource
+  reason     String
+  score      Int
+  userId     String?
+  deviceId   String?
+  adminId    String?
+  createdAt  DateTime   @default(now())
   resolvedAt DateTime?
 
   user   User?   @relation("UserFlags", fields: [userId], references: [id], onDelete: Cascade)
@@ -153,13 +178,13 @@ model CheatFlag {
 }
 
 model LeaderboardEntry {
-  id         String              @id @default(cuid())
-  category   LeaderboardCategory
-  rank       Int
-  value      BigInt
+  id          String              @id @default(cuid())
+  category    LeaderboardCategory
+  rank        Int
+  value       BigInt
   generatedAt DateTime
-  userId     String
-  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([category, rank])
   @@index([category, userId])

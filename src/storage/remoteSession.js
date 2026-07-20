@@ -370,6 +370,48 @@ export async function fetchMe() {
   }
 }
 
+export async function updateNickname(nickname) {
+  const payload = await apiRequest('/api/auth/profile/nickname', {
+    method: 'PATCH',
+    body: { nickname }
+  });
+  const session = getStoredSession();
+  setStoredSession({
+    accessToken: session.accessToken,
+    refreshToken: session.refreshToken,
+    principal: payload.principal
+  });
+  return payload.principal;
+}
+
+export async function fetchFriends() {
+  return apiRequest('/api/friends');
+}
+
+export async function searchFriends(query) {
+  const params = new URLSearchParams({ q: String(query || '').trim() });
+  return apiRequest(`/api/friends/search?${params}`);
+}
+
+export async function sendFriendRequest(targetUuid) {
+  return apiRequest('/api/friends/requests', {
+    method: 'POST',
+    body: { targetUuid }
+  });
+}
+
+export async function acceptFriendRequest(friendshipId) {
+  return apiRequest(`/api/friends/requests/${encodeURIComponent(friendshipId)}/accept`, {
+    method: 'POST'
+  });
+}
+
+export async function removeFriendship(friendshipId) {
+  return apiRequest(`/api/friends/${encodeURIComponent(friendshipId)}`, {
+    method: 'DELETE'
+  });
+}
+
 export async function startOAuthLogin(provider) {
   const base = getApiBaseUrl();
   if (!base) {
@@ -396,7 +438,8 @@ export async function startOAuthLogin(provider) {
     : `${window.location.origin}/oauth-success`;
   const params = new URLSearchParams({
     redirect,
-    codeChallenge: challenge
+    codeChallenge: challenge,
+    deviceId: getDeviceId()
   });
   const startUrl = `${base}/api/auth/oauth/${normalized}/start?${params}`;
 

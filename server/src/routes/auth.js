@@ -11,6 +11,7 @@ import {
   registerUser,
   revokeRefreshToken
 } from '../services/authService.js';
+import { serializeUserPrincipal, updateUserNickname } from '../services/profileService.js';
 import {
   createOAuthGrant,
   createOAuthState,
@@ -54,7 +55,8 @@ function parseStartFlow(req, provider) {
   return createOAuthState({
     provider,
     redirect: String(req.query.redirect || '').trim(),
-    codeChallenge: String(req.query.codeChallenge || '').trim()
+    codeChallenge: String(req.query.codeChallenge || '').trim(),
+    deviceId: String(req.query.deviceId || '').trim()
   });
 }
 
@@ -62,7 +64,7 @@ router.post('/register', async (req, res) => {
   const schema = z.object({
     email: z.string().email(),
     password: z.string().min(8),
-    displayName: z.string().min(2).max(32).optional(),
+    displayName: z.string().trim().min(2).max(24).regex(/^[\p{L}\p{N}_ -]+$/u),
     deviceId: z.string().min(8).max(255).optional(),
     migrateDeviceSaves: z.boolean().optional()
   });
@@ -176,6 +178,29 @@ router.get('/me', requireAuth, async (req, res) => {
   return res.json({ principal: req.principal });
 });
 
+router.patch('/profile/nickname', requireAuth, async (req, res) => {
+  if (req.principal.type !== 'USER') {
+    return res.status(403).json({ error: 'USER_ACCOUNT_REQUIRED' });
+  }
+  const schema = z.object({ nickname: z.string().trim().min(2).max(24) });
+  try {
+    const parsed = schema.parse(req.body || {});
+    const user = await updateUserNickname(req.principal.id, parsed.nickname);
+    return res.json({ principal: serializeUserPrincipal(user) });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'VALIDATION_ERROR', details: error.flatten() });
+    }
+    if (error.message === 'NICKNAME_COOLDOWN') {
+      return res.status(429).json({ error: 'NICKNAME_COOLDOWN', availableAt: error.availableAt });
+    }
+    if (['NICKNAME_LENGTH_INVALID', 'NICKNAME_CHARACTERS_INVALID'].includes(error.message)) {
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'NICKNAME_UPDATE_FAILED' });
+  }
+});
+
 router.post('/link-device', requireAuth, async (req, res) => {
   if (req.principal.type !== 'USER') {
     return res.status(403).json({ error: 'USER_ACCOUNT_REQUIRED' });
@@ -232,12 +257,18 @@ router.get('/oauth/google/callback', (req, res, next) => {
     return res.status(400).json({ error: error.message });
   }
 
-  passport.authenticate('google', { session: false }, (err, session) => {
+  passport.authenticate('google', { session: false }, async (err, session) => {
     if (err || !session) {
       return res.status(401).json({ error: 'GOOGLE_OAUTH_FAILED' });
     }
-
-    return sendOauthSuccess(res, session, flow);
+    try {
+      if (flow.deviceId) {
+        await linkDeviceToUser({ userId: session.principal.id, deviceId: flow.deviceId, migrateSaves: true });
+      }
+      return sendOauthSuccess(res, session, flow);
+    } catch (_error) {
+      return res.status(500).json({ error: 'GOOGLE_ACCOUNT_LINK_FAILED' });
+    }
   })(req, res, next);
 });
 
@@ -272,11 +303,18 @@ router.get('/oauth/steam/callback', (req, res, next) => {
   }
   res.clearCookie('fox_oauth_state', { path: '/api/auth/oauth/steam' });
 
-  passport.authenticate('steam', { session: false }, (err, session) => {
+  passport.authenticate('steam', { session: false }, async (err, session) => {
     if (err || !session) {
       return res.status(401).json({ error: 'STEAM_OAUTH_FAILED' });
     }
-    return sendOauthSuccess(res, session, flow);
+    try {
+      if (flow.deviceId) {
+        await linkDeviceToUser({ userId: session.principal.id, deviceId: flow.deviceId, migrateSaves: true });
+      }
+      return sendOauthSuccess(res, session, flow);
+    } catch (_error) {
+      return res.status(500).json({ error: 'STEAM_ACCOUNT_LINK_FAILED' });
+    }
   })(req, res, next);
 });
 

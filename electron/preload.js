@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('foxEvolution', {
   updateMetaSettings: (settings) => ipcRenderer.invoke('game:updateMetaSettings', settings),
   deleteSlot: (slotId) => ipcRenderer.invoke('game:deleteSlot', slotId),
   getVersion: () => ipcRenderer.invoke('app:version'),
+  setFullscreen: (enabled) => ipcRenderer.invoke('app:set-fullscreen', Boolean(enabled)),
   getUpdateState: () => ipcRenderer.invoke('app:update:state'),
   checkForUpdates: () => ipcRenderer.invoke('app:update:check'),
   installUpdateAndRestart: () => ipcRenderer.invoke('app:update:install'),
