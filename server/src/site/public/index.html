@@ -22,8 +22,10 @@
   </head>
   <body>
     <a class="skip-link" href="#main">Przejdź do treści</a>
+    <div class="cursor-glow" aria-hidden="true" data-cursor-glow></div>
 
     <header class="site-header" data-header>
+      <div class="scroll-progress" aria-hidden="true"><span data-scroll-progress></span></div>
       <div class="shell nav-shell">
         <a class="brand" href="#top" aria-label="Fox Evolution — strona główna">
           <img src="/assets/fox-evolution-icon.png" alt="" />
@@ -42,6 +44,8 @@
     <main id="main">
       <section id="top" class="hero section-grid">
         <div class="scanlines" aria-hidden="true"></div>
+        <div class="hero-orb hero-orb--cyan" aria-hidden="true"></div>
+        <div class="hero-orb hero-orb--amber" aria-hidden="true"></div>
         <div class="shell hero-layout">
           <div class="hero-copy reveal">
             <p class="eyebrow"><span class="status-dot"></span> MERGE FOX TYCOON // WINDOWS + MACOS</p>
@@ -54,7 +58,7 @@
               <a class="pixel-button pixel-button--ghost" href="#download">Pobierz na macOS ↓</a>
             </div>
             <div class="hero-proof" aria-label="Najważniejsze funkcje">
-              <span><strong>15</strong> tierów lisów</span><span><strong>3</strong> żywioły</span><span><strong>∞</strong> rozwoju</span>
+              <span><strong data-count-to="15">15</strong> tierów lisów</span><span><strong data-count-to="3">3</strong> żywioły</span><span><strong>∞</strong> rozwoju</span>
             </div>
           </div>
 
@@ -62,15 +66,17 @@
             <div class="game-window">
               <div class="window-bar"><span class="window-dots" aria-hidden="true">■ ■ ■</span><span>FOX_EVOLUTION.EXE</span><span>ONLINE</span></div>
               <div class="window-grid">
-                <div class="coin-counter"><span>◆</span> 12.48M</div>
-                <div class="merge-stage">
-                  <div class="fox-slot"><span class="tier-label">TIER 05</span><img src="/assets/fox-tier-05.png" alt="Lis piątego tieru" /></div>
+                <div class="coin-counter"><span>◆</span> <strong data-demo-coins>12.48M</strong></div>
+                <div class="merge-stage" data-merge-stage>
+                  <button class="fox-slot" type="button" data-merge-fox aria-pressed="false"><span class="tier-label">TIER 05</span><img src="/assets/fox-tier-05.png" alt="Lis piątego tieru" /><span class="slot-action">WYBIERZ</span></button>
                   <div class="merge-symbol" aria-hidden="true">+</div>
-                  <div class="fox-slot"><span class="tier-label">TIER 05</span><img src="/assets/fox-tier-05.png" alt="Drugi lis piątego tieru" /></div>
+                  <button class="fox-slot" type="button" data-merge-fox aria-pressed="false"><span class="tier-label">TIER 05</span><img src="/assets/fox-tier-05.png" alt="Drugi lis piątego tieru" /><span class="slot-action">WYBIERZ</span></button>
                   <div class="merge-beam" aria-hidden="true"></div>
-                  <div class="fox-slot fox-slot--result"><span class="tier-label">NEW // TIER 10</span><img src="/assets/fox-tier-10.png" alt="Ewoluowany lis dziesiątego tieru" /></div>
+                  <div class="merge-burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                  <div class="fox-slot fox-slot--result" data-merge-result><span class="tier-label">NEW // TIER 10</span><img src="/assets/fox-tier-10.png" alt="Ewoluowany lis dziesiątego tieru" /></div>
                 </div>
-                <div class="window-log"><span>&gt; merge_sequence: complete</span><span>&gt; income_multiplier: x4.2</span><span class="log-success">&gt; new_fox_unlocked ✓</span></div>
+                <div class="merge-prompt" aria-live="polite" data-merge-status>Kliknij oba lisy, aby uruchomić merge.</div>
+                <div class="window-log"><span data-log-sequence>&gt; merge_sequence: waiting</span><span>&gt; income_multiplier: x4.2</span><span class="log-success" data-log-success>&gt; select_two_foxes_</span></div>
               </div>
             </div>
             <div class="floating-chip floating-chip--one">+42.8K / TICK</div><div class="floating-chip floating-chip--two">RARE EVOLUTION</div>
@@ -78,13 +84,17 @@
         </div>
       </section>
 
+      <div class="signal-strip" aria-label="Najważniejsze elementy gry">
+        <div class="signal-track"><span>MERGE</span><i>◆</i><span>15 TIERÓW</span><i>◆</i><span>REBIRTH</span><i>◆</i><span>3 ŻYWIOŁY</span><i>◆</i><span>RANKING ONLINE</span><i>◆</i><span>CHMURA</span><i>◆</i><span>MERGE</span><i>◆</i><span>15 TIERÓW</span><i>◆</i><span>REBIRTH</span><i>◆</i><span>3 ŻYWIOŁY</span><i>◆</i><span>RANKING ONLINE</span><i>◆</i><span>CHMURA</span></div>
+      </div>
+
       <section id="gra" class="gameplay-section section-grid">
         <div class="shell">
           <div class="section-heading reveal"><p class="eyebrow">// PĘTLA ROZGRYWKI</p><h2>PROSTE ZASADY.<br /><span>WIELKA EWOLUCJA.</span></h2><p>Każde połączenie przybliża Cię do rzadszych lisów, większych mnożników i nowych możliwości.</p></div>
           <div class="mechanics-grid">
-            <article class="mechanic-card reveal"><span class="card-index">01</span><div class="card-icon">＋</div><h3>Kupuj i łącz</h3><p>Umieszczaj lisy na planszy i łącz dwa identyczne osobniki w potężniejszy tier.</p><span class="card-command">MERGE FOXES_</span></article>
-            <article class="mechanic-card reveal"><span class="card-index">02</span><div class="card-icon">◆</div><h3>Zarabiaj bez przerwy</h3><p>Każdy lis generuje monety. Rozwijaj ekonomię, rabaty i tempo globalnego ticka.</p><span class="card-command">STACK COINS_</span></article>
-            <article class="mechanic-card reveal"><span class="card-index">03</span><div class="card-icon">⚡</div><h3>Przekraczaj granice</h3><p>Odblokuj rebirth, żywioły i stałe bonusy, które zmieniają każdą kolejną rozgrywkę.</p><span class="card-command">EVOLVE MORE_</span></article>
+            <article class="mechanic-card reveal" data-tilt><span class="card-index">01</span><div class="card-icon">＋</div><h3>Kupuj i łącz</h3><p>Umieszczaj lisy na planszy i łącz dwa identyczne osobniki w potężniejszy tier.</p><span class="card-command">MERGE FOXES_</span></article>
+            <article class="mechanic-card reveal" data-tilt><span class="card-index">02</span><div class="card-icon">◆</div><h3>Zarabiaj bez przerwy</h3><p>Każdy lis generuje monety. Rozwijaj ekonomię, rabaty i tempo globalnego ticka.</p><span class="card-command">STACK COINS_</span></article>
+            <article class="mechanic-card reveal" data-tilt><span class="card-index">03</span><div class="card-icon">⚡</div><h3>Przekraczaj granice</h3><p>Odblokuj rebirth, żywioły i stałe bonusy, które zmieniają każdą kolejną rozgrywkę.</p><span class="card-command">EVOLVE MORE_</span></article>
           </div>
         </div>
       </section>
@@ -98,10 +108,12 @@
           </div>
           <div class="evolution-track reveal">
             <div class="track-line" aria-hidden="true"></div>
-            <article class="evolution-node"><span>START</span><img src="/assets/fox-tier-01.png" alt="Lis pierwszego tieru" /><strong>TIER 01</strong></article>
-            <article class="evolution-node"><span>MERGE</span><img src="/assets/fox-tier-05.png" alt="Lis piątego tieru" /><strong>TIER 05</strong></article>
-            <article class="evolution-node"><span>ASCEND</span><img src="/assets/fox-tier-10.png" alt="Lis dziesiątego tieru" /><strong>TIER 10</strong></article>
-            <article class="evolution-node evolution-node--legendary"><span>LEGENDARY</span><img src="/assets/fox-tier-15.png" alt="Legendarny lis piętnastego tieru" /><strong>TIER 15</strong></article>
+            <div class="track-line track-line--active" aria-hidden="true" data-track-progress></div>
+            <button class="evolution-node is-active" type="button" data-evolution-node data-step="0" data-description="Pierwszy lis rozpoczyna ekonomię i otwiera drogę do kolejnych połączeń."><span>START</span><img src="/assets/fox-tier-01.png" alt="Lis pierwszego tieru" /><strong>TIER 01</strong></button>
+            <button class="evolution-node" type="button" data-evolution-node data-step="1" data-description="Regularne łączenie podnosi tier, tempo zarobku i wartość każdego kliknięcia."><span>MERGE</span><img src="/assets/fox-tier-05.png" alt="Lis piątego tieru" /><strong>TIER 05</strong></button>
+            <button class="evolution-node" type="button" data-evolution-node data-step="2" data-description="Wyższe tiery odblokowują nowe systemy, ulepszenia i coraz większe mnożniki."><span>ASCEND</span><img src="/assets/fox-tier-10.png" alt="Lis dziesiątego tieru" /><strong>TIER 10</strong></button>
+            <button class="evolution-node evolution-node--legendary" type="button" data-evolution-node data-step="3" data-description="Tier 15 prowadzi do legendarnych ewolucji ognia, wody i elektryczności."><span>LEGENDARY</span><img src="/assets/fox-tier-15.png" alt="Legendarny lis piętnastego tieru" /><strong>TIER 15</strong></button>
+            <div class="evolution-readout" aria-live="polite"><span data-evolution-label>TIER 01 // START</span><p data-evolution-description>Pierwszy lis rozpoczyna ekonomię i otwiera drogę do kolejnych połączeń.</p></div>
           </div>
         </div>
       </section>

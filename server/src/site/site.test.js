@@ -8,6 +8,8 @@ const siteDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public'
 
 test('public site contains the complete download journey and required assets', () => {
   const html = fs.readFileSync(path.join(siteDir, 'index.html'), 'utf8');
+  const css = fs.readFileSync(path.join(siteDir, 'site.css'), 'utf8');
+  const script = fs.readFileSync(path.join(siteDir, 'site.js'), 'utf8');
 
   assert.match(html, /Fox Evolution — Merge Fox Tycoon/);
   assert.match(html, /href="\/download\/windows"/);
@@ -18,6 +20,18 @@ test('public site contains the complete download journey and required assets', (
   assert.match(html, /id="ewolucja"/);
   assert.match(html, /id="funkcje"/);
   assert.match(html, /id="faq"/);
+  assert.match(html, /data-merge-stage/);
+  assert.equal((html.match(/data-merge-fox/g) || []).length, 2);
+  assert.equal((html.match(/data-evolution-node/g) || []).length, 4);
+  assert.equal((html.match(/data-tilt/g) || []).length, 3);
+  assert.match(html, /data-scroll-progress/);
+
+  assert.match(script, /completeMergeDemo/);
+  assert.match(script, /--hero-tilt-x/);
+  assert.match(script, /--scroll-progress/);
+  assert.match(script, /prefers-reduced-motion/);
+  assert.match(css, /@keyframes particle-burst/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 
   assert.ok(fs.existsSync(path.join(siteDir, 'og.png')), 'missing social preview image');
 
