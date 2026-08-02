@@ -45,3 +45,11 @@ test('waits for Windows file handles before starting the downloaded installer', 
   assert.match(electronMain, /autoUpdater\.quitAndInstall\(true, true\)/);
   assert.doesNotMatch(electronMain, /launchWindowsUpdateHandoff/);
 });
+
+test('main menu uses the official game icon instead of the paw glyph', () => {
+  const mainMenu = fs.readFileSync(path.join(projectRoot, 'src/components/MainMenu.jsx'), 'utf8');
+
+  assert.match(mainMenu, /fox-evolution-icon\.png/);
+  assert.match(mainMenu, /className="main-menu-brand-icon"/);
+  assert.doesNotMatch(mainMenu, /<GuiIcon name="pet" alt="" size=\{64\} \/>/);
+});

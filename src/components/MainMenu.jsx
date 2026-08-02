@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import gameIconUrl from '../../assets/app/fox-evolution-icon.png';
 import { formatNumber } from '../game/format';
 import AudioVolumeControl from './AudioVolumeControl';
 import GuiIcon from './GuiIcon';
@@ -10,7 +11,7 @@ function RootMenu({ onContinue, onNew, onOpenLoad, onOpenRanking, onOpenSettings
     <div className="panel main-menu-panel mx-auto w-full max-w-5xl p-7">
       <section className="main-menu-hero">
         <div className="main-menu-brand-mark" aria-hidden="true">
-          <GuiIcon name="pet" alt="" size={64} />
+          <img className="main-menu-brand-icon" src={gameIconUrl} alt="" />
         </div>
         <p className="main-menu-kicker">MERGE TYCOON</p>
         <h1 className="main-menu-title">Fox Evolution</h1>

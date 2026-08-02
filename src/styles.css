@@ -147,6 +147,14 @@ body {
   box-shadow: inset 0 0 0 4px #020617, 5px 5px 0 #451a03;
 }
 
+.main-menu-brand-icon {
+  width: 76px;
+  height: 76px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(3px 3px 0 rgba(2, 6, 23, 0.88));
+}
+
 .main-menu-kicker,
 .main-menu-section-label,
 .settings-section-title {

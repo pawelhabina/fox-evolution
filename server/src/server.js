@@ -24,6 +24,7 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const adminPublicDir = path.join(__dirname, 'admin', 'public');
+const sitePublicDir = path.join(__dirname, 'site', 'public');
 
 if (env.trustProxy > 0) {
   app.set('trust proxy', env.trustProxy);
@@ -65,19 +66,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/updates', express.static(env.updatesDir, { setHeaders: setUpdateHeaders }));
 app.get('/download/windows', redirectLatestWindows);
 
-app.get('/', (_req, res) => {
-  res.type('html').send(`<!doctype html>
-<html lang="pl">
-  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fox Evolution</title></head>
-  <body>
-    <main>
-      <h1>Fox Evolution</h1>
-      <p>Desktopowa gra o łączeniu i ewolucji lisów.</p>
-      <p><a href="/download/windows">Pobierz najnowszą wersję dla Windows (.exe)</a></p>
-    </main>
-  </body>
-</html>`);
-});
+app.use(express.static(sitePublicDir, { index: false, maxAge: '1h' }));
+app.get('/', (_req, res) => res.sendFile(path.join(sitePublicDir, 'index.html')));
 
 app.use('/admin', express.static(adminPublicDir));
 app.get('/admin*', (_req, res) => {
