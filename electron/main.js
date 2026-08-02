@@ -1,7 +1,6 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { launchWindowsUpdateHandoff } = require('./updateHandoff');
 
 // The v2 installer uses a clean program directory, but game data must stay in
 // the original profile so saves and settings survive the migration.
@@ -554,28 +553,12 @@ app.whenReady().then(() => {
       progress: 100
     });
 
-    if (process.platform === 'win32' && autoUpdater.installerPath && fs.existsSync(autoUpdater.installerPath)) {
-      try {
-        appendUpdateInstallLog(`Preparing installer: ${path.basename(autoUpdater.installerPath)}`);
-        const handoff = launchWindowsUpdateHandoff({
-          appPid: process.pid,
-          appExecutablePath: process.execPath,
-          installerPath: autoUpdater.installerPath,
-          logPath: getUpdateInstallLogPath()
-        });
-        appendUpdateInstallLog(`Update helper launched: pid=${handoff.pid} script=${handoff.scriptPath}`);
-        setTimeout(() => {
-          app.quit();
-        }, 250);
-        return true;
-      } catch (error) {
-        appendUpdateInstallLog(`Handoff failed, using electron-updater fallback: ${error?.message || error}`);
-      }
-    }
-
-    setImmediate(() => {
-      autoUpdater.quitAndInstall(false, true);
-    });
+    // Let the renderer finish persisting its last state and release update
+    // handles before NSIS starts. On Windows this avoids a race seen when the
+    // installer is spawned in the same tick as the button click.
+    await new Promise((resolve) => setTimeout(resolve, 10_000));
+    appendUpdateInstallLog(`Starting installer through electron-updater: ${path.basename(autoUpdater.installerPath || '')}`);
+    autoUpdater.quitAndInstall(true, true);
     return true;
   });
   ipcMain.handle('app:oauth:open', async (_event, value) => {

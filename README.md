@@ -73,9 +73,14 @@ Konfiguracja:
 
 Flow nowej wersji:
 1. Podbij `version` w [package.json](/Users/pravel9/Documents/fox-evolution/package.json).
-2. Uruchom `npm run release:desktop`.
-3. Zrestartuj backend lub wrzuć nowe pliki `server/updates` na serwer.
-4. Klient dostanie update przy starcie lub maksymalnie do 5 minut.
+2. Uruchom testy i zacommituj dokładnie ten stan jako commit wydania.
+3. Uruchom `npm run release:desktop`.
+4. Zrestartuj backend lub wrzuć nowe pliki `server/updates` na serwer.
+5. Klient dostanie update przy starcie lub maksymalnie do 5 minut.
+
+Od wersji `1.2.0` wypchnij również tag `vX.Y.Z` wskazujący commit wydania. Workflow
+`.github/workflows/release.yml` sprawdzi zgodność taga z `package.json`, zbuduje Windows,
+uruchomi testy i opublikuje instalator, blockmapę oraz `latest.yml` jako GitHub Release.
 
 ## Build
 ```bash

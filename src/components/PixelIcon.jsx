@@ -54,6 +54,15 @@ const ICONS = {
       <PixelRect x="9" y="5" width="2" height="2" fill={COLORS.light} />
     </>
   ),
+  friends: (
+    <>
+      <path fill={COLORS.ink} d="M4 2h7v2h2v7h-2v2h2v2h2v-3h-1V6h2V4h6v2h2v6h-2v2h1v2h1v7H1v-8h2v-2h2v-2H3V4h1V2Z" />
+      <path fill={COLORS.orange} d="M5 4h5v2h1v4h-2v2H6v-2H5V4Zm11 2h4v2h1v3h-2v2h-3v-2h-1V8h1V6Z" />
+      <path fill={COLORS.cyan} d="M4 15h3v2h2v-2h3v2h2v4H3v-4h1v-2Zm12 0h4v1h2v5h-6v-6Z" />
+      <PixelRect x="6" y="5" width="2" height="2" fill={COLORS.light} />
+      <PixelRect x="17" y="7" width="2" height="2" fill={COLORS.light} />
+    </>
+  ),
   power: (
     <>
       <path fill={COLORS.ink} d="M9 1h6v10H9V1ZM5 5h3v4H6v8h2v2h8v-2h2V9h-2V5h3v2h2v12h-3v3H6v-3H3V7h2V5Z" />

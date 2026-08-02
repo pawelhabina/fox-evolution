@@ -18,12 +18,26 @@ async function discoverNextcloudRoot() {
   const cloudStorage = path.join(os.homedir(), 'Library', 'CloudStorage');
   const entries = await fs.readdir(cloudStorage, { withFileTypes: true });
   const roots = entries.filter((entry) => entry.isDirectory() && entry.name.startsWith('Nextcloud-'));
+  if (roots.length === 1) {
+    return path.join(cloudStorage, roots[0].name);
+  }
+
+  const existingFoxEvoRoots = [];
+  for (const root of roots) {
+    const candidate = path.join(cloudStorage, root.name);
+    if (await exists(path.join(candidate, 'global', 'fox-evo'))) {
+      existingFoxEvoRoots.push(candidate);
+    }
+  }
+  if (existingFoxEvoRoots.length === 1) {
+    return existingFoxEvoRoots[0];
+  }
+
   if (roots.length !== 1) {
     throw new Error(
-      `Expected exactly one mounted Nextcloud account, found ${roots.length}. Set NEXTCLOUD_SYNC_ROOT explicitly.`
+      `Could not select one Nextcloud account for global/fox-evo from ${roots.length} mounted accounts. Set NEXTCLOUD_SYNC_ROOT explicitly.`
     );
   }
-  return path.join(cloudStorage, roots[0].name);
 }
 
 async function sha256(filePath) {

@@ -28,3 +28,20 @@ test('uses existing application and installer icon assets', () => {
     assert.ok(fs.existsSync(path.join(projectRoot, iconPath)), `missing icon: ${iconPath}`);
   }
 });
+
+test('installer recovers from a broken legacy uninstaller without deleting game data', () => {
+  const installerInclude = fs.readFileSync(path.join(projectRoot, 'build/installer.nsh'), 'utf8');
+
+  assert.match(installerInclude, /!macro customUnInstallCheck\b/);
+  assert.match(installerInclude, /!macro customUnInstallCheckCurrentUser\b/);
+  assert.match(installerInclude, /RMDir \/r "\$INSTDIR"/);
+  assert.doesNotMatch(installerInclude, /RMDir \/r .*AppData\\Roaming\\fox-evolution/i);
+});
+
+test('waits for Windows file handles before starting the downloaded installer', () => {
+  const electronMain = fs.readFileSync(path.join(projectRoot, 'electron/main.js'), 'utf8');
+
+  assert.match(electronMain, /await new Promise\(\(resolve\) => setTimeout\(resolve, 10_000\)\)/);
+  assert.match(electronMain, /autoUpdater\.quitAndInstall\(true, true\)/);
+  assert.doesNotMatch(electronMain, /launchWindowsUpdateHandoff/);
+});

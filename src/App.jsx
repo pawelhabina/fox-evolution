@@ -4,7 +4,7 @@ import Arena from './components/Arena';
 import EvolutionModal from './components/EvolutionModal';
 import FoxContextMenu from './components/FoxContextMenu';
 import Hud from './components/Hud';
-import MainMenu from './components/MainMenu';
+import MainMenu, { AccountMenu } from './components/MainMenu';
 import PixelGridBackground from './components/PixelGridBackground';
 import SettingsModal from './components/SettingsModal';
 import ShopPanel from './components/ShopPanel';
@@ -198,6 +198,7 @@ export default function App() {
   const [systemMenuOpen, setSystemMenuOpen] = useState(false);
   const [shopCollapsed, setShopCollapsed] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [friendsModalOpen, setFriendsModalOpen] = useState(false);
   const [evolutionTargetId, setEvolutionTargetId] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [gameVersion, setGameVersion] = useState('dev');
@@ -466,7 +467,8 @@ export default function App() {
         await refreshAuthPrincipal();
         await refreshMenuMeta();
         setAppScreen('menu');
-        setMenuView('account');
+        setMenuView('profile');
+        setFriendsModalOpen(false);
         trackTelemetryEvent('auth_login', { method: 'oauth' });
         pushToast('Zalogowano');
       } catch (_error) {
@@ -702,9 +704,13 @@ export default function App() {
               playSfx('ui');
               setMenuView('settings');
             }}
-            onOpenAccount={() => {
+            onOpenProfile={() => {
               playSfx('ui');
-              setMenuView('account');
+              setMenuView('profile');
+            }}
+            onOpenFriends={() => {
+              playSfx('ui');
+              setMenuView('friends');
             }}
             onExit={async () => {
               await quitGameApp();
@@ -889,6 +895,7 @@ export default function App() {
     remoteSlotUpdatedAtRef.current = null;
     setModeMenuOpen(false);
     setSystemMenuOpen(false);
+    setFriendsModalOpen(false);
     setMenuView('root');
     setAppScreen('menu');
   };
@@ -993,6 +1000,19 @@ export default function App() {
               <GuiIcon name="settings" alt="" />
               Ustawienia
             </button>
+            {remoteEnabled && (
+              <button
+                type="button"
+                className="flex items-center gap-2 rounded-lg bg-cyan-700/80 px-3 py-2 text-left text-sm text-cyan-50"
+                onClick={() => {
+                  setFriendsModalOpen(true);
+                  setSystemMenuOpen(false);
+                }}
+              >
+                <GuiIcon name="friends" alt="" />
+                Znajomi
+              </button>
+            )}
             <button type="button" className="flex items-center gap-2 rounded-lg bg-indigo-600/80 px-3 py-2 text-left text-sm" onClick={goToMainMenu}>
               <GuiIcon name="home" alt="" />
               Wyjście do menu głównego
@@ -1005,6 +1025,69 @@ export default function App() {
               <GuiIcon name="power" alt="" />
               Wyjście z gry
             </button>
+          </div>
+        </div>
+      )}
+
+      {friendsModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 p-4" onClick={() => setFriendsModalOpen(false)}>
+          <div className="w-full max-w-3xl" onClick={(event) => event.stopPropagation()}>
+            <AccountMenu
+              section="friends"
+              principal={authPrincipal}
+              onBack={() => setFriendsModalOpen(false)}
+              onRegister={async ({ email, password, displayName }) => {
+                await registerGameAccount({ email, password, displayName });
+                await refreshAuthPrincipal();
+                await refreshMenuMeta();
+                trackTelemetryEvent('auth_register', { method: 'password' });
+                pushToast('Konto utworzone');
+              }}
+              onLogin={async ({ email, password }) => {
+                await loginGameAccount({ email, password });
+                await refreshAuthPrincipal();
+                await refreshMenuMeta();
+                trackTelemetryEvent('auth_login', { method: 'password' });
+                pushToast('Zalogowano');
+              }}
+              onLogout={async () => {
+                await logoutGameAccount();
+                await refreshAuthPrincipal();
+                await refreshMenuMeta();
+                trackTelemetryEvent('auth_logout');
+                pushToast('Wylogowano');
+              }}
+              onOAuthLogin={async (provider) => {
+                try {
+                  await beginOAuthLogin(provider);
+                  pushToast('Dokończ logowanie w przeglądarce');
+                } catch (_error) {
+                  pushToast('Nie udało się uruchomić logowania');
+                }
+              }}
+              onUpdateNickname={async (nickname) => {
+                const principal = await updateGameNickname(nickname);
+                setAuthPrincipal(principal);
+                pushToast('Nick został zapisany');
+              }}
+              onLoadFriends={fetchGameFriends}
+              onSearchFriends={searchGameFriends}
+              onSendFriendRequest={async (targetUuid) => {
+                const result = await sendGameFriendRequest(targetUuid);
+                pushToast(result?.friendship?.status === 'ACCEPTED' ? 'Dodano znajomego' : 'Wysłano zaproszenie');
+                return result;
+              }}
+              onAcceptFriendRequest={async (friendshipId) => {
+                const result = await acceptGameFriendRequest(friendshipId);
+                pushToast('Zaakceptowano zaproszenie');
+                return result;
+              }}
+              onRemoveFriendship={async (friendshipId) => {
+                const result = await removeGameFriendship(friendshipId);
+                pushToast('Lista znajomych została zaktualizowana');
+                return result;
+              }}
+            />
           </div>
         </div>
       )}

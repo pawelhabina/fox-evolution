@@ -3,7 +3,7 @@ import { formatNumber } from '../game/format';
 import AudioVolumeControl from './AudioVolumeControl';
 import GuiIcon from './GuiIcon';
 
-function RootMenu({ onContinue, onNew, onOpenLoad, onOpenRanking, onOpenSettings, onOpenAccount, onExit, hasSaves, isRemoteEnabled, principal }) {
+function RootMenu({ onContinue, onNew, onOpenLoad, onOpenRanking, onOpenSettings, onOpenProfile, onOpenFriends, onExit, hasSaves, isRemoteEnabled, principal }) {
   const isUser = principal?.type === 'USER';
 
   return (
@@ -12,17 +12,12 @@ function RootMenu({ onContinue, onNew, onOpenLoad, onOpenRanking, onOpenSettings
         <div className="main-menu-brand-mark" aria-hidden="true">
           <GuiIcon name="pet" alt="" size={64} />
         </div>
-        <p className="main-menu-kicker">PIXEL MERGE TYCOON</p>
+        <p className="main-menu-kicker">MERGE TYCOON</p>
         <h1 className="main-menu-title">Fox Evolution</h1>
         <p className="main-menu-tagline">Kupuj, łącz, zarabiaj i ulepszaj lisy.</p>
-        <div className="main-menu-feature-list" aria-label="Najważniejsze elementy gry">
-          <span>15 tierów</span>
-          <span>3 ewolucje</span>
-          <span>Rebirth</span>
-        </div>
 
         {isRemoteEnabled && (
-          <button type="button" className="main-menu-profile-card" onClick={onOpenAccount}>
+          <button type="button" className="main-menu-profile-card" onClick={onOpenProfile}>
             <GuiIcon name="user" alt="Profil" size={28} />
             <span className="min-w-0">
               <strong>{isUser ? principal.displayName : 'Grasz jako gość'}</strong>
@@ -33,8 +28,7 @@ function RootMenu({ onContinue, onNew, onOpenLoad, onOpenRanking, onOpenSettings
         )}
       </section>
 
-      <section className="main-menu-actions" aria-label="Menu główne">
-        <p className="main-menu-section-label">GRA</p>
+      <section className="main-menu-actions mt-4" aria-label="Menu główne">
         {hasSaves && (
           <button type="button" className="primary-btn main-menu-action main-menu-action--primary" onClick={onContinue}>
             <GuiIcon name="play" alt="" size={22} />
@@ -56,9 +50,15 @@ function RootMenu({ onContinue, onNew, onOpenLoad, onOpenRanking, onOpenSettings
             Ranking
           </button>
           {isRemoteEnabled && (
-            <button type="button" className="shop-tab main-menu-square-action" onClick={onOpenAccount}>
+            <button type="button" className="shop-tab main-menu-square-action" onClick={onOpenProfile}>
               <GuiIcon name="user" alt="" size={20} />
-              Konto i znajomi
+              Profil
+            </button>
+          )}
+          {isRemoteEnabled && (
+            <button type="button" className="shop-tab main-menu-square-action" onClick={onOpenFriends}>
+              <GuiIcon name="friends" alt="" size={20} />
+              Znajomi
             </button>
           )}
           <button type="button" className="shop-tab main-menu-square-action" onClick={onOpenSettings}>
@@ -263,7 +263,8 @@ function FriendRow({ item, actionLabel, onAction, danger = false }) {
   );
 }
 
-function AccountMenu({
+export function AccountMenu({
+  section = 'profile',
   principal,
   onBack,
   onRegister,
@@ -278,7 +279,6 @@ function AccountMenu({
   onRemoveFriendship
 }) {
   const [mode, setMode] = useState('login');
-  const [accountTab, setAccountTab] = useState('profile');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -324,12 +324,12 @@ function AccountMenu({
   }
 
   useEffect(() => {
-    if (isUser && accountTab === 'friends') {
+    if (isUser && section === 'friends') {
       void refreshFriends();
     }
     // Funkcja korzysta z aktualnych propsów, a przeładowanie ma następować tylko po zmianie zakładki lub konta.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accountTab, isUser, principal?.id]);
+  }, [section, isUser, principal?.id]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -400,8 +400,8 @@ function AccountMenu({
     <div className="panel account-panel mx-auto w-full max-w-3xl p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-2xl font-bold text-amber-300">
-          <GuiIcon name="user" alt="" size={24} />
-          Konto gracza
+          <GuiIcon name={section === 'friends' ? 'friends' : 'user'} alt="" size={24} />
+          {section === 'friends' ? 'Znajomi' : 'Profil gracza'}
         </h2>
         <button type="button" className="shop-tab flex items-center gap-2" onClick={onBack}>
           <GuiIcon name="back" alt="" />
@@ -417,16 +417,7 @@ function AccountMenu({
         </span>
       </div>
 
-      {isUser && (
-        <div className="account-tabs">
-          <button type="button" className={accountTab === 'profile' ? 'active' : ''} onClick={() => setAccountTab('profile')}>Profil</button>
-          <button type="button" className={accountTab === 'friends' ? 'active' : ''} onClick={() => setAccountTab('friends')}>
-            Znajomi{friendsData.incoming.length > 0 ? ` (${friendsData.incoming.length})` : ''}
-          </button>
-        </div>
-      )}
-
-      {isUser && accountTab === 'profile' && (
+      {isUser && section === 'profile' && (
         <div className="grid gap-3">
           {principal.profileSetupRequired && (
             <div className="account-onboarding">
@@ -471,7 +462,7 @@ function AccountMenu({
         </div>
       )}
 
-      {isUser && accountTab === 'friends' && (
+      {isUser && section === 'friends' && (
         <div className="friends-panel">
           <div className="friends-intro">
             <strong>Lista znajomych</strong>
@@ -667,7 +658,8 @@ export default function MainMenu({
   onOpenLoad,
   onOpenRanking,
   onOpenSettings,
-  onOpenAccount,
+  onOpenProfile,
+  onOpenFriends,
   onExit,
   onBack,
   onLoad,
@@ -712,9 +704,10 @@ export default function MainMenu({
   if (view === 'settings') {
     return <SettingsMenu settings={meta.settings} onToggle={onToggleSettings} onSetVolume={onSetSettingsVolume} onBack={onBack} />;
   }
-  if (view === 'account') {
+  if (view === 'profile' || view === 'friends') {
     return (
       <AccountMenu
+        section={view}
         principal={principal}
         onBack={onBack}
         onRegister={onRegisterAccount}
@@ -738,7 +731,8 @@ export default function MainMenu({
       onOpenLoad={onOpenLoad}
       onOpenRanking={onOpenRanking}
       onOpenSettings={onOpenSettings}
-      onOpenAccount={onOpenAccount}
+      onOpenProfile={onOpenProfile}
+      onOpenFriends={onOpenFriends}
       onExit={onExit}
       hasSaves={meta.slots.length > 0}
       isRemoteEnabled={isRemoteEnabled}
