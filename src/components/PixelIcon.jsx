@@ -18,9 +18,11 @@ function PixelRect({ x, y, width, height, fill }) {
 const ICONS = {
   settings: (
     <>
-      <path fill={COLORS.ink} d="M8 1h8v3h4v4h3v8h-3v4h-4v3H8v-3H4v-4H1V8h3V4h4V1Zm2 7v2H8v4h2v2h4v-2h2v-4h-2V8h-4Z" />
-      <path fill={COLORS.amber} d="M9 3h6v3h3v3h3v6h-3v3h-3v3H9v-3H6v-3H3V9h3V6h3V3Zm1 4v2H8v6h2v2h4v-2h2V9h-2V7h-4Z" />
-      <PixelRect x="10" y="10" width="4" height="4" fill={COLORS.cyan} />
+      <path fill={COLORS.ink} d="M8 1h8v3h2l2-2 3 3-2 2v2h2v6h-2v2l2 2-3 3-2-2h-2v3H8v-3H6l-2 2-3-3 2-2v-2H1V9h2V7L1 5l3-3 2 2h2V1Z" />
+      <path fill={COLORS.amber} d="M10 3h4v3h4l2-2 1 1-2 3v3h2v2h-2v3l2 3-1 1-2-2h-4v3h-4v-3H6l-2 2-1-1 2-3v-3H3v-2h2V8L3 5l1-1 2 2h4V3Z" />
+      <path fill={COLORS.cyan} d="M9 8h6v2h2v4h-2v2H9v-2H7v-4h2V8Z" />
+      <PixelRect x="10" y="10" width="4" height="4" fill={COLORS.ink} />
+      <PixelRect x="10" y="10" width="2" height="2" fill={COLORS.light} />
     </>
   ),
   play: (

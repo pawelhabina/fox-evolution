@@ -31,6 +31,7 @@ import {
 } from './game/economy';
 import { gameReducer, ACTIONS, getFoxInfoForMenu } from './game/reducer';
 import { getResetCountdowns } from './game/quests';
+import { registerFoxClick } from './game/clickRateLimit.mjs';
 import { createInitialState } from './storage/defaultState';
 import {
   deleteSlot,
@@ -206,6 +207,7 @@ export default function App() {
   const incomePulseIdRef = useRef(0);
   const remoteSlotUpdatedAtRef = useRef(null);
   const updateDownloadedToastShownRef = useRef(false);
+  const foxClickTimestampsRef = useRef([]);
   const { toasts, pushToast } = useToasts();
   stateRef.current = state;
 
@@ -833,6 +835,12 @@ export default function App() {
     }
 
     const nowTs = Date.now();
+    const clickAttempt = registerFoxClick(foxClickTimestampsRef.current, nowTs);
+    foxClickTimestampsRef.current = clickAttempt.timestamps;
+    if (!clickAttempt.accepted) {
+      return 0;
+    }
+
     const gain = getFoxClickValue(fox, state, nowTs);
     dispatch({ type: ACTIONS.CLICK_FOX, id, nowTs });
     playSfx('click');
