@@ -1362,6 +1362,120 @@ body {
   box-shadow: 3px 3px 0 #020617;
 }
 
+.game-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  padding: 1rem;
+  place-items: center;
+  overflow-y: auto;
+  background: rgba(2, 6, 23, 0.88);
+  backdrop-filter: blur(5px);
+}
+
+.game-modal {
+  position: relative;
+  width: min(100%, 560px);
+  padding: clamp(1.15rem, 2.6vw, 2rem);
+  border: 2px solid #475569;
+  color: #e2e8f0;
+  background:
+    linear-gradient(135deg, rgba(34, 211, 238, 0.07), transparent 42%),
+    #07101f;
+  box-shadow: inset 0 0 0 4px #020617, 8px 8px 0 #01030a;
+  animation: game-modal-in 180ms steps(3, end) both;
+}
+
+.game-modal--evolution { width: min(100%, 620px); border-color: #f59e0b; }
+.game-modal--rebirth { border-color: #818cf8; text-align: center; }
+
+.game-modal-icon {
+  display: grid;
+  width: 74px;
+  height: 74px;
+  margin: 0 auto 1rem;
+  place-items: center;
+  border: 2px solid #475569;
+  background: #111827;
+  box-shadow: inset 0 0 0 3px #020617, 4px 4px 0 #020617;
+}
+
+.game-modal-icon--evolution { border-color: #f59e0b; color: #fbbf24; }
+.game-modal-icon--rebirth { border-color: #818cf8; color: #c4b5fd; }
+.game-modal-kicker { color: #22d3ee; font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 0.58rem; letter-spacing: 0.12em; text-align: center; }
+.game-modal h3 { margin-top: 0.65rem; color: #f8fafc; font-family: 'Press Start 2P', 'Courier New', monospace; font-size: clamp(1rem, 2.5vw, 1.45rem); line-height: 1.45; text-align: center; }
+.game-modal-lead { max-width: 480px; margin: 0.7rem auto 0; color: #94a3b8; font-size: 0.82rem; line-height: 1.55; text-align: center; }
+
+.evolution-balance {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  padding: 0.65rem;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.72);
+  font-size: 0.72rem;
+}
+
+.evolution-balance strong { color: #fbbf24; }
+.evolution-choice-grid { display: grid; gap: 0.65rem; margin-top: 1rem; }
+.evolution-choice { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 0.8rem; width: 100%; padding: 0.8rem; border: 1px solid #475569; color: #e2e8f0; background: #0f172a; text-align: left; box-shadow: 3px 3px 0 #020617; }
+.evolution-choice:hover:not(:disabled), .evolution-choice:focus-visible { outline: none; transform: translate(-2px, -2px); box-shadow: 5px 5px 0 #020617; }
+.evolution-choice:disabled { cursor: not-allowed; filter: grayscale(0.75); opacity: 0.45; }
+.evolution-choice-icon { display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid currentColor; background: rgba(2, 6, 23, 0.7); }
+.evolution-choice > span:nth-child(2) { min-width: 0; }
+.evolution-choice strong, .evolution-choice small { display: block; }
+.evolution-choice strong { font-size: 0.86rem; }
+.evolution-choice small { margin-top: 0.25rem; color: #94a3b8; font-size: 0.67rem; line-height: 1.4; }
+.evolution-choice em { color: currentColor; font-size: 0.58rem; font-style: normal; font-weight: 900; }
+
+.evolution-card--fire { border-color: #f97316; color: #fdba74; background: linear-gradient(90deg, rgba(194, 65, 12, 0.2), transparent 65%), #0f172a; }
+.evolution-card--electric { border-color: #a855f7; color: #d8b4fe; background: linear-gradient(90deg, rgba(126, 34, 206, 0.2), transparent 65%), #0f172a; }
+.evolution-card--water { border-color: #38bdf8; color: #7dd3fc; background: linear-gradient(90deg, rgba(3, 105, 161, 0.2), transparent 65%), #0f172a; }
+.evolution-accent--fire { border-color: #f97316; color: #fb923c; }
+.evolution-accent--electric { border-color: #a855f7; color: #c084fc; }
+.evolution-accent--water { border-color: #38bdf8; color: #7dd3fc; }
+
+.evolution-confirm-card { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: 0.9rem; margin-top: 1.2rem; padding: 1rem; border-width: 1px; border-style: solid; text-align: left; }
+.evolution-confirm-card strong, .evolution-confirm-card span { display: block; }
+.evolution-confirm-card strong { color: #f8fafc; font-size: 0.82rem; }
+.evolution-confirm-card span { margin-top: 0.35rem; color: #94a3b8; font-size: 0.68rem; }
+.game-modal-warning { margin-top: 0.8rem; padding: 0.55rem; border: 1px solid #ef4444; color: #fecaca; background: rgba(127, 29, 29, 0.25); font-size: 0.72rem; text-align: center; }
+
+.game-modal-reward { display: grid; width: min(100%, 230px); margin: 1.2rem auto 0; padding: 0.9rem; border: 1px solid #818cf8; background: rgba(49, 46, 129, 0.28); }
+.game-modal-reward span { color: #a5b4fc; font-size: 0.58rem; font-weight: 900; letter-spacing: 0.12em; }
+.game-modal-reward strong { color: #fbbf24; font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 1.55rem; line-height: 1.7; text-shadow: 2px 2px 0 #78350f; }
+.game-modal-reward small { color: #cbd5e1; font-size: 0.68rem; }
+.game-modal-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-top: 1rem; text-align: left; }
+.game-modal-columns > div { display: grid; gap: 0.28rem; padding: 0.7rem; border: 1px solid #334155; background: rgba(15, 23, 42, 0.8); }
+.game-modal-columns strong { margin-bottom: 0.18rem; color: #4ade80; font-size: 0.72rem; text-transform: uppercase; }
+.game-modal-columns span { color: #94a3b8; font-size: 0.66rem; }
+.game-modal-columns .is-danger strong { color: #fb7185; }
+
+.game-modal-actions { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 0.65rem; margin-top: 1.2rem; }
+.game-modal-cancel, .game-modal-confirm, .game-modal-close { min-height: 44px; padding: 0.65rem 0.8rem; border: 1px solid #475569; font-size: 0.72rem; font-weight: 900; }
+.game-modal-cancel, .game-modal-close { color: #cbd5e1; background: #1e293b; }
+.game-modal-confirm { border-color: #f59e0b; color: #fff7d6; background: #92400e; box-shadow: 3px 3px 0 #451a03; }
+.game-modal-confirm--rebirth { border-color: #818cf8; background: #4338ca; box-shadow: 3px 3px 0 #1e1b4b; }
+.evolution-confirm--fire { border-color: #f97316; background: #c2410c; }
+.evolution-confirm--electric { border-color: #c084fc; background: #7e22ce; }
+.evolution-confirm--water { border-color: #38bdf8; background: #0369a1; }
+.game-modal-close { width: 100%; margin-top: 0.8rem; }
+
+@keyframes game-modal-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 520px) {
+  .evolution-choice { grid-template-columns: 42px minmax(0, 1fr); }
+  .evolution-choice em { display: none; }
+  .evolution-balance { gap: 0.75rem; }
+  .game-modal-columns, .game-modal-actions { grid-template-columns: 1fr; }
+}
+
 /* Pixelowa normalizacja obejmuje też klasy narzędziowe używane w menu i modalach. */
 .app-shell button,
 .app-shell input,

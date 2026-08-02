@@ -328,7 +328,7 @@ export default function Arena({
             <GuiIcon name="pet" alt="Kup lisa" size={24} />
             <span>
               <strong>Kup lisa</strong>
-              <small>{buyBlockedReason || `${formatNumber(buyCost)} monet`}</small>
+              <small>{formatNumber(buyCost)} monet{buyBlockedReason ? ` · ${buyBlockedReason}` : ''}</small>
             </span>
           </button>
         </div>

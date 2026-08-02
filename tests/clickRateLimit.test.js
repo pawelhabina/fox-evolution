@@ -43,7 +43,8 @@ test('settings icon has explicit gear teeth and a center opening', () => {
   const settingsIcon = pixelIcon.match(/settings: \([\s\S]*?\r?\n  \),\r?\n  play:/);
 
   assert.ok(settingsIcon, 'settings icon definition is missing');
-  assert.match(settingsIcon[0], /M8 1h8v3/);
-  assert.match(settingsIcon[0], /M9 8h6v2/);
-  assert.match(settingsIcon[0], /x="10" y="10" width="4" height="4" fill=\{COLORS\.ink\}/);
+  assert.match(settingsIcon[0], /M11 0h10v5/);
+  assert.match(settingsIcon[0], /fill=\{COLORS\.gray\}/);
+  assert.match(settingsIcon[0], /M13 13h6v6h-6v-6Z/);
+  assert.match(pixelIcon, /settings: '0 0 32 32'/);
 });

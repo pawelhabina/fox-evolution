@@ -340,6 +340,9 @@ export function getTodayLoginRewardInfo(state) {
   } else if (nextStreakDay === LOGIN_STREAK_DAYS) {
     type = 'epic';
     amount = LOGIN_REWARD_VALUES.epic;
+  } else if (nextStreakDay <= 3) {
+    type = 'early';
+    amount = LOGIN_REWARD_VALUES.early;
   }
 
   return {
@@ -352,6 +355,17 @@ export function getTodayLoginRewardInfo(state) {
     monthlyProgress: login.totalClaims % LOGIN_MONTHLY_STEP,
     monthlyTarget: LOGIN_MONTHLY_STEP
   };
+}
+
+export function getLoginRewardForStreakDay(dayNumber) {
+  const safeDay = Math.max(1, Math.min(LOGIN_STREAK_DAYS, Math.floor(Number(dayNumber) || 1)));
+  if (safeDay === LOGIN_STREAK_DAYS) {
+    return LOGIN_REWARD_VALUES.epic;
+  }
+  if (safeDay <= 3) {
+    return LOGIN_REWARD_VALUES.early;
+  }
+  return LOGIN_REWARD_VALUES.common;
 }
 
 export function claimLoginReward(state) {

@@ -1,6 +1,7 @@
 const COLORS = {
   ink: '#020617',
   slate: '#64748b',
+  gray: '#94a3b8',
   light: '#f8fafc',
   amber: '#fbbf24',
   orange: '#f97316',
@@ -18,11 +19,11 @@ function PixelRect({ x, y, width, height, fill }) {
 const ICONS = {
   settings: (
     <>
-      <path fill={COLORS.ink} d="M8 1h8v3h2l2-2 3 3-2 2v2h2v6h-2v2l2 2-3 3-2-2h-2v3H8v-3H6l-2 2-3-3 2-2v-2H1V9h2V7L1 5l3-3 2 2h2V1Z" />
-      <path fill={COLORS.amber} d="M10 3h4v3h4l2-2 1 1-2 3v3h2v2h-2v3l2 3-1 1-2-2h-4v3h-4v-3H6l-2 2-1-1 2-3v-3H3v-2h2V8L3 5l1-1 2 2h4V3Z" />
-      <path fill={COLORS.cyan} d="M9 8h6v2h2v4h-2v2H9v-2H7v-4h2V8Z" />
-      <PixelRect x="10" y="10" width="4" height="4" fill={COLORS.ink} />
-      <PixelRect x="10" y="10" width="2" height="2" fill={COLORS.light} />
+      <path fill={COLORS.ink} d="M11 0h10v5h4l4-3 3 3-3 4v4h3v8h-3v4l3 4-3 3-4-3h-4v3H11v-3H7l-4 3-3-3 3-4v-4H0v-8h3V9L0 5l3-3 4 3h4V0Z" />
+      <path fill={COLORS.gray} d="M13 3h6v5h6l4-3 2 2-3 4v6h2v4h-2v6l3 4-2 2-4-3h-6v4h-6v-4H7l-4 3-2-2 3-4v-6H2v-4h3v-6L2 7l2-2 4 3h5V3Z" />
+      <path fill={COLORS.slate} d="M10 10h12v3h3v6h-3v3H10v-3H7v-6h3v-3Z" />
+      <path fill={COLORS.ink} d="M13 13h6v6h-6v-6Z" />
+      <PixelRect x="14" y="14" width="2" height="2" fill={COLORS.light} />
     </>
   ),
   play: (
@@ -243,6 +244,10 @@ export function hasPixelIcon(name) {
   return Boolean(ICONS[name]);
 }
 
+const ICON_VIEW_BOXES = {
+  settings: '0 0 32 32'
+};
+
 export default function PixelIcon({ name, alt = '', className = '', size = 16 }) {
   const content = ICONS[name];
   if (!content) {
@@ -253,7 +258,7 @@ export default function PixelIcon({ name, alt = '', className = '', size = 16 })
 
   return (
     <svg
-      viewBox="0 0 24 24"
+      viewBox={ICON_VIEW_BOXES[name] || '0 0 24 24'}
       width={size}
       height={size}
       className={`gui-icon pixel-icon inline-block shrink-0 ${className}`.trim()}

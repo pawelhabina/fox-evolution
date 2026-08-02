@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   LOGIN_MONTHLY_STEP,
   LOGIN_STREAK_DAYS,
@@ -20,7 +21,7 @@ import {
   getUpgradeCost
 } from '../game/economy';
 import { formatCompact, formatNumber, formatPercent } from '../game/format';
-import { formatCountdown, getTodayLoginRewardInfo } from '../game/quests';
+import { formatCountdown, getLoginRewardForStreakDay, getTodayLoginRewardInfo } from '../game/quests';
 import GuiIcon from './GuiIcon';
 
 const TABS = ['Ulepszenia', 'Boosty', 'Rebirth', 'Zadania'];
@@ -218,12 +219,14 @@ export default function ShopPanel({
   onClaimLoginReward,
   onCollapse
 }) {
+  const [rebirthConfirmOpen, setRebirthConfirmOpen] = useState(false);
   const loginInfo = getTodayLoginRewardInfo(state);
   const { coins, gems, rebirth } = getUpgradeGroups();
   const temporaryBoosts = Object.values(TEMP_BOOST_DEFS);
 
   return (
-    <aside className="shop-panel ui-panel-frame flex h-full w-full min-h-0 flex-col">
+    <>
+      <aside className="shop-panel ui-panel-frame flex h-full w-full min-h-0 flex-col">
       <div className="shop-heading">
         <h2 className="flex items-center gap-2 font-black text-amber-300">
           <GuiIcon name="upgrade" alt="Sklep" size={20} />
@@ -286,12 +289,7 @@ export default function ShopPanel({
                 type="button"
                 className="mt-3 w-full rounded-xl bg-indigo-500 px-3 py-3 font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-600"
                 disabled={rebirthPreview <= 0}
-                onClick={() => {
-                  const confirmed = window.confirm('Wykonać Rebirth? Plansza i coinowe ulepszenia zostaną zresetowane.');
-                  if (confirmed) {
-                    onRebirth();
-                  }
-                }}
+                onClick={() => setRebirthConfirmOpen(true)}
               >
                 Zrób Rebirth
               </button>
@@ -322,7 +320,8 @@ export default function ShopPanel({
                           : 'border-slate-600 bg-slate-900/70 text-slate-300'
                       } ${isClaimed ? 'ring-1 ring-amber-300' : ''}`}
                     >
-                      D{dayNumber}
+                      <span className="block">D{dayNumber}</span>
+                      <small className="mt-1 block text-[8px] opacity-80">+{getLoginRewardForStreakDay(dayNumber)}</small>
                     </div>
                   );
                 })}
@@ -401,6 +400,51 @@ export default function ShopPanel({
           </div>
         )}
       </div>
-    </aside>
+      </aside>
+
+      {rebirthConfirmOpen && (
+        <div className="game-modal-backdrop" role="presentation" onMouseDown={() => setRebirthConfirmOpen(false)}>
+          <section
+            className="game-modal game-modal--rebirth"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rebirth-confirm-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="game-modal-icon game-modal-icon--rebirth" aria-hidden="true">
+              <GuiIcon name="rebirth" alt="" size={38} />
+            </div>
+            <p className="game-modal-kicker">RESET CYKLU</p>
+            <h3 id="rebirth-confirm-title">Wykonać Rebirth?</h3>
+            <p className="game-modal-lead">Plansza i wszystkie ulepszenia kupione za monety zostaną wyzerowane.</p>
+
+            <div className="game-modal-reward">
+              <span>OTRZYMASZ</span>
+              <strong>+{rebirthPreview}</strong>
+              <small>rebirth {rebirthPreview === 1 ? 'token' : 'tokens'}</small>
+            </div>
+
+            <div className="game-modal-columns">
+              <div><strong>Zachowujesz</strong><span>diamenty</span><span>rebirth tokens</span><span>premium i statystyki</span></div>
+              <div className="is-danger"><strong>Resetujesz</strong><span>lisy i planszę</span><span>monety</span><span>coinowe ulepszenia</span></div>
+            </div>
+
+            <div className="game-modal-actions">
+              <button type="button" className="game-modal-cancel" onClick={() => setRebirthConfirmOpen(false)}>Jeszcze nie</button>
+              <button
+                type="button"
+                className="game-modal-confirm game-modal-confirm--rebirth"
+                onClick={() => {
+                  onRebirth();
+                  setRebirthConfirmOpen(false);
+                }}
+              >
+                Potwierdź Rebirth
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+    </>
   );
 }
