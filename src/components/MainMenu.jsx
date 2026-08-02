@@ -4,7 +4,7 @@ import { formatNumber } from '../game/format';
 import AudioVolumeControl from './AudioVolumeControl';
 import GuiIcon from './GuiIcon';
 
-function RootMenu({ onContinue, onNew, onOpenLoad, onOpenRanking, onOpenSettings, onOpenProfile, onOpenFriends, onExit, hasSaves, isRemoteEnabled, principal }) {
+function RootMenu({ onContinue, onNew, onOpenLoad, onOpenRanking, onOpenSettings, onOpenProfile, onOpenFriends, onExit, hasSaves, isRemoteEnabled, principal, gameVersion }) {
   const isUser = principal?.type === 'USER';
 
   return (
@@ -14,8 +14,10 @@ function RootMenu({ onContinue, onNew, onOpenLoad, onOpenRanking, onOpenSettings
           <img className="main-menu-brand-icon" src={gameIconUrl} alt="" />
         </div>
         <p className="main-menu-kicker">MERGE TYCOON</p>
+        <p className="main-menu-release-badge"><span aria-hidden="true">●</span> EARLY ACCESS <small>v{gameVersion}</small></p>
         <h1 className="main-menu-title">Fox Evolution</h1>
         <p className="main-menu-tagline">Kupuj, łącz, zarabiaj i ulepszaj lisy.</p>
+        <p className="main-menu-release-note">Wczesna wersja gry — zawartość i balans mogą się zmieniać.</p>
 
         {isRemoteEnabled && (
           <button type="button" className="main-menu-profile-card" onClick={onOpenProfile}>
@@ -683,7 +685,8 @@ export default function MainMenu({
   onSearchFriends,
   onSendFriendRequest,
   onAcceptFriendRequest,
-  onRemoveFriendship
+  onRemoveFriendship,
+  gameVersion
 }) {
   if (view === 'load') {
     return <LoadMenu slots={meta.slots} onLoad={onLoad} onNew={onNew} onDelete={onDelete} onBack={onBack} />;
@@ -738,6 +741,7 @@ export default function MainMenu({
       hasSaves={meta.slots.length > 0}
       isRemoteEnabled={isRemoteEnabled}
       principal={principal}
+      gameVersion={gameVersion}
     />
   );
 }

@@ -751,6 +751,7 @@ export default function App() {
             }}
             isRemoteEnabled={remoteEnabled}
             principal={authPrincipal}
+            gameVersion={gameVersion}
             leaderboardData={leaderboardData}
             leaderboardLoading={leaderboardLoading}
             leaderboardError={leaderboardError}
@@ -807,7 +808,7 @@ export default function App() {
               return result;
             }}
           />
-          <p className="mt-4 text-xs text-slate-500">Wersja gry: {gameVersion}</p>
+          <p className="mt-4 text-xs text-slate-500">Early Access · wersja gry: {gameVersion}</p>
         </div>
       </main>
     );

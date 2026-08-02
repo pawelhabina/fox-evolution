@@ -90,7 +90,7 @@ export default function SettingsModal({ isOpen, settings, fullscreen, gameVersio
           </button>
         </div>
 
-        <p className="mt-4 text-xs text-slate-500">Wersja gry: {gameVersion}</p>
+        <p className="mt-4 text-xs text-slate-500">Early Access · wersja gry: {gameVersion}</p>
       </div>
     </div>
   );

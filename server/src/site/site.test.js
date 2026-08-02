@@ -11,7 +11,8 @@ test('public site contains the complete download journey and required assets', (
   const css = fs.readFileSync(path.join(siteDir, 'site.css'), 'utf8');
   const script = fs.readFileSync(path.join(siteDir, 'site.js'), 'utf8');
 
-  assert.match(html, /Fox Evolution — Merge Fox Tycoon/);
+  assert.match(html, /Fox Evolution Early Access — Merge Fox Tycoon/);
+  assert.ok((html.match(/EARLY ACCESS/g) || []).length >= 4);
   assert.match(html, /href="\/download\/windows"/);
   assert.match(html, /href="\/download\/macos\/arm64"/);
   assert.match(html, /href="\/download\/macos\/x64"/);
@@ -26,8 +27,8 @@ test('public site contains the complete download journey and required assets', (
   assert.equal((html.match(/data-tilt/g) || []).length, 3);
   assert.match(html, /data-scroll-progress/);
   assert.match(html, /data-motion-toggle/);
-  assert.match(html, /site\.css\?v=1\.1\.22/);
-  assert.match(html, /site\.js\?v=1\.1\.22/);
+  assert.match(html, /site\.css\?v=1\.2\.0/);
+  assert.match(html, /site\.js\?v=1\.2\.0/);
 
   assert.match(script, /completeMergeDemo/);
   assert.match(script, /startAutomaticMergeDemo/);

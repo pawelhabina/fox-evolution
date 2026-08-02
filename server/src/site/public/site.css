@@ -52,6 +52,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .brand { display: inline-flex; align-items: center; gap: 12px; color: var(--paper); text-decoration: none; font-size: 14px; font-weight: 800; letter-spacing: 0.08em; }
 .brand img { width: 44px; height: 44px; object-fit: contain; image-rendering: pixelated; }
 .brand strong { color: var(--amber-light); }
+.brand-badge { display: inline-block; margin-left: 7px; padding: 3px 5px; border: 1px solid var(--amber); color: var(--amber-light); background: #451a03; font-size: 7px; line-height: 1; vertical-align: middle; }
 .site-nav { display: flex; align-items: center; gap: 28px; }
 .site-nav a { position: relative; color: #cbd5e1; text-decoration: none; font-size: 13px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
 .site-nav a:not(.nav-download)::after { position: absolute; right: 0; bottom: -7px; left: 0; height: 2px; content: ""; background: var(--cyan); transform: scaleX(0); transition: transform 160ms ease; }
@@ -76,6 +77,8 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .hero-orb--amber { bottom: -190px; left: 7%; background: radial-gradient(circle, var(--amber), transparent 68%); animation: orb-drift-amber 13s ease-in-out infinite alternate; }
 .hero-layout { display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(460px, 1.08fr); align-items: center; gap: clamp(52px, 7vw, 94px); }
 .eyebrow { margin: 0 0 18px; color: var(--cyan); font-size: 12px; font-weight: 900; letter-spacing: 0.14em; }
+.early-access-note { max-width: 680px; margin: -6px 0 24px; padding: 10px 12px; border-left: 3px solid var(--amber); color: #cbd5e1; background: rgba(69, 26, 3, .5); font-size: 12px; line-height: 1.6; }
+.early-access-note strong { color: var(--amber-light); }
 .status-dot { display: inline-block; width: 8px; height: 8px; margin-right: 8px; background: var(--green); box-shadow: 0 0 12px var(--green); }
 h1, h2, h3, p { margin-top: 0; }
 h1, h2 { margin-bottom: 0; font-weight: 900; letter-spacing: -0.045em; line-height: 1.05; text-transform: uppercase; }

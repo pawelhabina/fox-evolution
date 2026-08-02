@@ -164,6 +164,33 @@ body {
   letter-spacing: 0.12em;
 }
 
+.main-menu-release-badge {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #f59e0b;
+  color: #fde68a;
+  background: rgba(120, 53, 15, 0.72);
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  box-shadow: 3px 3px 0 #451a03;
+}
+
+.main-menu-release-badge > span {
+  color: #4ade80;
+  text-shadow: 0 0 7px #22c55e;
+}
+
+.main-menu-release-badge small {
+  color: #fbbf24;
+  font: inherit;
+  opacity: 0.9;
+}
+
 .main-menu-title {
   margin-top: 0.45rem;
   color: #fbbf24;
@@ -178,6 +205,14 @@ body {
   margin-top: 1rem;
   color: #cbd5e1;
   font-size: clamp(0.86rem, 1.1vw, 1.08rem);
+  font-weight: 700;
+}
+
+.main-menu-release-note {
+  max-width: 34rem;
+  margin-top: 0.55rem;
+  color: #94a3b8;
+  font-size: 0.72rem;
   font-weight: 700;
 }
 
