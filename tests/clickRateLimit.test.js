@@ -40,7 +40,7 @@ test('game applies the shared limiter before rewarding a fox click', () => {
 
 test('settings icon has explicit gear teeth and a center opening', () => {
   const pixelIcon = fs.readFileSync(path.join(projectRoot, 'src/components/PixelIcon.jsx'), 'utf8');
-  const settingsIcon = pixelIcon.match(/settings: \([\s\S]*?\n  \),\n  play:/);
+  const settingsIcon = pixelIcon.match(/settings: \([\s\S]*?\r?\n  \),\r?\n  play:/);
 
   assert.ok(settingsIcon, 'settings icon definition is missing');
   assert.match(settingsIcon[0], /M8 1h8v3/);
