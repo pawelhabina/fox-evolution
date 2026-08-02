@@ -78,7 +78,9 @@ install -d -o admin-main -g www-data -m 775 ${targetUpdates}
 if [ ! -f ${targetApi}/.env ] && [ -f /opt/fox-evolution/server/.env ]; then
   install -o admin-main -g www-data -m 640 /opt/fox-evolution/server/.env ${targetApi}/.env
 fi
-if [ -d /var/www/foxevo/updates ]; then
+# The legacy directory is a one-time migration source. Re-importing it on every
+# deployment wastes the small production disk and can prevent a new release.
+if [ -d /var/www/foxevo/updates ] && [ ! -f ${targetUpdates}/latest.yml ] && [ ! -f ${targetUpdates}/latest-mac.yml ]; then
   for artifact in /var/www/foxevo/updates/*.exe /var/www/foxevo/updates/*.exe.blockmap /var/www/foxevo/updates/*.zip /var/www/foxevo/updates/*.zip.blockmap /var/www/foxevo/updates/*.dmg /var/www/foxevo/updates/*.dmg.blockmap /var/www/foxevo/updates/latest.yml /var/www/foxevo/updates/latest-mac.yml; do
     [ -f "$artifact" ] || continue
     cp -n "$artifact" ${targetUpdates}/

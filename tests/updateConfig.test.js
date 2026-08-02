@@ -60,4 +60,5 @@ test('production deployment publishes Windows and macOS update artifacts', () =>
   for (const include of ['*.exe', '*.zip', '*.dmg', 'latest.yml', 'latest-mac.yml']) {
     assert.match(deployScript, new RegExp(`--include=${include.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
   }
+  assert.match(deployScript, /\[ ! -f \$\{targetUpdates\}\/latest\.yml \] && \[ ! -f \$\{targetUpdates\}\/latest-mac\.yml \]/);
 });
