@@ -95,19 +95,28 @@ const coinCounter = demoCoins?.closest('.coin-counter');
 const logSequence = document.querySelector('[data-log-sequence]');
 const logSuccess = document.querySelector('[data-log-success]');
 let mergeResetTimer;
+let mergeAutoTimer;
+let mergeDemoClaimed = false;
 
-function resetMergeDemo() {
+function setMergeFoxSelected(button, selected) {
+  button.classList.toggle('is-selected', selected);
+  button.setAttribute('aria-pressed', String(selected));
+  const action = button.querySelector('.slot-action');
+  if (action) action.textContent = selected ? 'GOTOWY' : 'WYBIERZ';
+}
+
+function resetMergeDemo(scheduleAutomaticDemo = true) {
   window.clearTimeout(mergeResetTimer);
+  window.clearTimeout(mergeAutoTimer);
   mergeStage?.classList.remove('is-merging', 'is-complete');
-  mergeButtons.forEach((button) => {
-    button.classList.remove('is-selected');
-    button.setAttribute('aria-pressed', 'false');
-    const action = button.querySelector('.slot-action');
-    if (action) action.textContent = 'WYBIERZ';
-  });
+  mergeButtons.forEach((button) => setMergeFoxSelected(button, false));
+  if (demoCoins) demoCoins.textContent = '12.48M';
   if (mergeStatus) mergeStatus.textContent = 'Kliknij oba lisy, aby uruchomić merge.';
   if (logSequence) logSequence.textContent = '> merge_sequence: waiting';
   if (logSuccess) logSuccess.textContent = '> select_two_foxes_';
+  if (scheduleAutomaticDemo && !mergeDemoClaimed && !reducedMotion) {
+    mergeAutoTimer = window.setTimeout(startAutomaticMergeDemo, 1_100);
+  }
 }
 
 function completeMergeDemo() {
@@ -119,26 +128,43 @@ function completeMergeDemo() {
   if (demoCoins) demoCoins.textContent = '12.53M';
   coinCounter?.classList.add('is-gaining');
   window.setTimeout(() => coinCounter?.classList.remove('is-gaining'), reducedMotion ? 0 : 420);
-  mergeResetTimer = window.setTimeout(resetMergeDemo, 3_600);
+  mergeResetTimer = window.setTimeout(() => resetMergeDemo(true), 3_600);
+}
+
+function beginMergeDemo() {
+  mergeStage?.classList.add('is-merging');
+  if (mergeStatus) mergeStatus.textContent = 'Łączenie lisów...';
+  if (logSequence) logSequence.textContent = '> merge_sequence: running';
+  window.setTimeout(completeMergeDemo, reducedMotion ? 40 : 560);
+}
+
+function startAutomaticMergeDemo() {
+  if (mergeDemoClaimed || mergeButtons.length !== 2) return;
+  setMergeFoxSelected(mergeButtons[0], true);
+  if (mergeStatus) mergeStatus.textContent = 'Lis pierwszy gotowy...';
+  mergeAutoTimer = window.setTimeout(() => {
+    if (mergeDemoClaimed) return;
+    setMergeFoxSelected(mergeButtons[1], true);
+    beginMergeDemo();
+  }, 650);
 }
 
 mergeButtons.forEach((button) => {
   button.addEventListener('click', () => {
+    mergeDemoClaimed = true;
+    window.clearTimeout(mergeAutoTimer);
     if (mergeStage?.classList.contains('is-merging')) return;
-    if (mergeStage?.classList.contains('is-complete')) resetMergeDemo();
+    if (mergeStage?.classList.contains('is-complete')) resetMergeDemo(false);
     const selected = button.classList.toggle('is-selected');
-    button.setAttribute('aria-pressed', String(selected));
-    const action = button.querySelector('.slot-action');
-    if (action) action.textContent = selected ? 'GOTOWY' : 'WYBIERZ';
+    setMergeFoxSelected(button, selected);
     const selectionCount = mergeButtons.filter((item) => item.classList.contains('is-selected')).length;
     if (mergeStatus) mergeStatus.textContent = selectionCount === 1 ? 'Świetnie. Wybierz drugiego lisa.' : 'Kliknij oba lisy, aby uruchomić merge.';
     if (selectionCount < 2) return;
-    mergeStage?.classList.add('is-merging');
-    if (mergeStatus) mergeStatus.textContent = 'Łączenie lisów...';
-    if (logSequence) logSequence.textContent = '> merge_sequence: running';
-    window.setTimeout(completeMergeDemo, reducedMotion ? 40 : 560);
+    beginMergeDemo();
   });
 });
+
+if (!reducedMotion) mergeAutoTimer = window.setTimeout(startAutomaticMergeDemo, 1_200);
 
 const evolutionNodes = [...document.querySelectorAll('[data-evolution-node]')];
 const evolutionLabel = document.querySelector('[data-evolution-label]');
