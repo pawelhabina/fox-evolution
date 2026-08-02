@@ -42,4 +42,10 @@ jobs:
         run: |
           $version = node -p "require('./package.json').version"
           $installer = "dist/Fox-Evolution-$version-x64.exe"
-          gh release create $env:GITHUB_REF_NAME $installer "$installer.blockmap" "dist/latest.yml" --verify-tag --title "Fox Evolution $version" --generate-notes --latest
+          gh release view $env:GITHUB_REF_NAME --json tagName *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:GITHUB_REF_NAME $installer "$installer.blockmap" "dist/latest.yml" --clobber
+            gh release edit $env:GITHUB_REF_NAME --title "Fox Evolution $version Early Access" --prerelease
+          } else {
+            gh release create $env:GITHUB_REF_NAME $installer "$installer.blockmap" "dist/latest.yml" --verify-tag --title "Fox Evolution $version Early Access" --generate-notes --prerelease
+          }
