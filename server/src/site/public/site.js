@@ -23,17 +23,40 @@ async function loadLatestVersion() {
   try {
     const response = await fetch('/api/downloads', { headers: { Accept: 'application/json' } });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const { windows } = await response.json();
-    if (!windows) return;
-    const version = windows.fileName.match(/Fox-Evolution-([\d.]+)-x64\.exe/i)?.[1] || 'najnowsza';
-    const size = formatBytes(windows.size);
-    document.querySelectorAll('[data-download-link]').forEach((link) => { link.href = windows.downloadUrl || '/download/windows'; });
-    document.querySelectorAll('[data-download-meta]').forEach((node) => { node.textContent = `Wersja ${version}${size ? ` · ${size}` : ''}`; });
+    const { windows, macos } = await response.json();
+    const downloads = {
+      windows,
+      'macos-arm64': macos?.arm64,
+      'macos-x64': macos?.x64
+    };
+    const fallbacks = {
+      windows: 'Windows x64 · EXE',
+      'macos-arm64': 'Apple Silicon · DMG',
+      'macos-x64': 'macOS Intel · DMG'
+    };
+    const versions = [];
+
+    Object.entries(downloads).forEach(([platform, artifact]) => {
+      if (!artifact) return;
+      const version = artifact.fileName.match(/Fox-Evolution-([\d.]+)-(?:x64|arm64)\.(?:exe|dmg)/i)?.[1] || 'najnowsza';
+      const size = formatBytes(artifact.size);
+      versions.push(version);
+      document.querySelectorAll(`[data-download-link="${platform}"]`).forEach((link) => { link.href = artifact.downloadUrl; });
+      document.querySelectorAll(`[data-download-meta="${platform}"]`).forEach((node) => {
+        node.textContent = `${fallbacks[platform]} · ${version}${size ? ` · ${size}` : ''}`;
+      });
+      if (platform === 'windows') {
+        document.querySelectorAll('[data-download-meta]:not([data-download-meta="windows"]):not([data-download-meta="macos-arm64"]):not([data-download-meta="macos-x64"])').forEach((node) => {
+          node.textContent = `Wersja ${version}${size ? ` · ${size}` : ''}`;
+        });
+      }
+    });
+
     const detail = document.querySelector('[data-version-detail]');
-    if (detail) detail.textContent = `Fox Evolution ${version} · Windows x64${size ? ` · ${size}` : ''}`;
+    if (detail) detail.textContent = versions.length ? `Fox Evolution ${versions[0]} · Windows + macOS` : 'Windows + macOS';
   } catch (_error) {
     const detail = document.querySelector('[data-version-detail]');
-    if (detail) detail.textContent = 'Windows x64 · bezpieczny instalator';
+    if (detail) detail.textContent = 'Windows + macOS · instalatory bezpośrednie';
   }
 }
 

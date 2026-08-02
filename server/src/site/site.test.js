@@ -11,6 +11,9 @@ test('public site contains the complete download journey and required assets', (
 
   assert.match(html, /Fox Evolution — Merge Fox Tycoon/);
   assert.match(html, /href="\/download\/windows"/);
+  assert.match(html, /href="\/download\/macos\/arm64"/);
+  assert.match(html, /href="\/download\/macos\/x64"/);
+  assert.match(html, /WINDOWS \+ MACOS/);
   assert.match(html, /id="gra"/);
   assert.match(html, /id="ewolucja"/);
   assert.match(html, /id="funkcje"/);

@@ -136,13 +136,14 @@ h1 span, h2 span { color: var(--amber-light); text-shadow: 4px 4px 0 #78350f; }
 .feature-board p { margin-bottom: 0; color: var(--muted); font-size: 13px; }
 
 .download-section { padding: 80px 0; }
-.download-panel { display: grid; grid-template-columns: 130px 1fr auto; align-items: center; gap: 34px; padding: 38px; border: 2px solid var(--amber); background: linear-gradient(100deg, rgba(146, 64, 14, 0.28), transparent 50%), #07101f; box-shadow: 10px 10px 0 #451a03; }
+.download-panel { display: grid; grid-template-columns: 130px 1fr; align-items: center; gap: 34px; padding: 38px; border: 2px solid var(--amber); background: linear-gradient(100deg, rgba(146, 64, 14, 0.28), transparent 50%), #07101f; box-shadow: 10px 10px 0 #451a03; }
 .download-icon { display: grid; width: 118px; height: 118px; place-items: center; border: 1px solid #6b4d13; background: #020617; }
 .download-icon img { width: 108px; height: 108px; object-fit: contain; image-rendering: pixelated; }
 .download-copy h2 { color: var(--amber-light); text-shadow: 4px 4px 0 #78350f; }
 .download-copy p:last-child { max-width: 620px; margin: 14px 0 0; color: #cbd5e1; }
-.download-action { min-width: 250px; text-align: center; }
-.download-action > p { margin: 14px 0 0; color: var(--muted); font-size: 10px; }
+.download-options { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; text-align: center; }
+.download-options .pixel-button { width: 100%; }
+.download-options > p { grid-column: 1 / -1; margin: 2px 0 0; color: var(--muted); font-size: 10px; }
 
 .faq-layout { display: grid; grid-template-columns: 0.65fr 1.35fr; gap: 72px; }
 .faq-list { border-top: 1px solid #334155; }
@@ -170,8 +171,7 @@ h1 span, h2 span { color: var(--amber-light); text-shadow: 4px 4px 0 #78350f; }
   .mechanics-grid { grid-template-columns: 1fr; }
   .mechanic-card { min-height: 250px; }
   .download-panel { grid-template-columns: 110px 1fr; }
-  .download-action { grid-column: 1 / -1; }
-  .download-action .pixel-button { width: 100%; }
+  .download-options { grid-template-columns: 1fr; }
   .faq-layout { gap: 16px; }
 }
 

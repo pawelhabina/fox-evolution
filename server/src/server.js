@@ -13,7 +13,7 @@ import authRoutes from './routes/auth.js';
 import gameRoutes from './routes/game.js';
 import friendsRoutes from './routes/friends.js';
 import healthRoutes from './routes/health.js';
-import downloadsRoutes, { redirectLatestWindows } from './routes/downloads.js';
+import downloadsRoutes, { redirectLatestMacArm64, redirectLatestMacX64, redirectLatestWindows } from './routes/downloads.js';
 import leaderboardRoutes from './routes/leaderboard.js';
 import telemetryRoutes from './routes/telemetry.js';
 import { ensureAdminUser } from './services/authService.js';
@@ -65,6 +65,8 @@ app.use('/api/admin', adminRoutes);
 
 app.use('/updates', express.static(env.updatesDir, { setHeaders: setUpdateHeaders }));
 app.get('/download/windows', redirectLatestWindows);
+app.get('/download/macos/arm64', redirectLatestMacArm64);
+app.get('/download/macos/x64', redirectLatestMacX64);
 
 app.use(express.static(sitePublicDir, { index: false, maxAge: '1h' }));
 app.get('/', (_req, res) => res.sendFile(path.join(sitePublicDir, 'index.html')));

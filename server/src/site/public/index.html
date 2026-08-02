@@ -34,7 +34,7 @@
         </button>
         <nav id="site-nav" class="site-nav" aria-label="Główna nawigacja" data-nav>
           <a href="#gra">Gra</a><a href="#ewolucja">Ewolucja</a><a href="#funkcje">Funkcje</a><a href="#faq">FAQ</a>
-          <a class="nav-download" href="/download/windows">Pobierz grę</a>
+          <a class="nav-download" href="#download">Pobierz grę</a>
         </nav>
       </div>
     </header>
@@ -44,14 +44,14 @@
         <div class="scanlines" aria-hidden="true"></div>
         <div class="shell hero-layout">
           <div class="hero-copy reveal">
-            <p class="eyebrow"><span class="status-dot"></span> MERGE FOX TYCOON // WINDOWS</p>
+            <p class="eyebrow"><span class="status-dot"></span> MERGE FOX TYCOON // WINDOWS + MACOS</p>
             <h1>ŁĄCZ. EWOLUUJ.<br /><span>ZBUDUJ IMPERIUM.</span></h1>
             <p class="hero-lead">Zaczynasz od jednego lisa. Łączysz, zarabiasz i wspinasz się przez kolejne tiery, aż odblokujesz potężne ewolucje żywiołów.</p>
             <div class="hero-actions">
-              <a class="pixel-button pixel-button--primary" href="/download/windows" data-download-link>
+              <a class="pixel-button pixel-button--primary" href="/download/windows" data-download-link="windows">
                 <span class="button-icon">↓</span><span><strong>Pobierz na Windows</strong><small data-download-meta>Najnowsza wersja</small></span>
               </a>
-              <a class="pixel-button pixel-button--ghost" href="#gra">Zobacz rozgrywkę →</a>
+              <a class="pixel-button pixel-button--ghost" href="#download">Pobierz na macOS ↓</a>
             </div>
             <div class="hero-proof" aria-label="Najważniejsze funkcje">
               <span><strong>15</strong> tierów lisów</span><span><strong>3</strong> żywioły</span><span><strong>∞</strong> rozwoju</span>
@@ -118,11 +118,16 @@
         </div>
       </section>
 
-      <section class="download-section section-grid">
+      <section id="download" class="download-section section-grid">
         <div class="shell download-panel reveal">
           <div class="download-icon"><img src="/assets/fox-evolution-icon.png" alt="Ikona Fox Evolution" /></div>
-          <div class="download-copy"><p class="eyebrow">// GOTOWY NA START?</p><h2>ROZPOCZNIJ EWOLUCJĘ.</h2><p>Darmowy instalator dla Windows. Aktualizacje pobierzesz później bezpośrednio w grze.</p></div>
-          <div class="download-action"><a class="pixel-button pixel-button--primary" href="/download/windows" data-download-link><span class="button-icon">↓</span><span><strong>Pobierz instalator</strong><small data-download-meta>Windows x64</small></span></a><p data-version-detail>Sprawdzanie najnowszej wersji...</p></div>
+          <div class="download-copy"><p class="eyebrow">// GOTOWY NA START?</p><h2>ROZPOCZNIJ EWOLUCJĘ.</h2><p>Darmowe instalatory dla Windows i macOS. Aktualizacje pobierzesz później bezpośrednio w grze.</p></div>
+          <div class="download-options">
+            <a class="pixel-button pixel-button--primary" href="/download/windows" data-download-link="windows"><span class="button-icon">↓</span><span><strong>Windows</strong><small data-download-meta="windows">x64 · EXE</small></span></a>
+            <a class="pixel-button pixel-button--primary" href="/download/macos/arm64" data-download-link="macos-arm64"><span class="button-icon">↓</span><span><strong>macOS Apple Silicon</strong><small data-download-meta="macos-arm64">M1–M4 · DMG</small></span></a>
+            <a class="pixel-button pixel-button--ghost" href="/download/macos/x64" data-download-link="macos-x64"><span class="button-icon">↓</span><span><strong>macOS Intel</strong><small data-download-meta="macos-x64">x64 · DMG</small></span></a>
+            <p data-version-detail>Sprawdzanie najnowszej wersji...</p>
+          </div>
         </div>
       </section>
 
@@ -133,7 +138,7 @@
             <details><summary>Czy Fox Evolution jest darmowe?<span>+</span></summary><p>Tak. Instalator i wszystkie podstawowe mechaniki gry są dostępne bez opłat.</p></details>
             <details><summary>Czy muszę zakładać konto?<span>+</span></summary><p>Nie. Możesz grać jako gość. Konto jest potrzebne dopiero do synchronizacji, rankingu i znajomych.</p></details>
             <details><summary>Jak działają aktualizacje?<span>+</span></summary><p>Gra sama wykrywa nową wersję, pobiera ją w tle i wyświetla przycisk bezpiecznej instalacji.</p></details>
-            <details><summary>Na jakich systemach działa gra?<span>+</span></summary><p>Aktualna publiczna wersja jest przygotowana dla 64-bitowego systemu Windows.</p></details>
+            <details><summary>Na jakich systemach działa gra?<span>+</span></summary><p>Aktualna publiczna wersja działa na 64-bitowym Windowsie oraz macOS — zarówno na Apple Silicon, jak i procesorach Intel.</p></details>
           </div>
         </div>
       </section>
