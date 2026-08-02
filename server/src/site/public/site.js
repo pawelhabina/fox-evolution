@@ -1,8 +1,25 @@
 const navToggle = document.querySelector('[data-nav-toggle]');
 const nav = document.querySelector('[data-nav]');
 const header = document.querySelector('[data-header]');
-const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const motionToggle = document.querySelector('[data-motion-toggle]');
+const motionLabel = document.querySelector('[data-motion-label]');
+let motionEnabled = true;
+try {
+  motionEnabled = window.localStorage.getItem('fox-site-motion') !== 'off';
+} catch (_error) {
+  motionEnabled = true;
+}
+let reducedMotion = !motionEnabled;
 const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+function renderMotionPreference() {
+  document.documentElement.classList.toggle('motion-enabled', motionEnabled);
+  document.documentElement.classList.toggle('motion-paused', !motionEnabled);
+  motionToggle?.setAttribute('aria-pressed', String(motionEnabled));
+  if (motionLabel) motionLabel.textContent = `Animacje: ${motionEnabled ? 'ON' : 'OFF'}`;
+}
+
+renderMotionPreference();
 
 function closeNavigation() {
   navToggle?.setAttribute('aria-expanded', 'false');
@@ -98,6 +115,12 @@ let mergeResetTimer;
 let mergeAutoTimer;
 let mergeDemoClaimed = false;
 
+function scheduleAutomaticMergeDemo(delay = 250) {
+  window.clearTimeout(mergeAutoTimer);
+  if (mergeDemoClaimed || reducedMotion || document.visibilityState === 'hidden') return;
+  mergeAutoTimer = window.setTimeout(startAutomaticMergeDemo, delay);
+}
+
 function setMergeFoxSelected(button, selected) {
   button.classList.toggle('is-selected', selected);
   button.setAttribute('aria-pressed', String(selected));
@@ -115,7 +138,7 @@ function resetMergeDemo(scheduleAutomaticDemo = true) {
   if (logSequence) logSequence.textContent = '> merge_sequence: waiting';
   if (logSuccess) logSuccess.textContent = '> select_two_foxes_';
   if (scheduleAutomaticDemo && !mergeDemoClaimed && !reducedMotion) {
-    mergeAutoTimer = window.setTimeout(startAutomaticMergeDemo, 1_100);
+    scheduleAutomaticMergeDemo(450);
   }
 }
 
@@ -164,7 +187,35 @@ mergeButtons.forEach((button) => {
   });
 });
 
-if (!reducedMotion) mergeAutoTimer = window.setTimeout(startAutomaticMergeDemo, 1_200);
+if (!reducedMotion) {
+  window.requestAnimationFrame(() => window.requestAnimationFrame(() => scheduleAutomaticMergeDemo(180)));
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && !mergeStage?.classList.contains('is-merging') && !mergeStage?.classList.contains('is-complete')) {
+    scheduleAutomaticMergeDemo(180);
+  }
+});
+
+window.addEventListener('pageshow', () => scheduleAutomaticMergeDemo(180));
+
+motionToggle?.addEventListener('click', () => {
+  motionEnabled = !motionEnabled;
+  reducedMotion = !motionEnabled;
+  try {
+    window.localStorage.setItem('fox-site-motion', motionEnabled ? 'on' : 'off');
+  } catch (_error) {
+    // The toggle still works for the current page when storage is unavailable.
+  }
+  renderMotionPreference();
+  if (motionEnabled) {
+    mergeDemoClaimed = false;
+    resetMergeDemo(true);
+  } else {
+    window.clearTimeout(mergeAutoTimer);
+    window.clearTimeout(mergeResetTimer);
+  }
+});
 
 const evolutionNodes = [...document.querySelectorAll('[data-evolution-node]')];
 const evolutionLabel = document.querySelector('[data-evolution-label]');

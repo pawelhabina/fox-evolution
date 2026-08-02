@@ -25,14 +25,17 @@ test('public site contains the complete download journey and required assets', (
   assert.equal((html.match(/data-evolution-node/g) || []).length, 4);
   assert.equal((html.match(/data-tilt/g) || []).length, 3);
   assert.match(html, /data-scroll-progress/);
-  assert.match(html, /site\.css\?v=1\.1\.21/);
-  assert.match(html, /site\.js\?v=1\.1\.21/);
+  assert.match(html, /data-motion-toggle/);
+  assert.match(html, /site\.css\?v=1\.1\.22/);
+  assert.match(html, /site\.js\?v=1\.1\.22/);
 
   assert.match(script, /completeMergeDemo/);
   assert.match(script, /startAutomaticMergeDemo/);
+  assert.match(script, /scheduleAutomaticMergeDemo/);
+  assert.match(script, /fox-site-motion/);
   assert.match(script, /--hero-tilt-x/);
   assert.match(script, /--scroll-progress/);
-  assert.match(script, /prefers-reduced-motion/);
+  assert.match(script, /motion-enabled/);
   assert.match(css, /@keyframes particle-burst/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 
