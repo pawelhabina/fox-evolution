@@ -1,67 +1,146 @@
 <!doctype html>
-<html lang="en">
+<html lang="pl">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fox Evolution Admin</title>
-    <link rel="stylesheet" href="/admin/style.css" />
+    <meta name="theme-color" content="#060b16" />
+    <title>Fox Evolution — Panel administracyjny</title>
+    <link rel="icon" type="image/png" href="/assets/fox-evolution-icon.png" />
+    <link rel="stylesheet" href="/admin/style.css?v=2" />
   </head>
   <body>
-    <main class="shell">
-      <h1>Fox Evolution Admin</h1>
+    <div class="ambient-grid" aria-hidden="true"></div>
 
-      <section class="card" id="login-card">
-        <h2>Admin Login</h2>
-        <form id="login-form">
-          <label>Email <input type="email" id="email" required /></label>
-          <label>Password <input type="password" id="password" required /></label>
-          <button type="submit">Log in</button>
+    <main id="login-view" class="login-view">
+      <section class="login-card">
+        <div class="login-brand">
+          <img src="/assets/fox-evolution-icon.png" alt="" />
+          <div><span>MIONIX GAMES</span><strong>FOX CONTROL</strong></div>
+        </div>
+        <div class="login-copy">
+          <p class="eyebrow">// STREFA ADMINISTRATORA</p>
+          <h1>Centrum dowodzenia</h1>
+          <p>Zarządzaj graczami, zapisami i kondycją Fox Evolution z jednego miejsca.</p>
+        </div>
+        <form id="login-form" class="login-form">
+          <label><span>Adres e-mail</span><input type="email" id="email" autocomplete="username" placeholder="admin@example.com" required /></label>
+          <label><span>Hasło</span><input type="password" id="password" autocomplete="current-password" placeholder="••••••••••••" required /></label>
+          <button type="submit" class="button button--primary"><span>Zaloguj do panelu</span><b aria-hidden="true">→</b></button>
         </form>
-        <p id="login-error" class="error"></p>
-      </section>
-
-      <section class="card hidden" id="dashboard-card">
-        <div class="toolbar">
-          <h2>Dashboard</h2>
-          <button id="logout-btn">Log out</button>
-        </div>
-
-        <div id="overview"></div>
-
-        <h3>Users</h3>
-        <div class="toolbar">
-          <input id="search" placeholder="Search by email/display name" />
-          <button id="search-btn">Search</button>
-        </div>
-        <div id="users"></div>
-
-        <h3>User Details</h3>
-        <pre id="user-details" class="panel">Select user</pre>
-
-        <h3>Save Editor</h3>
-        <div class="toolbar">
-          <input id="save-id" placeholder="Save ID" />
-          <button id="load-save-btn">Load save</button>
-        </div>
-        <label>
-          Save name
-          <input id="save-name" />
-        </label>
-        <label>
-          Save state JSON
-          <textarea id="save-state" rows="10"></textarea>
-        </label>
-        <button id="save-save-btn">Update save (admin)</button>
-        <p id="save-editor-msg" class="error"></p>
-
-        <h3>Audit Logs</h3>
-        <pre id="audit-logs" class="panel">Loading...</pre>
-
-        <h3>Telemetry (30 dni)</h3>
-        <pre id="telemetry-stats" class="panel">Loading...</pre>
+        <p id="login-error" class="form-message is-error" role="alert"></p>
+        <p class="login-foot">Dostęp wyłącznie dla kont z rolą administratora.</p>
       </section>
     </main>
 
-    <script src="/admin/app.js"></script>
+    <div id="admin-app" class="admin-app hidden">
+      <aside class="sidebar">
+        <a class="sidebar-brand" href="#overview" aria-label="Fox Evolution Admin">
+          <img src="/assets/fox-evolution-icon.png" alt="" />
+          <span><strong>FOX</strong><small>CONTROL PANEL</small></span>
+        </a>
+        <nav class="side-nav" aria-label="Panel administracyjny">
+          <button class="nav-item is-active" type="button" data-view="overview"><span class="nav-icon">⌂</span><span>Przegląd</span></button>
+          <button class="nav-item" type="button" data-view="users"><span class="nav-icon">♟</span><span>Gracze</span><b id="flagged-nav-count">0</b></button>
+          <button class="nav-item" type="button" data-view="telemetry"><span class="nav-icon">⌁</span><span>Telemetria</span></button>
+          <button class="nav-item" type="button" data-view="audit"><span class="nav-icon">≡</span><span>Dziennik zmian</span></button>
+        </nav>
+        <div class="sidebar-status"><span class="status-dot"></span><div><strong>API połączone</strong><small id="last-refresh">Jeszcze nie odświeżono</small></div></div>
+        <button id="logout-btn" class="logout-button" type="button"><span>Wyloguj</span><b>↗</b></button>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar">
+          <button id="menu-toggle" class="icon-button menu-toggle" type="button" aria-label="Otwórz menu">☰</button>
+          <div><p class="eyebrow" id="view-kicker">// CENTRUM DOWODZENIA</p><h1 id="view-title">Przegląd systemu</h1></div>
+          <div class="topbar-actions">
+            <button id="refresh-btn" class="button button--secondary" type="button"><span>Odśwież dane</span><b>↻</b></button>
+            <div class="admin-avatar" title="Administrator">A</div>
+          </div>
+        </header>
+
+        <div class="content">
+          <section class="view is-active" data-view-panel="overview">
+            <div id="overview-cards" class="metric-grid" aria-live="polite"></div>
+            <div class="dashboard-grid">
+              <article class="surface surface--wide">
+                <header class="surface-header"><div><p class="eyebrow">// AKTYWNOŚĆ</p><h2>Ostatnie 14 dni</h2></div><button class="text-button" type="button" data-go-view="telemetry">Pełna telemetria →</button></header>
+                <div id="overview-activity" class="activity-chart loading-block"></div>
+              </article>
+              <article class="surface">
+                <header class="surface-header"><div><p class="eyebrow">// ANTY-CHEAT</p><h2>Najczęstsze flagi</h2></div></header>
+                <div id="flag-reasons" class="reason-list loading-block"></div>
+              </article>
+              <article class="surface">
+                <header class="surface-header"><div><p class="eyebrow">// OSTATNIE ZMIANY</p><h2>Aktywność administratorów</h2></div><button class="text-button" type="button" data-go-view="audit">Pokaż wszystko →</button></header>
+                <div id="overview-audit" class="timeline loading-block"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="view" data-view-panel="users">
+            <article class="surface">
+              <div class="users-toolbar">
+                <div class="search-field"><span>⌕</span><input id="search" type="search" placeholder="Szukaj po nicku lub e-mailu…" /></div>
+                <select id="user-filter" aria-label="Filtr graczy"><option value="all">Wszyscy gracze</option><option value="flagged">Tylko oznaczeni</option><option value="admins">Administratorzy</option></select>
+                <button id="search-btn" class="button button--primary" type="button">Szukaj</button>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead><tr><th>Gracz</th><th>Status</th><th>Zapisy</th><th>Urządzenia</th><th>Ostatnie logowanie</th><th></th></tr></thead>
+                  <tbody id="users-table"></tbody>
+                </table>
+                <div id="users-empty" class="empty-state hidden"><span>⌕</span><h3>Brak wyników</h3><p>Zmień wyszukiwaną frazę lub filtr.</p></div>
+              </div>
+              <footer class="pagination"><p id="users-range">0 wyników</p><div><button id="prev-page" class="icon-button" type="button">←</button><span id="page-label">1 / 1</span><button id="next-page" class="icon-button" type="button">→</button></div></footer>
+            </article>
+          </section>
+
+          <section class="view" data-view-panel="telemetry">
+            <div class="section-toolbar"><div><p>Statystyki aktywności i zdarzeń przesyłanych przez grę.</p></div><select id="telemetry-days"><option value="7">7 dni</option><option value="30" selected>30 dni</option><option value="90">90 dni</option><option value="120">120 dni</option></select></div>
+            <div id="telemetry-summary" class="metric-grid metric-grid--compact"></div>
+            <div class="dashboard-grid">
+              <article class="surface surface--wide"><header class="surface-header"><div><p class="eyebrow">// AKTYWNI</p><h2>Użytkownicy i urządzenia</h2></div></header><div id="telemetry-chart" class="activity-chart"></div></article>
+              <article class="surface"><header class="surface-header"><div><p class="eyebrow">// ZDARZENIA</p><h2>Typy zdarzeń</h2></div></header><div id="event-types" class="event-list"></div></article>
+            </div>
+          </section>
+
+          <section class="view" data-view-panel="audit">
+            <article class="surface">
+              <header class="surface-header"><div><p class="eyebrow">// AUDYT</p><h2>Dziennik operacji administratorów</h2></div><select id="audit-limit"><option value="30">30 wpisów</option><option value="75">75 wpisów</option><option value="150">150 wpisów</option></select></header>
+              <div class="table-wrap"><table class="data-table"><thead><tr><th>Czas</th><th>Administrator</th><th>Operacja</th><th>Cel</th><th>Szczegóły</th></tr></thead><tbody id="audit-table"></tbody></table></div>
+            </article>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <div id="drawer-backdrop" class="backdrop hidden"></div>
+    <aside id="user-drawer" class="drawer" aria-hidden="true" aria-labelledby="drawer-title">
+      <header class="drawer-header"><div><p class="eyebrow">// PROFIL GRACZA</p><h2 id="drawer-title">Szczegóły</h2></div><button id="close-drawer" class="icon-button" type="button" aria-label="Zamknij">×</button></header>
+      <div id="user-details" class="drawer-body"></div>
+    </aside>
+
+    <div id="save-modal" class="modal-layer hidden" role="dialog" aria-modal="true" aria-labelledby="save-modal-title">
+      <form id="save-form" class="modal modal--large">
+        <header class="modal-header"><div><p class="eyebrow">// EDYTOR ZAPISU</p><h2 id="save-modal-title">Edycja zapisu</h2><p id="save-owner"></p></div><button class="icon-button" type="button" data-close-modal="save-modal">×</button></header>
+        <div class="conflict-banner hidden" id="save-conflict"><strong>Zapis zmienił się na serwerze.</strong><span>Odśwież dane, aby nie nadpisać nowszej wersji.</span><button id="reload-conflict" type="button">Wczytaj najnowszą wersję</button></div>
+        <div class="save-grid">
+          <fieldset><legend>Podstawowe</legend><label><span>Nazwa zapisu</span><input id="save-name" maxlength="64" /></label><div class="field-row"><label><span>Monety</span><input data-save-path="currencies.coins" inputmode="numeric" /></label><label><span>Diamenty</span><input data-save-path="currencies.gems" inputmode="numeric" /></label><label><span>Tokeny Rebirth</span><input data-save-path="currencies.rebirthTokens" inputmode="numeric" /></label></div><label><span>Liczba zakupów</span><input data-save-path="purchaseCount" inputmode="numeric" /></label></fieldset>
+          <fieldset><legend>Ulepszenia</legend><div class="field-row field-row--two"><label><span>Tier zakupu</span><input data-save-path="upgrades.basePurchaseTier" inputmode="numeric" /></label><label><span>Pasywny dochód</span><input data-save-path="upgrades.passiveIncome" inputmode="numeric" /></label><label><span>Rabat zakupu</span><input data-save-path="upgrades.buyDiscount" inputmode="numeric" /></label><label><span>Wartość klików</span><input data-save-path="upgrades.clickBonus" inputmode="numeric" /></label><label><span>Limit lisów</span><input data-save-path="upgrades.foxLimit" inputmode="numeric" /></label><label><span>Szybkość ticka</span><input data-save-path="upgrades.tickSpeed" inputmode="numeric" /></label><label><span>Mnożnik premium</span><input data-save-path="upgrades.gemIncomeMultiplier" inputmode="numeric" /></label><label><span>Sloty premium</span><input data-save-path="upgrades.gemFoxLimit" inputmode="numeric" /></label></div></fieldset>
+          <fieldset><legend>Statystyki</legend><div class="field-row field-row--two"><label><span>Zarobione monety</span><input data-save-path="stats.lifetimeCoinsEarned" inputmode="numeric" /></label><label><span>Wykonane merge</span><input data-save-path="stats.lifetimeMerges" inputmode="numeric" /></label><label><span>Kliknięcia</span><input data-save-path="stats.lifetimeClicks" inputmode="numeric" /></label><label><span>Zakupy lisów</span><input data-save-path="stats.lifetimeBuys" inputmode="numeric" /></label><label><span>Liczba Rebirth</span><input data-save-path="stats.lifetimeRebirths" inputmode="numeric" /></label><label><span>Dropy diamentów</span><input data-save-path="stats.lifetimeGemDrops" inputmode="numeric" /></label></div></fieldset>
+          <fieldset><legend>Kolekcja lisów</legend><div id="fox-summary" class="fox-summary"></div></fieldset>
+        </div>
+        <details class="technical-preview"><summary>Podgląd techniczny zapisu <span>tylko do odczytu</span></summary><pre id="save-json-preview"></pre></details>
+        <p id="save-editor-msg" class="form-message" role="status"></p>
+        <footer class="modal-actions"><div><span id="save-version"></span><small>Zapisujemy wyłącznie zmienione pola.</small></div><button class="button button--secondary" type="button" data-close-modal="save-modal">Anuluj</button><button id="save-submit" class="button button--primary" type="submit">Zapisz zmiany</button></footer>
+      </form>
+    </div>
+
+    <div id="flag-modal" class="modal-layer hidden" role="dialog" aria-modal="true" aria-labelledby="flag-modal-title">
+      <form id="flag-form" class="modal modal--small"><header class="modal-header"><div><p class="eyebrow">// ANTY-CHEAT</p><h2 id="flag-modal-title">Oznacz gracza</h2></div><button class="icon-button" type="button" data-close-modal="flag-modal">×</button></header><p id="flag-user-label" class="modal-lead"></p><label><span>Powód oznaczenia</span><textarea id="flag-reason" maxlength="300" rows="4" placeholder="Opisz powód ręcznego oznaczenia…"></textarea></label><footer class="modal-actions"><span></span><button class="button button--secondary" type="button" data-close-modal="flag-modal">Anuluj</button><button class="button button--danger" type="submit">Oznacz gracza</button></footer></form>
+    </div>
+
+    <div id="toast-region" class="toast-region" aria-live="polite"></div>
+    <script src="/admin/app.js?v=2"></script>
   </body>
 </html>

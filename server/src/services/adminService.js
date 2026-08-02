@@ -27,17 +27,23 @@ export async function getAdminOverview() {
   };
 }
 
-export async function listUsers({ page = 1, pageSize = 20, search = '' }) {
+export async function listUsers({ page = 1, pageSize = 20, search = '', filter = 'all' }) {
   const normalizedPageSize = Math.max(1, Math.min(100, Number(pageSize) || 20));
   const normalizedPage = Math.max(1, Number(page) || 1);
   const skip = (normalizedPage - 1) * normalizedPageSize;
   const query = String(search || '').trim();
 
-  const where = query
-    ? {
-        OR: [{ email: { contains: query } }, { displayName: { contains: query } }]
-      }
-    : {};
+  const filters = [];
+  if (query) {
+    filters.push({ OR: [{ email: { contains: query } }, { displayName: { contains: query } }] });
+  }
+  if (filter === 'flagged') {
+    filters.push({ isFlagged: true });
+  }
+  if (filter === 'admins') {
+    filters.push({ role: 'ADMIN' });
+  }
+  const where = filters.length > 0 ? { AND: filters } : {};
 
   const [total, users] = await Promise.all([
     prisma.user.count({ where }),

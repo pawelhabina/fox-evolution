@@ -2,6 +2,7 @@ import { FlagSource, PrincipalType } from '@prisma/client';
 import { prisma } from '../db.js';
 import { detectCheatSignals } from '../utils/cheatDetection.js';
 import { summarizeState } from '../utils/gameState.js';
+import { listStatePatchPaths, mergeStatePatch } from '../utils/statePatch.js';
 
 const MAX_SAVES_PER_OWNER = 5;
 
@@ -171,26 +172,42 @@ export async function deleteSaveForPrincipal(principal, slotId) {
   return true;
 }
 
-export async function adminUpdateSave({ adminUserId, saveId, state, name }) {
-  const existing = await prisma.gameSave.findUnique({ where: { id: saveId } });
-  if (!existing) {
-    throw new Error('SAVE_NOT_FOUND');
-  }
-
-  const summary = summarizeState(state || existing.state);
-
+export async function adminUpdateSave({ adminUserId, saveId, statePatch, name, expectedUpdatedAt }) {
   const updated = await prisma.$transaction(async (tx) => {
-    const save = await tx.gameSave.update({
-      where: { id: saveId },
+    const existing = await tx.gameSave.findUnique({ where: { id: saveId } });
+    if (!existing) {
+      throw new Error('SAVE_NOT_FOUND');
+    }
+
+    const expectedTimestamp = new Date(expectedUpdatedAt).getTime();
+    if (!Number.isFinite(expectedTimestamp) || existing.updatedAt.getTime() !== expectedTimestamp) {
+      const conflict = new Error('SAVE_CONFLICT');
+      conflict.currentUpdatedAt = existing.updatedAt;
+      throw conflict;
+    }
+
+    const nextState = statePatch ? mergeStatePatch(existing.state, statePatch) : existing.state;
+    const summary = summarizeState(nextState);
+    const updateResult = await tx.gameSave.updateMany({
+      where: {
+        id: saveId,
+        updatedAt: existing.updatedAt
+      },
       data: {
-        name: name?.trim() || existing.name,
-        state: state || existing.state,
+        ...(name !== undefined ? { name: name.trim() } : {}),
+        ...(statePatch ? { state: nextState } : {}),
         summaryCoins: summary.coins,
         summaryGems: summary.gems,
         summaryTopTier: summary.topTier,
         editedByAdminAt: new Date()
       }
     });
+
+    if (updateResult.count !== 1) {
+      throw new Error('SAVE_CONFLICT');
+    }
+
+    const save = await tx.gameSave.findUnique({ where: { id: saveId } });
 
     await tx.auditLog.create({
       data: {
@@ -199,8 +216,8 @@ export async function adminUpdateSave({ adminUserId, saveId, state, name }) {
         targetType: 'GameSave',
         targetId: saveId,
         details: {
-          changedName: Boolean(name),
-          changedState: Boolean(state)
+          changedName: name !== undefined,
+          changedStatePaths: statePatch ? listStatePatchPaths(statePatch) : []
         }
       }
     });
