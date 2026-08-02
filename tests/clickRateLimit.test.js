@@ -5,29 +5,29 @@ const path = require('node:path');
 
 const projectRoot = path.resolve(__dirname, '..');
 
-test('accepts no more than ten fox clicks in any rolling second', async () => {
+test('accepts no more than six fox clicks in any rolling second', async () => {
   const { registerFoxClick } = await import('../src/game/clickRateLimit.mjs');
   let timestamps = [];
 
-  for (let index = 0; index < 10; index += 1) {
-    const result = registerFoxClick(timestamps, 1_000 + index * 90);
+  for (let index = 0; index < 6; index += 1) {
+    const result = registerFoxClick(timestamps, 1_000 + index * 150);
     assert.equal(result.accepted, true);
     timestamps = result.timestamps;
   }
 
   const blocked = registerFoxClick(timestamps, 1_900);
   assert.equal(blocked.accepted, false);
-  assert.equal(blocked.timestamps.length, 10);
+  assert.equal(blocked.timestamps.length, 6);
 });
 
 test('accepts another click after the rolling window expires', async () => {
   const { registerFoxClick } = await import('../src/game/clickRateLimit.mjs');
-  const timestamps = Array.from({ length: 10 }, (_, index) => 1_000 + index * 90);
+  const timestamps = Array.from({ length: 6 }, (_, index) => 1_000 + index * 150);
 
   const result = registerFoxClick(timestamps, 2_000);
 
   assert.equal(result.accepted, true);
-  assert.equal(result.timestamps.length, 10);
+  assert.equal(result.timestamps.length, 6);
   assert.equal(result.timestamps.at(-1), 2_000);
 });
 

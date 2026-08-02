@@ -9,7 +9,7 @@ function read(relativePath) {
   return fs.readFileSync(path.join(projectRoot, relativePath), 'utf8');
 }
 
-test('base tier progression uses the slower 1.2.1 economy curve', () => {
+test('base tier progression uses the slower economy curve', () => {
   const constants = read('src/game/constants.js');
   const tierUpgrade = constants.match(/basePurchaseTier: \{[\s\S]*?\r?\n  \},\r?\n  passiveIncome:/);
 
@@ -30,6 +30,27 @@ test('gem rewards are reduced without removing regular drops', () => {
   assert.match(constants, /common: 30/);
   assert.match(quests, /nextStreakDay <= 3/);
   assert.match(quests, /amount = LOGIN_REWARD_VALUES\.early/);
+});
+
+test('click income and click upgrades use the slower economy', () => {
+  const constants = read('src/game/constants.js');
+  const economy = read('src/game/economy.js');
+
+  assert.match(constants, /CLICK_VALUE_RATIO = 0\.1125/);
+  assert.match(constants, /description: '\+2% wartości kliknięcia na poziom\.'/);
+  assert.match(economy, /clickLevel \* 0\.02/);
+});
+
+test('daily and weekly quests require sustained play', () => {
+  const constants = read('src/game/constants.js');
+  const quests = read('src/game/quests.js');
+
+  assert.match(constants, /target: 3000, type: 'clicks'/);
+  assert.match(constants, /target: 60000, type: 'clicks'/);
+  assert.match(constants, /target: 2400, type: 'merges'/);
+  assert.match(constants, /target: 5000, type: 'buys'/);
+  assert.match(constants, /target: 500000000, type: 'coinsEarned'/);
+  assert.match(quests, /syncQuestDefinitions\(nextState\.quests\.weekly/);
 });
 
 test('fox purchase always shows its price, including when blocked', () => {

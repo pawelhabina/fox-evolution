@@ -1,4 +1,4 @@
-export const GAME_VERSION = '1.2.1';
+export const GAME_VERSION = '1.2.2';
 export const RELEASE_CHANNEL = 'EARLY ACCESS';
 export const BASE_TICK_SECONDS = 5;
 export const MIN_TICK_SECONDS = 1;
@@ -75,7 +75,7 @@ const TIER_NAMES = [
   'Mega Fox'
 ];
 
-const CLICK_VALUE_RATIO = 0.45;
+const CLICK_VALUE_RATIO = 0.1125;
 
 export const FOX_TIERS = TIER_NAMES.map((name, index) => {
   const tier = index + 1;
@@ -171,7 +171,7 @@ export const UPGRADE_DEFS = {
   clickBonus: {
     id: 'clickBonus',
     title: 'Wartość klików',
-    description: '+5% wartości kliknięcia na poziom.',
+    description: '+2% wartości kliknięcia na poziom.',
     shop: 'coins',
     currency: 'coins',
     cap: 40,
@@ -254,26 +254,26 @@ export const WEEKLY_QUEST_REWARD = 20;
 export const QUESTS_PER_SECTION = 5;
 
 export const DAILY_QUEST_POOL = [
-  { id: 'daily_merge_8', label: 'Wykonaj 8 merge', target: 8, type: 'merges' },
-  { id: 'daily_merge_15', label: 'Wykonaj 15 merge', target: 15, type: 'merges' },
-  { id: 'daily_click_60', label: 'Kliknij lisy 60 razy', target: 60, type: 'clicks' },
-  { id: 'daily_click_120', label: 'Kliknij lisy 120 razy', target: 120, type: 'clicks' },
-  { id: 'daily_buy_20', label: 'Kup 20 lisów', target: 20, type: 'buys' },
-  { id: 'daily_buy_35', label: 'Kup 35 lisów', target: 35, type: 'buys' },
-  { id: 'daily_tier_8', label: 'Osiągnij tier 8', target: 8, type: 'maxTier' },
-  { id: 'daily_coins_20k', label: 'Zarób 20 000 monet', target: 20000, type: 'coinsEarned' }
+  { id: 'daily_merge_8', label: 'Wykonaj 40 merge', target: 40, type: 'merges' },
+  { id: 'daily_merge_15', label: 'Wykonaj 80 merge', target: 80, type: 'merges' },
+  { id: 'daily_click_60', label: 'Kliknij lisy 1 500 razy', target: 1500, type: 'clicks' },
+  { id: 'daily_click_120', label: 'Kliknij lisy 3 000 razy', target: 3000, type: 'clicks' },
+  { id: 'daily_buy_20', label: 'Kup 100 lisów', target: 100, type: 'buys' },
+  { id: 'daily_buy_35', label: 'Kup 180 lisów', target: 180, type: 'buys' },
+  { id: 'daily_tier_8', label: 'Osiągnij tier 10', target: 10, type: 'maxTier' },
+  { id: 'daily_coins_20k', label: 'Zarób 500 000 monet', target: 500000, type: 'coinsEarned' }
 ];
 
 export const WEEKLY_QUEST_POOL = [
-  { id: 'weekly_merge_80', label: 'Wykonaj 80 merge', target: 80, type: 'merges' },
-  { id: 'weekly_merge_150', label: 'Wykonaj 150 merge', target: 150, type: 'merges' },
-  { id: 'weekly_click_600', label: 'Kliknij lisy 600 razy', target: 600, type: 'clicks' },
-  { id: 'weekly_click_1200', label: 'Kliknij lisy 1200 razy', target: 1200, type: 'clicks' },
-  { id: 'weekly_buy_140', label: 'Kup 140 lisów', target: 140, type: 'buys' },
-  { id: 'weekly_buy_260', label: 'Kup 260 lisów', target: 260, type: 'buys' },
-  { id: 'weekly_tier_14', label: 'Osiągnij tier 14', target: 14, type: 'maxTier' },
-  { id: 'weekly_tier_18', label: 'Osiągnij tier 18', target: 18, type: 'maxTier' },
-  { id: 'weekly_coins_2m', label: 'Zarób 2 000 000 monet', target: 2000000, type: 'coinsEarned' }
+  { id: 'weekly_merge_80', label: 'Wykonaj 1 200 merge', target: 1200, type: 'merges' },
+  { id: 'weekly_merge_150', label: 'Wykonaj 2 400 merge', target: 2400, type: 'merges' },
+  { id: 'weekly_click_600', label: 'Kliknij lisy 30 000 razy', target: 30000, type: 'clicks' },
+  { id: 'weekly_click_1200', label: 'Kliknij lisy 60 000 razy', target: 60000, type: 'clicks' },
+  { id: 'weekly_buy_140', label: 'Kup 3 000 lisów', target: 3000, type: 'buys' },
+  { id: 'weekly_buy_260', label: 'Kup 5 000 lisów', target: 5000, type: 'buys' },
+  { id: 'weekly_tier_14', label: 'Osiągnij tier 18', target: 18, type: 'maxTier' },
+  { id: 'weekly_tier_18', label: 'Osiągnij tier 22', target: 22, type: 'maxTier' },
+  { id: 'weekly_coins_2m', label: 'Zarób 500 000 000 monet', target: 500000000, type: 'coinsEarned' }
 ];
 
 export const LOGIN_REWARD_VALUES = {

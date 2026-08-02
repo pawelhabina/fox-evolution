@@ -84,7 +84,7 @@ export function getPassiveIncomeMultiplier(state, nowTs = Date.now()) {
 
 export function getClickMultiplier(state, nowTs = Date.now()) {
   const clickLevel = state.upgrades.clickBonus || 0;
-  const baseMultiplier = (1 + clickLevel * 0.05) * getGemIncomeMultiplier(state);
+  const baseMultiplier = (1 + clickLevel * 0.02) * getGemIncomeMultiplier(state);
   const tempMultiplier = isTemporaryBoostActive(state, 'clickFrenzy', nowTs) ? TEMP_BOOST_EFFECTS.clickFrenzyMultiplier : 1;
   return baseMultiplier * tempMultiplier;
 }

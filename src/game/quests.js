@@ -22,6 +22,21 @@ function pickRandomQuests(pool, count, reward) {
   }));
 }
 
+function syncQuestDefinitions(quests, pool, reward) {
+  const definitionsById = new Map(pool.map((quest) => [quest.id, quest]));
+  return quests.map((quest) => {
+    const definition = definitionsById.get(quest.id);
+    if (!definition) {
+      return quest;
+    }
+    return {
+      ...quest,
+      ...definition,
+      reward
+    };
+  });
+}
+
 function getCurrentDailyPeriodStart(nowTs = Date.now()) {
   const now = new Date(nowTs);
   const start = new Date(now);
@@ -228,6 +243,15 @@ export function ensureTemporalResets(state, nowTs = Date.now()) {
       }
     };
   }
+
+  nextState = {
+    ...nextState,
+    quests: {
+      ...nextState.quests,
+      daily: syncQuestDefinitions(nextState.quests.daily, DAILY_QUEST_POOL, DAILY_QUEST_REWARD),
+      weekly: syncQuestDefinitions(nextState.quests.weekly, WEEKLY_QUEST_POOL, WEEKLY_QUEST_REWARD)
+    }
+  };
 
   if (nextState.quests.dailyKey !== dayKey) {
     const loginRewards = normalizeLoginRewards(nextState.quests.loginRewards);

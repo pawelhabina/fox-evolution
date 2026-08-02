@@ -1,4 +1,4 @@
-export const FOX_CLICK_LIMIT = 10;
+export const FOX_CLICK_LIMIT = 6;
 export const FOX_CLICK_WINDOW_MS = 1_000;
 
 export function registerFoxClick(
