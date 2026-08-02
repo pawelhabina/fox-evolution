@@ -135,14 +135,20 @@ systemctl reload nginx
   );
 
   const localUpdates = path.join(projectRoot, 'server/updates');
-  if (fs.existsSync(localUpdates) && fs.readdirSync(localUpdates).some((name) => name.endsWith('.exe') || name === 'latest.yml')) {
+  const updateFilePattern = /^(?:latest.*\.yml|.*\.(?:exe|zip|dmg)(?:\.blockmap)?)$/i;
+  if (fs.existsSync(localUpdates) && fs.readdirSync(localUpdates).some((name) => updateFilePattern.test(name))) {
     command(
       'rsync',
       [
         '-az',
         '--include=*.exe',
         '--include=*.exe.blockmap',
+        '--include=*.zip',
+        '--include=*.zip.blockmap',
+        '--include=*.dmg',
+        '--include=*.dmg.blockmap',
         '--include=latest.yml',
+        '--include=latest-mac.yml',
         '--exclude=*',
         '-e',
         `ssh -o StrictHostKeyChecking=accept-new -p ${port}`,

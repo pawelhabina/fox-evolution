@@ -53,3 +53,11 @@ test('main menu uses the official game icon instead of the paw glyph', () => {
   assert.match(mainMenu, /className="main-menu-brand-icon"/);
   assert.doesNotMatch(mainMenu, /<GuiIcon name="pet" alt="" size=\{64\} \/>/);
 });
+
+test('production deployment publishes Windows and macOS update artifacts', () => {
+  const deployScript = fs.readFileSync(path.join(projectRoot, 'scripts/deploy-s1.mjs'), 'utf8');
+
+  for (const include of ['*.exe', '*.zip', '*.dmg', 'latest.yml', 'latest-mac.yml']) {
+    assert.match(deployScript, new RegExp(`--include=${include.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+  }
+});
