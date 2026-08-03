@@ -44,3 +44,58 @@ test('admin save edits use partial patches and optimistic concurrency', () => {
   assert.match(script, /payload\.statePatch = statePatch/);
   assert.match(script, /expectedUpdatedAt: original\.updatedAt/);
 });
+
+test('admin player profile exposes full identifiers with copy controls', () => {
+  const service = read('services/adminService.js');
+  const script = read('admin/public/app.js');
+
+  assert.match(service, /publicId: user\.publicId/);
+  assert.match(service, /publicId: \{ contains: query \}/);
+  assert.match(script, /Pełne ID konta/);
+  assert.match(script, /Publiczne UUID/);
+  assert.match(script, /data-copy-value/);
+  assert.doesNotMatch(script, /user\.id\.slice\(0,12\).*ID konta/);
+});
+
+test('admin password reset is one-time, audited and invalidates all user sessions', () => {
+  const schema = read('../prisma/schema.prisma');
+  const route = read('routes/admin.js');
+  const service = read('services/adminService.js');
+  const auth = read('services/authService.js');
+  const html = read('admin/public/index.html');
+  const script = read('admin/public/app.js');
+
+  assert.match(schema, /sessionVersion\s+Int\s+@default\(0\)/);
+  assert.match(route, /users\/:userId\/reset-password/);
+  assert.match(service, /generateTemporaryPassword\(\)/);
+  assert.match(service, /sessionVersion: \{ increment: 1 \}/);
+  assert.match(service, /refreshToken\.updateMany/);
+  assert.match(service, /ADMIN_RESET_USER_PASSWORD/);
+  assert.doesNotMatch(service, /details: \{[^}]*temporaryPassword/);
+  assert.match(auth, /record\.sessionVersion !== \(user\.sessionVersion \|\| 0\)/);
+  assert.match(auth, /Number\(payload\.sv \|\| 0\) !== \(user\.sessionVersion \|\| 0\)/);
+  assert.match(html, /id="generated-password"/);
+  assert.match(script, /byId\('generated-password'\)\.textContent = ''/);
+});
+
+test('admin messages support global and individual one-time deliveries', () => {
+  const schema = read('../prisma/schema.prisma');
+  const adminRoute = read('routes/admin.js');
+  const playerRoute = read('routes/messages.js');
+  const service = read('services/messageService.js');
+  const html = read('admin/public/index.html');
+  const script = read('admin/public/app.js');
+
+  assert.match(schema, /model AdminMessage \{/);
+  assert.match(schema, /model AdminMessageDelivery \{/);
+  assert.match(schema, /@@unique\(\[messageId, userId\]\)/);
+  assert.match(adminRoute, /z\.enum\(\['GLOBAL', 'USER'\]\)/);
+  assert.match(service, /where: \{ role: 'USER' \}/);
+  assert.match(service, /adminMessageDelivery\.createMany/);
+  assert.match(service, /ADMIN_SEND_PLAYER_MESSAGE/);
+  assert.match(playerRoute, /getPendingPlayerMessage/);
+  assert.match(playerRoute, /markPlayerMessageRead/);
+  assert.match(html, /data-view-panel="messages"/);
+  assert.match(script, /composeMessageForUser/);
+  assert.match(script, /Odczytano:/);
+});

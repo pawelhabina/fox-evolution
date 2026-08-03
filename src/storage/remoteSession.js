@@ -3,6 +3,7 @@ const REFRESH_TOKEN_KEY = 'fox-api-refresh-token';
 const PRINCIPAL_KEY = 'fox-api-principal';
 const DEVICE_ID_KEY = 'fox-api-device-id';
 const OAUTH_FLOW_KEY = 'fox-api-oauth-flow';
+let refreshAccessTokenPromise = null;
 
 function getApiBaseUrl() {
   return String(import.meta.env.VITE_API_BASE_URL || '')
@@ -220,7 +221,7 @@ async function rawApiRequest(path, { method = 'GET', body, headers = {}, auth = 
   }
 }
 
-async function refreshAccessToken() {
+async function performRefreshAccessToken() {
   const { refreshToken } = getStoredSession();
   if (!refreshToken) {
     return false;
@@ -233,13 +234,27 @@ async function refreshAccessToken() {
   });
 
   if (!response.ok) {
-    setStoredSession({ accessToken: null, refreshToken: null, principal: null });
+    // A different request (or renderer callback) may already have rotated this
+    // token. Never erase a newer session because an older refresh failed.
+    if (getStoredSession().refreshToken === refreshToken) {
+      setStoredSession({ accessToken: null, refreshToken: null, principal: null });
+    }
     return false;
   }
 
   const payload = await response.json();
   setStoredSession(payload);
   return true;
+}
+
+async function refreshAccessToken() {
+  if (!refreshAccessTokenPromise) {
+    refreshAccessTokenPromise = performRefreshAccessToken().finally(() => {
+      refreshAccessTokenPromise = null;
+    });
+  }
+
+  return refreshAccessTokenPromise;
 }
 
 export async function apiRequest(path, { method = 'GET', body, auth = true, retry = true } = {}) {
@@ -466,6 +481,17 @@ export async function fetchLeaderboard(category, limit = 10) {
   const normalized = String(category || '').trim().toLowerCase();
   return apiRequest(`/api/leaderboard/${normalized}?limit=${Math.max(1, Math.min(50, Number(limit) || 10))}`, {
     auth: true
+  });
+}
+
+export async function fetchPendingAdminMessage() {
+  const payload = await apiRequest('/api/messages/pending');
+  return payload?.message || null;
+}
+
+export async function acknowledgeAdminMessage(deliveryId) {
+  return apiRequest(`/api/messages/${encodeURIComponent(deliveryId)}/read`, {
+    method: 'POST'
   });
 }
 

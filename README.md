@@ -139,6 +139,7 @@ Rebirth resetuje:
 Rebirth zachowuje:
 - gems,
 - rebirth tokens,
+- limit lisów kupiony za rebirth points,
 - statystyki lifetime,
 - ustawienia.
 

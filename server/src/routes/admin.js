@@ -2,9 +2,10 @@ import express from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
-import { getAdminOverview, getSaveDetails, getTelemetryStats, getUserDetails, listUsers, recentAuditLogs, setUserFlag } from '../services/adminService.js';
+import { getAdminOverview, getSaveDetails, getTelemetryStats, getUserDetails, listUsers, recentAuditLogs, resetUserPassword, setUserFlag } from '../services/adminService.js';
 import { adminUpdateSave } from '../services/saveService.js';
 import { refreshLeaderboards } from '../services/leaderboardService.js';
+import { createAdminMessage, listAdminMessages } from '../services/messageService.js';
 
 const router = express.Router();
 const adminStateNumber = z.number().finite().int().nonnegative();
@@ -84,6 +85,58 @@ router.patch('/users/:userId/flag', async (req, res) => {
       return res.status(400).json({ error: 'VALIDATION_ERROR', details: error.flatten() });
     }
     return res.status(500).json({ error: 'FLAG_UPDATE_FAILED' });
+  }
+});
+
+router.post('/users/:userId/reset-password', async (req, res) => {
+  try {
+    const result = await resetUserPassword({
+      adminUserId: req.principal.id,
+      userId: req.params.userId
+    });
+    res.set('Cache-Control', 'no-store');
+    return res.json(result);
+  } catch (error) {
+    if (error.message === 'USER_NOT_FOUND') {
+      return res.status(404).json({ error: 'USER_NOT_FOUND' });
+    }
+    if (['CANNOT_RESET_OWN_PASSWORD', 'PASSWORD_LOGIN_UNAVAILABLE'].includes(error.message)) {
+      return res.status(409).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'PASSWORD_RESET_FAILED' });
+  }
+});
+
+router.get('/messages', async (req, res) => {
+  return res.json({ messages: await listAdminMessages(Number(req.query.limit || 50)) });
+});
+
+router.post('/messages', async (req, res) => {
+  const schema = z.object({
+    audience: z.enum(['GLOBAL', 'USER']),
+    userId: z.string().min(1).optional(),
+    title: z.string().trim().min(1).max(80),
+    body: z.string().trim().min(1).max(2000)
+  }).refine((data) => data.audience !== 'USER' || Boolean(data.userId), {
+    message: 'userId is required for USER audience',
+    path: ['userId']
+  });
+
+  try {
+    const parsed = schema.parse(req.body || {});
+    const result = await createAdminMessage({
+      adminUserId: req.principal.id,
+      ...parsed
+    });
+    return res.status(201).json({ message: result.message, deliveryCount: result.deliveryCount });
+  } catch (error) {
+    if (error.message === 'USER_NOT_FOUND') {
+      return res.status(404).json({ error: 'USER_NOT_FOUND' });
+    }
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'VALIDATION_ERROR', details: error.flatten() });
+    }
+    return res.status(500).json({ error: 'MESSAGE_SEND_FAILED' });
   }
 });
 

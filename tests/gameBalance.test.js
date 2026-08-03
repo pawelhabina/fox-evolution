@@ -37,8 +37,27 @@ test('click income and click upgrades use the slower economy', () => {
   const economy = read('src/game/economy.js');
 
   assert.match(constants, /CLICK_VALUE_RATIO = 0\.1125/);
+  assert.match(constants, /Math\.max\(previousClickValue \+ 1, Math\.round\(baseIncomePerTick \* CLICK_VALUE_RATIO\)\)/);
   assert.match(constants, /description: '\+2% wartości kliknięcia na poziom\.'/);
   assert.match(economy, /clickLevel \* 0\.02/);
+});
+
+test('fox limit is a persistent rebirth upgrade instead of a coin upgrade', () => {
+  const constants = read('src/game/constants.js');
+  const foxLimitUpgrade = constants.match(/foxLimit: \{[\s\S]*?\r?\n  \},\r?\n  gemIncomeMultiplier:/);
+
+  assert.ok(foxLimitUpgrade, 'fox limit upgrade definition is missing');
+  assert.match(foxLimitUpgrade[0], /shop: 'rebirth'/);
+  assert.match(foxLimitUpgrade[0], /currency: 'rebirthTokens'/);
+  assert.match(foxLimitUpgrade[0], /baseCost: 1/);
+});
+
+test('session refresh is shared between concurrent startup requests', () => {
+  const remoteSession = read('src/storage/remoteSession.js');
+
+  assert.match(remoteSession, /let refreshAccessTokenPromise = null/);
+  assert.match(remoteSession, /refreshAccessTokenPromise = performRefreshAccessToken\(\)\.finally/);
+  assert.match(remoteSession, /getStoredSession\(\)\.refreshToken === refreshToken/);
 });
 
 test('daily and weekly quests require sustained play', () => {

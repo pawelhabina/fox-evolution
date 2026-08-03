@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import GuiIcon from './components/GuiIcon';
+import AdminMessageModal from './components/AdminMessageModal';
 import Arena from './components/Arena';
 import EvolutionModal from './components/EvolutionModal';
 import FoxContextMenu from './components/FoxContextMenu';
 import Hud from './components/Hud';
+import HelpModal from './components/HelpModal';
 import MainMenu, { AccountMenu } from './components/MainMenu';
 import PixelGridBackground from './components/PixelGridBackground';
+import PokedexModal from './components/PokedexModal';
 import SettingsModal from './components/SettingsModal';
+import StatisticsModal from './components/StatisticsModal';
 import ShopPanel from './components/ShopPanel';
 import ToastStack from './components/ToastStack';
 import { configureAudio, playSfx, shutdownAudio, startBackgroundMusic } from './audio/gameAudio';
@@ -36,7 +40,9 @@ import { createInitialState } from './storage/defaultState';
 import {
   deleteSlot,
   acceptGameFriendRequest,
+  acknowledgeGameAdminMessage,
   fetchLeaderboardCategory,
+  fetchGameAdminMessage,
   fetchGameFriends,
   getAuthPrincipal,
   beginOAuthLogin,
@@ -180,6 +186,7 @@ export default function App() {
   const [menuView, setMenuView] = useState('root');
   const [saveMeta, setSaveMeta] = useState(DEFAULT_MENU_META);
   const [authPrincipal, setAuthPrincipal] = useState(() => getAuthPrincipal());
+  const [adminMessage, setAdminMessage] = useState(null);
   const [leaderboardData, setLeaderboardData] = useState(null);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState('');
@@ -199,6 +206,9 @@ export default function App() {
   const [systemMenuOpen, setSystemMenuOpen] = useState(false);
   const [shopCollapsed, setShopCollapsed] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [statisticsSnapshot, setStatisticsSnapshot] = useState(null);
+  const [pokedexOpen, setPokedexOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [friendsModalOpen, setFriendsModalOpen] = useState(false);
   const [evolutionTargetId, setEvolutionTargetId] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -208,8 +218,10 @@ export default function App() {
   const remoteSlotUpdatedAtRef = useRef(null);
   const updateDownloadedToastShownRef = useRef(false);
   const foxClickTimestampsRef = useRef([]);
+  const adminMessageRef = useRef(null);
   const { toasts, pushToast } = useToasts();
   stateRef.current = state;
+  adminMessageRef.current = adminMessage;
 
   const coinsPerSecond = useMemo(() => getExpectedCoinsPerSecond(state), [state]);
   const buyCost = useMemo(() => getBuyFoxCost(state), [state]);
@@ -320,6 +332,33 @@ export default function App() {
     const principal = await refreshAuthPrincipalFromApi();
     setAuthPrincipal(principal);
   }, []);
+
+  const refreshAdminMessage = useCallback(async () => {
+    if (!remoteEnabled || authPrincipal?.type !== 'USER' || adminMessageRef.current) {
+      return;
+    }
+    try {
+      const pending = await fetchGameAdminMessage();
+      if (pending) {
+        adminMessageRef.current = pending;
+        setAdminMessage(pending);
+      }
+    } catch (_error) {
+      // A transient API failure should not interrupt the game.
+    }
+  }, [authPrincipal?.id, authPrincipal?.type, remoteEnabled]);
+
+  const acknowledgeCurrentAdminMessage = useCallback(async (message) => {
+    try {
+      await acknowledgeGameAdminMessage(message.deliveryId);
+      adminMessageRef.current = null;
+      setAdminMessage(null);
+      setTimeout(() => { void refreshAdminMessage(); }, 0);
+    } catch (_error) {
+      pushToast('Nie udało się potwierdzić wiadomości. Spróbuj ponownie.');
+      throw _error;
+    }
+  }, [pushToast, refreshAdminMessage]);
 
   const refreshLeaderboard = useCallback(async () => {
     if (!remoteEnabled) {
@@ -551,6 +590,20 @@ export default function App() {
   }, [appScreen, isLoaded]);
 
   useEffect(() => {
+    if (!isLoaded || appScreen !== 'game') {
+      return undefined;
+    }
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        dispatch({ type: ACTIONS.RECORD_PLAY_TIME, seconds: 1, nowTs: Date.now() });
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [appScreen, isLoaded]);
+
+  useEffect(() => {
     if (appScreen !== 'game') {
       return;
     }
@@ -669,6 +722,20 @@ export default function App() {
     updateDownloadedToastShownRef.current = false;
   }, [pushToast, updateState.status]);
 
+  useEffect(() => {
+    if (!remoteEnabled || authPrincipal?.type !== 'USER') {
+      adminMessageRef.current = null;
+      setAdminMessage(null);
+      return undefined;
+    }
+
+    adminMessageRef.current = null;
+    setAdminMessage(null);
+    void refreshAdminMessage();
+    const interval = setInterval(() => { void refreshAdminMessage(); }, 30000);
+    return () => clearInterval(interval);
+  }, [authPrincipal?.id, authPrincipal?.type, refreshAdminMessage, remoteEnabled]);
+
   if (!isLoaded) {
     return <div className="app-shell flex items-center justify-center">Ładowanie...</div>;
   }
@@ -706,6 +773,10 @@ export default function App() {
               playSfx('ui');
               setMenuView('settings');
             }}
+            onOpenHelp={() => {
+              playSfx('ui');
+              setHelpOpen(true);
+            }}
             onOpenProfile={() => {
               playSfx('ui');
               setMenuView('profile');
@@ -723,6 +794,19 @@ export default function App() {
             }}
             onLoad={loadSlotAndStart}
             onNew={createNewGameAndStart}
+            onOpenStats={async (slot) => {
+              playSfx('ui');
+              try {
+                const loaded = await loadSlotStateWithMeta(slot.id);
+                setStatisticsSnapshot({
+                  state: loaded.state,
+                  name: slot.name,
+                  updatedAt: loaded.updatedAt || slot.updatedAt
+                });
+              } catch (_error) {
+                pushToast('Nie udało się wczytać statystyk save’a');
+              }
+            }}
             onDelete={async (slotId) => {
               await deleteSlot(slotId);
               await refreshMenuMeta();
@@ -810,6 +894,10 @@ export default function App() {
           />
           <p className="mt-4 text-xs text-slate-500">Early Access · wersja gry: {gameVersion}</p>
         </div>
+        <StatisticsModal snapshot={statisticsSnapshot} onClose={() => setStatisticsSnapshot(null)} />
+        {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
+        <AdminMessageModal message={adminMessage} onAcknowledge={acknowledgeCurrentAdminMessage} />
+        <ToastStack toasts={toasts} />
       </main>
     );
   }
@@ -1008,6 +1096,44 @@ export default function App() {
             >
               <GuiIcon name="settings" alt="" />
               Ustawienia
+            </button>
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-lg bg-cyan-700/80 px-3 py-2 text-left text-sm text-cyan-50"
+              onClick={() => {
+                const slot = saveMeta.slots.find((item) => item.id === currentSlotId);
+                setStatisticsSnapshot({
+                  state: stateRef.current,
+                  name: slot?.name || 'Aktualny save',
+                  updatedAt: remoteSlotUpdatedAtRef.current || slot?.updatedAt
+                });
+                setSystemMenuOpen(false);
+              }}
+            >
+              <GuiIcon name="trophy" alt="" />
+              Statystyki
+            </button>
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-lg bg-amber-600/80 px-3 py-2 text-left text-sm text-amber-50"
+              onClick={() => {
+                setPokedexOpen(true);
+                setSystemMenuOpen(false);
+              }}
+            >
+              <GuiIcon name="pet" alt="" />
+              Pokédex
+            </button>
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-lg bg-indigo-700/80 px-3 py-2 text-left text-sm text-indigo-50"
+              onClick={() => {
+                setHelpOpen(true);
+                setSystemMenuOpen(false);
+              }}
+            >
+              <GuiIcon name="quest" alt="" />
+              Pomocne informacje
             </button>
             {remoteEnabled && (
               <button
@@ -1297,6 +1423,14 @@ export default function App() {
         onHardReset={handleHardReset}
         onClose={() => setSettingsModalOpen(false)}
       />
+
+      <StatisticsModal snapshot={statisticsSnapshot} onClose={() => setStatisticsSnapshot(null)} />
+
+      {pokedexOpen && <PokedexModal pokedex={state.pokedex} onClose={() => setPokedexOpen(false)} />}
+
+      {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
+
+      <AdminMessageModal message={adminMessage} onAcknowledge={acknowledgeCurrentAdminMessage} />
 
       <ToastStack toasts={toasts} />
     </main>

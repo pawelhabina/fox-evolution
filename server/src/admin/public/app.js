@@ -6,8 +6,10 @@ const adminState = {
   selectedSave: null,
   conflictSave: null,
   flagTarget: null,
+  passwordResetTarget: null,
   overview: null,
   telemetry: null,
+  messages: [],
   audit: []
 };
 
@@ -29,6 +31,7 @@ const flagModal = byId('flag-modal');
 const VIEW_COPY = {
   overview: ['// CENTRUM DOWODZENIA', 'Przegląd systemu'],
   users: ['// SPOŁECZNOŚĆ', 'Gracze i zapisy'],
+  messages: ['// KOMUNIKACJA', 'Wiadomości dla graczy'],
   telemetry: ['// ANALITYKA', 'Telemetria gry'],
   audit: ['// BEZPIECZEŃSTWO', 'Dziennik zmian']
 };
@@ -36,7 +39,9 @@ const VIEW_COPY = {
 const ACTION_LABELS = {
   ADMIN_EDIT_SAVE: 'Edycja zapisu',
   ADMIN_FLAG_USER: 'Oznaczenie gracza',
-  ADMIN_UNFLAG_USER: 'Usunięcie flagi'
+  ADMIN_UNFLAG_USER: 'Usunięcie flagi',
+  ADMIN_RESET_USER_PASSWORD: 'Reset hasła gracza',
+  ADMIN_SEND_PLAYER_MESSAGE: 'Wiadomość do graczy'
 };
 
 class ApiError extends Error {
@@ -124,6 +129,25 @@ function setBusy(button, busy, label = 'Przetwarzanie…') {
   }
 }
 
+async function copyText(value) {
+  const text = String(value || '');
+  if (!text) return false;
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (_error) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = document.execCommand('copy');
+    textarea.remove();
+    return copied;
+  }
+}
+
 function renderAuthState() {
   const logged = Boolean(adminState.token);
   loginView.classList.toggle('hidden', logged);
@@ -148,6 +172,7 @@ function switchView(view, updateHash = true) {
   if (updateHash) history.replaceState(null, '', `#${view}`);
   document.querySelector('.sidebar').classList.remove('is-open');
   if (view === 'users' && adminState.users.items.length === 0) loadUsers();
+  if (view === 'messages') loadMessages();
   if (view === 'telemetry') loadTelemetry();
   if (view === 'audit') loadAudit();
 }
@@ -264,13 +289,109 @@ function renderUserDetails(user) {
     <article class="save-card"><div class="save-card-head"><div><h5>${escapeHtml(save.name)}</h5><p>${escapeHtml(save.slotId)} · ${relativeTime(save.updatedAt)}</p></div><button class="row-button" type="button" data-save-open="${escapeHtml(save.id)}">Edytuj</button></div><div class="save-stats"><div><span>MONETY</span><strong>${escapeHtml(formatNumber(save.summary?.coins))}</strong></div><div><span>DIAMENTY</span><strong>${escapeHtml(formatNumber(save.summary?.gems))}</strong></div><div><span>TOP TIER</span><strong>${save.summary?.topTier || 1}</strong></div></div></article>`).join('') : '<div class="empty-state"><p>Ten gracz nie ma zapisów w chmurze.</p></div>';
   const devices = user.devices?.length ? user.devices.map((device) => `<article class="device-card"><div><strong>${escapeHtml(device.label || 'Nieznane urządzenie')}</strong><small>Połączono ${formatDate(device.linkedAt)}</small></div>${device.isFlagged ? '<span class="badge badge--flag">Flaga</span>' : '<span class="badge badge--ok">OK</span>'}</article>`).join('') : '<div class="empty-state"><p>Brak połączonych urządzeń.</p></div>';
   const flags = user.flags?.length ? user.flags.map((flag) => `<article class="flag-card"><p>${escapeHtml(flag.reason)}</p><small>${escapeHtml(flag.source)} · wynik ${flag.score} · ${formatDate(flag.createdAt)}</small></article>`).join('') : '<div class="empty-state"><p>Brak historii flag.</p></div>';
+  const internalId = user.id || '';
+  const publicId = user.publicId || '';
   userDetails.innerHTML = `
     <section class="profile-hero"><span class="profile-avatar">${escapeHtml(initials(user.displayName))}</span><div><h3>${escapeHtml(user.displayName)}</h3><p>${escapeHtml(user.email || 'konto bez e-maila')}</p></div>${status}</section>
-    <div class="profile-meta"><div class="meta-card"><span>Rola</span><strong>${escapeHtml(user.role)}</strong></div><div class="meta-card"><span>Ostatnie logowanie</span><strong>${escapeHtml(relativeTime(user.lastLoginAt))}</strong></div><div class="meta-card"><span>Utworzono</span><strong>${formatDate(user.createdAt, false)}</strong></div><div class="meta-card"><span>ID konta</span><strong title="${escapeHtml(user.id)}">${escapeHtml(user.id.slice(0,12))}…</strong></div></div>
-    ${user.isFlagged ? `<button class="button button--secondary user-flag-action" type="button" data-unflag-user="${escapeHtml(user.id)}">Usuń oznaczenie</button>` : `<button class="button button--danger user-flag-action" type="button" data-flag-user="${escapeHtml(user.id)}" data-name="${escapeHtml(user.displayName)}">Oznacz gracza</button>`}
+    <div class="profile-meta"><div class="meta-card"><span>Rola</span><strong>${escapeHtml(user.role)}</strong></div><div class="meta-card"><span>Ostatnie logowanie</span><strong>${escapeHtml(relativeTime(user.lastLoginAt))}</strong></div><div class="meta-card"><span>Utworzono</span><strong>${formatDate(user.createdAt, false)}</strong></div><div class="meta-card"><span>Logowanie hasłem</span><strong>${user.email ? 'Dostępne' : 'Brak adresu e-mail'}</strong></div><div class="meta-card identifier-card"><span>Pełne ID konta</span><div class="identifier-value"><code>${escapeHtml(internalId)}</code><button class="row-button" type="button" data-copy-value="${escapeHtml(internalId)}">Kopiuj</button></div></div><div class="meta-card identifier-card"><span>Publiczne UUID</span><div class="identifier-value"><code>${escapeHtml(publicId || 'Brak UUID')}</code>${publicId ? `<button class="row-button" type="button" data-copy-value="${escapeHtml(publicId)}">Kopiuj</button>` : ''}</div></div></div>
+    <div class="profile-actions">${user.isFlagged ? `<button class="button button--secondary user-flag-action" type="button" data-unflag-user="${escapeHtml(user.id)}">Usuń oznaczenie</button>` : `<button class="button button--danger user-flag-action" type="button" data-flag-user="${escapeHtml(user.id)}" data-name="${escapeHtml(user.displayName)}">Oznacz gracza</button>`}${user.email ? `<button class="button button--secondary" type="button" data-reset-password="${escapeHtml(user.id)}" data-name="${escapeHtml(user.displayName)}">Wygeneruj nowe hasło</button>` : ''}<button class="button button--secondary" type="button" data-message-user="${escapeHtml(user.id)}" data-name="${escapeHtml(user.displayName)}">Wyślij wiadomość</button></div>
     <section class="drawer-section"><div class="drawer-section-head"><h4>Zapisy gry</h4><span>${user.saves?.length || 0}</span></div><div class="save-list">${saves}</div></section>
     <section class="drawer-section"><div class="drawer-section-head"><h4>Urządzenia</h4><span>${user.devices?.length || 0}</span></div><div class="device-list">${devices}</div></section>
     <section class="drawer-section"><div class="drawer-section-head"><h4>Historia flag</h4><span>${user.flags?.length || 0}</span></div><div class="flag-list">${flags}</div></section>`;
+}
+
+function openPasswordResetModal(userId, displayName) {
+  adminState.passwordResetTarget = { userId, displayName };
+  byId('password-reset-user').textContent = `Resetujesz hasło konta: ${displayName}`;
+  byId('password-reset-confirm').classList.remove('hidden');
+  byId('password-reset-result').classList.add('hidden');
+  byId('generated-password').textContent = '';
+  byId('password-reset-message').textContent = '';
+  byId('password-reset-submit').classList.remove('hidden');
+  byId('password-reset-modal').classList.remove('hidden');
+}
+
+async function submitPasswordReset() {
+  const target = adminState.passwordResetTarget;
+  if (!target) return;
+  const button = byId('password-reset-submit');
+  const message = byId('password-reset-message');
+  setBusy(button, true, 'Generowanie…');
+  message.textContent = '';
+  try {
+    const result = await api(`/api/admin/users/${encodeURIComponent(target.userId)}/reset-password`, { method: 'POST' });
+    byId('generated-password').textContent = result.temporaryPassword;
+    byId('password-reset-confirm').classList.add('hidden');
+    byId('password-reset-result').classList.remove('hidden');
+    button.classList.add('hidden');
+    toast('Hasło zostało zresetowane', `Unieważnione sesje: ${result.revokedSessions || 0}`);
+    loadAudit().catch(() => {});
+  } catch (error) {
+    const messages = {
+      CANNOT_RESET_OWN_PASSWORD: 'Nie można resetować własnego hasła z aktywnej sesji panelu.',
+      PASSWORD_LOGIN_UNAVAILABLE: 'To konto nie obsługuje logowania hasłem.'
+    };
+    message.textContent = messages[error.message] || error.message || 'Nie udało się zresetować hasła.';
+  } finally {
+    setBusy(button, false);
+  }
+}
+
+function updateMessageAudience() {
+  const individual = byId('message-audience').value === 'USER';
+  byId('message-user-field').classList.toggle('hidden', !individual);
+  byId('message-user-id').required = individual;
+}
+
+function composeMessageForUser(userId, displayName) {
+  switchView('messages');
+  byId('message-audience').value = 'USER';
+  byId('message-user-id').value = userId;
+  byId('message-form-info').classList.remove('is-error');
+  byId('message-form-info').textContent = `Odbiorca: ${displayName}`;
+  updateMessageAudience();
+  closeDrawer();
+  setTimeout(() => byId('message-title').focus(), 0);
+}
+
+async function loadMessages() {
+  const data = await api('/api/admin/messages?limit=50');
+  adminState.messages = data.messages || [];
+  const node = byId('messages-history');
+  node.classList.remove('loading-block');
+  node.innerHTML = adminState.messages.length ? adminState.messages.map((message) => {
+    const target = message.audience === 'GLOBAL'
+      ? 'Wszystkie konta graczy'
+      : message.recipient?.displayName || message.recipient?.email || message.recipient?.id || 'Wybrane konto';
+    return `<article class="message-history-card"><div class="message-history-head"><h3>${escapeHtml(message.title)}</h3><small>${escapeHtml(formatDate(message.createdAt))}</small></div><p>${escapeHtml(message.body)}</p><div class="message-delivery-meta"><span>${escapeHtml(target)}</span><span>Odczytano: ${formatNumber(message.readCount)}/${formatNumber(message.deliveryCount)}</span><span>Autor: ${escapeHtml(message.createdByAdmin?.displayName || message.createdByAdmin?.email || 'Administrator')}</span></div></article>`;
+  }).join('') : '<div class="empty-state"><span>✉</span><h3>Brak wiadomości</h3><p>Wyślij pierwszą wiadomość do graczy.</p></div>';
+}
+
+async function submitMessage() {
+  const audience = byId('message-audience').value;
+  const payload = {
+    audience,
+    title: byId('message-title').value.trim(),
+    body: byId('message-body').value.trim()
+  };
+  if (audience === 'USER') payload.userId = byId('message-user-id').value.trim();
+  const button = byId('message-submit');
+  const info = byId('message-form-info');
+  setBusy(button, true, 'Wysyłanie…');
+  info.classList.remove('is-error');
+  try {
+    const result = await api('/api/admin/messages', { method: 'POST', body: JSON.stringify(payload) });
+    byId('message-title').value = '';
+    byId('message-body').value = '';
+    info.textContent = `Dostarczono do ${result.deliveryCount || 0} kont.`;
+    toast('Wiadomość wysłana', `Liczba dostarczeń: ${result.deliveryCount || 0}`);
+    await loadMessages();
+  } catch (error) {
+    info.classList.add('is-error');
+    info.textContent = error.message === 'USER_NOT_FOUND' ? 'Nie znaleziono konta o podanym ID.' : error.message || 'Nie udało się wysłać wiadomości.';
+  } finally {
+    setBusy(button, false);
+  }
 }
 
 async function setUserFlag(userId, flagged, reason = '') {
@@ -384,6 +505,11 @@ async function submitSave() {
 }
 
 function closeModal(id) {
+  if (id === 'password-reset-modal') {
+    byId('generated-password').textContent = '';
+    byId('password-reset-message').textContent = '';
+    adminState.passwordResetTarget = null;
+  }
   byId(id)?.classList.add('hidden');
 }
 
@@ -429,6 +555,7 @@ async function refreshCurrentView() {
   try {
     if (adminState.view === 'overview') await loadOverview();
     if (adminState.view === 'users') await loadUsers();
+    if (adminState.view === 'messages') await loadMessages();
     if (adminState.view === 'telemetry') await loadTelemetry();
     if (adminState.view === 'audit') await loadAudit();
     toast('Dane odświeżone');
@@ -477,6 +604,12 @@ byId('prev-page').addEventListener('click', () => { adminState.users.page -= 1; 
 byId('next-page').addEventListener('click', () => { adminState.users.page += 1; loadUsers(); });
 byId('telemetry-days').addEventListener('change', loadTelemetry);
 byId('audit-limit').addEventListener('change', loadAudit);
+byId('message-audience').addEventListener('change', () => {
+  byId('message-form-info').textContent = '';
+  updateMessageAudience();
+});
+byId('message-form').addEventListener('submit', (event) => { event.preventDefault(); submitMessage(); });
+byId('messages-refresh').addEventListener('click', loadMessages);
 byId('close-drawer').addEventListener('click', closeDrawer);
 drawerBackdrop.addEventListener('click', closeDrawer);
 usersTable.addEventListener('click', (event) => { const button = event.target.closest('[data-user-open]'); if (button) openUser(button.dataset.userOpen).catch((error) => toast('Nie udało się otworzyć profilu', error.message, 'error')); });
@@ -484,9 +617,18 @@ userDetails.addEventListener('click', async (event) => {
   const saveButton = event.target.closest('[data-save-open]');
   const flagButton = event.target.closest('[data-flag-user]');
   const unflagButton = event.target.closest('[data-unflag-user]');
+  const resetPasswordButton = event.target.closest('[data-reset-password]');
+  const copyButton = event.target.closest('[data-copy-value]');
+  const messageButton = event.target.closest('[data-message-user]');
   if (saveButton) await openSave(saveButton.dataset.saveOpen);
   if (flagButton) openFlagModal(flagButton.dataset.flagUser, flagButton.dataset.name);
   if (unflagButton) await setUserFlag(unflagButton.dataset.unflagUser, false);
+  if (resetPasswordButton) openPasswordResetModal(resetPasswordButton.dataset.resetPassword, resetPasswordButton.dataset.name);
+  if (copyButton) {
+    const copied = await copyText(copyButton.dataset.copyValue);
+    toast(copied ? 'Skopiowano identyfikator' : 'Nie udało się skopiować', '', copied ? 'success' : 'error');
+  }
+  if (messageButton) composeMessageForUser(messageButton.dataset.messageUser, messageButton.dataset.name);
 });
 document.querySelectorAll('[data-close-modal]').forEach((button) => button.addEventListener('click', () => closeModal(button.dataset.closeModal)));
 saveForm.addEventListener('submit', (event) => { event.preventDefault(); submitSave(); });
@@ -498,7 +640,12 @@ byId('flag-form').addEventListener('submit', async (event) => {
   await setUserFlag(adminState.flagTarget.userId, true, reason);
   closeModal('flag-modal');
 });
-document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { closeDrawer(); closeModal('save-modal'); closeModal('flag-modal'); } });
+byId('password-reset-form').addEventListener('submit', (event) => { event.preventDefault(); submitPasswordReset(); });
+byId('copy-generated-password').addEventListener('click', async () => {
+  const copied = await copyText(byId('generated-password').textContent);
+  toast(copied ? 'Hasło skopiowane' : 'Nie udało się skopiować', '', copied ? 'success' : 'error');
+});
+document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { closeDrawer(); closeModal('save-modal'); closeModal('flag-modal'); closeModal('password-reset-modal'); } });
 window.addEventListener('hashchange', () => switchView(location.hash.replace('#',''), false));
 
 bootDashboard();

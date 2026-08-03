@@ -16,6 +16,7 @@ import healthRoutes from './routes/health.js';
 import downloadsRoutes, { redirectLatestMacArm64, redirectLatestMacX64, redirectLatestWindows } from './routes/downloads.js';
 import leaderboardRoutes from './routes/leaderboard.js';
 import telemetryRoutes from './routes/telemetry.js';
+import messageRoutes from './routes/messages.js';
 import { ensureAdminUser } from './services/authService.js';
 import { ensureAllUserPublicIds } from './services/profileService.js';
 import { refreshLeaderboards } from './services/leaderboardService.js';
@@ -61,6 +62,7 @@ app.use('/api/game', gameRoutes);
 app.use('/api/friends', friendsRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/telemetry', telemetryRoutes);
+app.use('/api/messages', messageRoutes);
 app.use('/api/admin', adminRoutes);
 
 app.use('/updates', express.static(env.updatesDir, { setHeaders: setUpdateHeaders }));

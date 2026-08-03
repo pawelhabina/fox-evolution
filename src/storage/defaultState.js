@@ -1,9 +1,11 @@
 import { GAME_VERSION } from '../game/constants';
+import { SAVE_DATA_VERSION } from '../game/progression.mjs';
 import { createQuestState } from '../game/quests';
 
 export function createInitialState(nowTs = Date.now()) {
   return {
     version: GAME_VERSION,
+    dataVersion: SAVE_DATA_VERSION,
     currencies: {
       coins: 120,
       gems: 0,
@@ -38,12 +40,36 @@ export function createInitialState(nowTs = Date.now()) {
       sfxMuted: false
     },
     stats: {
+      playTimeSeconds: 0,
       lifetimeCoinsEarned: 0,
+      lifetimeCoinsSpent: 0,
+      lifetimeCoinsFromClicks: 0,
+      lifetimeCoinsFromPassive: 0,
+      lifetimeCoinsFromSales: 0,
+      lifetimeCoinsFromInstantCash: 0,
+      lifetimeGemsEarned: 0,
+      lifetimeGemsSpent: 0,
+      lifetimeGemsFromDrops: 0,
+      lifetimeGemsFromQuests: 0,
+      lifetimeGemsFromLoginRewards: 0,
+      lifetimeRebirthTokensEarned: 0,
+      lifetimeRebirthTokensSpent: 0,
       lifetimeMerges: 0,
       lifetimeClicks: 0,
       lifetimeBuys: 0,
+      lifetimeSells: 0,
       lifetimeRebirths: 0,
       lifetimeGemDrops: 0,
+      lifetimeEvolutions: 0,
+      lifetimeUpgradesBought: 0,
+      lifetimeTemporaryBoostsBought: 0,
+      lifetimeInstantCashBuys: 0,
+      lifetimeDailyQuestsClaimed: 0,
+      lifetimeWeeklyQuestsClaimed: 0,
+      lifetimeLoginRewardsClaimed: 0,
+      highestTier: 0,
+      highestBaseTier: 0,
+      highestElementalTier: 0,
       daily: {
         merges: 0,
         clicks: 0,
@@ -60,9 +86,14 @@ export function createInitialState(nowTs = Date.now()) {
       }
     },
     quests: createQuestState(nowTs),
+    pokedex: {
+      discoveries: {}
+    },
     meta: {
       nextFoxId: 1,
-      gemDropCounter: 0
+      gemDropCounter: 0,
+      createdAt: new Date(nowTs).toISOString(),
+      lastPlayedAt: new Date(nowTs).toISOString()
     },
     arena: {
       width: 900,

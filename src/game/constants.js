@@ -1,4 +1,4 @@
-export const GAME_VERSION = '1.2.2';
+export const GAME_VERSION = '1.2.3';
 export const RELEASE_CHANNEL = 'EARLY ACCESS';
 export const BASE_TICK_SECONDS = 5;
 export const MIN_TICK_SECONDS = 1;
@@ -77,11 +77,13 @@ const TIER_NAMES = [
 
 const CLICK_VALUE_RATIO = 0.1125;
 
+let previousClickValue = 0;
 export const FOX_TIERS = TIER_NAMES.map((name, index) => {
   const tier = index + 1;
   const baseIncomePerTick = Math.max(1, Math.round(2 * 1.85 ** index));
-  const clickValue = Math.max(1, Math.round(baseIncomePerTick * CLICK_VALUE_RATIO));
+  const clickValue = Math.max(previousClickValue + 1, Math.round(baseIncomePerTick * CLICK_VALUE_RATIO));
   const sellValue = Math.max(1, Math.round(baseIncomePerTick * 6.5));
+  previousClickValue = clickValue;
   return {
     tier,
     name,
@@ -95,14 +97,16 @@ const EXTRA_EVOLUTION_TIERS = [];
 let previousIncome = FOX_TIERS[FOX_TIERS.length - 1].baseIncomePerTick;
 for (let tier = 16; tier <= 30; tier += 1) {
   const baseIncomePerTick = Math.max(1, Math.round(previousIncome * 1.75));
+  const clickValue = Math.max(previousClickValue + 1, Math.round(baseIncomePerTick * CLICK_VALUE_RATIO));
   EXTRA_EVOLUTION_TIERS.push({
     tier,
     name: `Elemental Fox Lv ${tier}`,
     baseIncomePerTick,
-    clickValue: Math.max(1, Math.round(baseIncomePerTick * CLICK_VALUE_RATIO)),
+    clickValue,
     sellValue: Math.max(1, Math.round(baseIncomePerTick * 6.5))
   });
   previousIncome = baseIncomePerTick;
+  previousClickValue = clickValue;
 }
 
 export const ALL_FOX_TIERS = [...FOX_TIERS, ...EXTRA_EVOLUTION_TIERS];
@@ -182,11 +186,11 @@ export const UPGRADE_DEFS = {
     id: 'foxLimit',
     title: 'Limit lisów',
     description: 'Zwiększa limit lisów na planszy o 1.',
-    shop: 'coins',
-    currency: 'coins',
+    shop: 'rebirth',
+    currency: 'rebirthTokens',
     cap: 45,
-    baseCost: 140,
-    growth: 1.28
+    baseCost: 1,
+    growth: 1.35
   },
   gemIncomeMultiplier: {
     id: 'gemIncomeMultiplier',

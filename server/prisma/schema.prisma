@@ -38,31 +38,39 @@ enum FriendshipStatus {
   ACCEPTED
 }
 
+enum AdminMessageAudience {
+  GLOBAL
+  USER
+}
+
 model User {
-  id                     String             @id @default(cuid())
-  publicId               String?            @unique
-  email                  String?            @unique
+  id                     String                 @id @default(cuid())
+  publicId               String?                @unique
+  email                  String?                @unique
   passwordHash           String?
+  sessionVersion         Int                    @default(0)
   displayName            String
   nicknameChangedAt      DateTime?
-  profileSetupRequired   Boolean            @default(false)
-  role                   UserRole           @default(USER)
-  isFlagged              Boolean            @default(false)
+  profileSetupRequired   Boolean                @default(false)
+  role                   UserRole               @default(USER)
+  isFlagged              Boolean                @default(false)
   flagReason             String?
-  createdAt              DateTime           @default(now())
-  updatedAt              DateTime           @updatedAt
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
   lastLoginAt            DateTime?
   oauthIdentities        OAuthIdentity[]
   saves                  GameSave[]
   refreshTokens          RefreshToken[]
-  flags                  CheatFlag[]        @relation("UserFlags")
-  adminCreatedFlags      CheatFlag[]        @relation("AdminCreatedFlags")
+  flags                  CheatFlag[]            @relation("UserFlags")
+  adminCreatedFlags      CheatFlag[]            @relation("AdminCreatedFlags")
   deviceLinks            UserDeviceLink[]
-  auditLogs              AuditLog[]         @relation("AdminAuditLogs")
+  auditLogs              AuditLog[]             @relation("AdminAuditLogs")
   leaderboardRows        LeaderboardEntry[]
   telemetryEvents        TelemetryEvent[]
-  sentFriendRequests     Friendship[]       @relation("FriendshipRequester")
-  receivedFriendRequests Friendship[]       @relation("FriendshipAddressee")
+  adminMessagesCreated   AdminMessage[]         @relation("AdminMessageAuthor")
+  adminMessageDeliveries AdminMessageDelivery[]
+  sentFriendRequests     Friendship[]           @relation("FriendshipRequester")
+  receivedFriendRequests Friendship[]           @relation("FriendshipAddressee")
 }
 
 model Friendship {
@@ -118,19 +126,20 @@ model OAuthIdentity {
 }
 
 model RefreshToken {
-  id            String        @id @default(cuid())
-  tokenHash     String        @unique
-  principalType PrincipalType
-  userId        String?
-  deviceId      String?
-  expiresAt     DateTime
-  revokedAt     DateTime?
-  replacedById  String?
-  ipAddress     String?
-  userAgent     String?
-  createdAt     DateTime      @default(now())
-  user          User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  device        Device?       @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  id             String        @id @default(cuid())
+  tokenHash      String        @unique
+  principalType  PrincipalType
+  sessionVersion Int           @default(0)
+  userId         String?
+  deviceId       String?
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  replacedById   String?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime      @default(now())
+  user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device         Device?       @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 }
 
 model GameSave {
@@ -220,4 +229,31 @@ model TelemetryEvent {
   @@index([eventType, createdAt])
   @@index([userId, createdAt])
   @@index([deviceId, createdAt])
+}
+
+model AdminMessage {
+  id               String                 @id @default(cuid())
+  audience         AdminMessageAudience
+  title            String
+  body             String                 @db.Text
+  createdByAdminId String
+  createdAt        DateTime               @default(now())
+  createdByAdmin   User                   @relation("AdminMessageAuthor", fields: [createdByAdminId], references: [id], onDelete: Cascade)
+  deliveries       AdminMessageDelivery[]
+
+  @@index([createdAt])
+  @@index([audience, createdAt])
+}
+
+model AdminMessageDelivery {
+  id        String       @id @default(cuid())
+  messageId String
+  userId    String
+  readAt    DateTime?
+  createdAt DateTime     @default(now())
+  message   AdminMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId, readAt, createdAt])
 }

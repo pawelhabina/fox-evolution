@@ -1,6 +1,6 @@
 {
   "name": "fox-evolution-v2",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Merge Fox Tycoon",
   "main": "electron/main.js",
   "scripts": {
@@ -26,6 +26,13 @@
     "artifactName": "Fox-Evolution-${version}-${arch}.${ext}",
     "files": [
       "dist/**/*",
+      "!dist/mac{,/**/*}",
+      "!dist/mac-arm64{,/**/*}",
+      "!dist/*.dmg",
+      "!dist/*.zip",
+      "!dist/*.blockmap",
+      "!dist/latest*.yml",
+      "!dist/builder-effective-config.yaml",
       "electron/**/*",
       "assets/app/fox-evolution-icon.png",
       "package.json",

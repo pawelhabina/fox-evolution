@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#060b16" />
     <title>Fox Evolution — Panel administracyjny</title>
     <link rel="icon" type="image/png" href="/assets/fox-evolution-icon.png" />
-    <link rel="stylesheet" href="/admin/style.css?v=2" />
+    <link rel="stylesheet" href="/admin/style.css?v=4" />
   </head>
   <body>
     <div class="ambient-grid" aria-hidden="true"></div>
@@ -41,6 +41,7 @@
         <nav class="side-nav" aria-label="Panel administracyjny">
           <button class="nav-item is-active" type="button" data-view="overview"><span class="nav-icon">⌂</span><span>Przegląd</span></button>
           <button class="nav-item" type="button" data-view="users"><span class="nav-icon">♟</span><span>Gracze</span><b id="flagged-nav-count">0</b></button>
+          <button class="nav-item" type="button" data-view="messages"><span class="nav-icon">✉</span><span>Wiadomości</span></button>
           <button class="nav-item" type="button" data-view="telemetry"><span class="nav-icon">⌁</span><span>Telemetria</span></button>
           <button class="nav-item" type="button" data-view="audit"><span class="nav-icon">≡</span><span>Dziennik zmian</span></button>
         </nav>
@@ -80,7 +81,7 @@
           <section class="view" data-view-panel="users">
             <article class="surface">
               <div class="users-toolbar">
-                <div class="search-field"><span>⌕</span><input id="search" type="search" placeholder="Szukaj po nicku lub e-mailu…" /></div>
+                <div class="search-field"><span>⌕</span><input id="search" type="search" placeholder="Szukaj po nicku, e-mailu, ID lub UUID…" /></div>
                 <select id="user-filter" aria-label="Filtr graczy"><option value="all">Wszyscy gracze</option><option value="flagged">Tylko oznaczeni</option><option value="admins">Administratorzy</option></select>
                 <button id="search-btn" class="button button--primary" type="button">Szukaj</button>
               </div>
@@ -93,6 +94,24 @@
               </div>
               <footer class="pagination"><p id="users-range">0 wyników</p><div><button id="prev-page" class="icon-button" type="button">←</button><span id="page-label">1 / 1</span><button id="next-page" class="icon-button" type="button">→</button></div></footer>
             </article>
+          </section>
+
+          <section class="view" data-view-panel="messages">
+            <div class="messages-grid">
+              <form id="message-form" class="surface message-composer">
+                <header class="surface-header"><div><p class="eyebrow">// NOWA WIADOMOŚĆ</p><h2>Wyślij popup graczom</h2></div></header>
+                <label><span>Odbiorcy</span><select id="message-audience"><option value="GLOBAL">Wszystkie istniejące konta graczy</option><option value="USER">Wybrane konto</option></select></label>
+                <label id="message-user-field" class="hidden"><span>Pełne ID konta lub publiczne UUID</span><input id="message-user-id" maxlength="64" placeholder="ID albo UUID odbiorcy" /></label>
+                <label><span>Tytuł</span><input id="message-title" maxlength="80" placeholder="Krótki tytuł wiadomości" required /></label>
+                <label><span>Treść</span><textarea id="message-body" maxlength="2000" rows="8" placeholder="Treść jednorazowego popupu…" required></textarea></label>
+                <p id="message-form-info" class="form-message" role="status"></p>
+                <button id="message-submit" class="button button--primary" type="submit">Wyślij wiadomość</button>
+              </form>
+              <article class="surface message-history-surface">
+                <header class="surface-header"><div><p class="eyebrow">// DOSTARCZENIA</p><h2>Historia wiadomości</h2></div><button id="messages-refresh" class="text-button" type="button">Odśwież →</button></header>
+                <div id="messages-history" class="message-history loading-block"></div>
+              </article>
+            </div>
           </section>
 
           <section class="view" data-view-panel="telemetry">
@@ -140,7 +159,17 @@
       <form id="flag-form" class="modal modal--small"><header class="modal-header"><div><p class="eyebrow">// ANTY-CHEAT</p><h2 id="flag-modal-title">Oznacz gracza</h2></div><button class="icon-button" type="button" data-close-modal="flag-modal">×</button></header><p id="flag-user-label" class="modal-lead"></p><label><span>Powód oznaczenia</span><textarea id="flag-reason" maxlength="300" rows="4" placeholder="Opisz powód ręcznego oznaczenia…"></textarea></label><footer class="modal-actions"><span></span><button class="button button--secondary" type="button" data-close-modal="flag-modal">Anuluj</button><button class="button button--danger" type="submit">Oznacz gracza</button></footer></form>
     </div>
 
+    <div id="password-reset-modal" class="modal-layer hidden" role="dialog" aria-modal="true" aria-labelledby="password-reset-title">
+      <form id="password-reset-form" class="modal modal--small">
+        <header class="modal-header"><div><p class="eyebrow">// BEZPIECZEŃSTWO KONTA</p><h2 id="password-reset-title">Wygeneruj nowe hasło</h2></div><button class="icon-button" type="button" data-close-modal="password-reset-modal">×</button></header>
+        <div id="password-reset-confirm" class="password-reset-content"><p id="password-reset-user"></p><p>Dotychczasowe hasło przestanie działać, a wszystkie aktywne sesje gracza zostaną unieważnione.</p></div>
+        <div id="password-reset-result" class="password-reset-content hidden"><p>Nowe wygenerowane hasło zostanie pokazane tylko teraz. Skopiuj je przed zamknięciem okna.</p><div class="generated-password"><code id="generated-password"></code><button id="copy-generated-password" class="row-button" type="button">Kopiuj</button></div></div>
+        <p id="password-reset-message" class="form-message is-error" role="alert"></p>
+        <footer class="modal-actions"><span></span><button class="button button--secondary" type="button" data-close-modal="password-reset-modal">Zamknij</button><button id="password-reset-submit" class="button button--danger" type="submit">Wygeneruj i wyloguj gracza</button></footer>
+      </form>
+    </div>
+
     <div id="toast-region" class="toast-region" aria-live="polite"></div>
-    <script src="/admin/app.js?v=2"></script>
+    <script src="/admin/app.js?v=4"></script>
   </body>
 </html>

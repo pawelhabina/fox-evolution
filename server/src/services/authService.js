@@ -9,6 +9,7 @@ function createAccessPayloadForUser(user) {
   return {
     pt: 'USER',
     uid: user.id,
+    sv: user.sessionVersion || 0,
     role: user.role,
     flagged: Boolean(user.isFlagged)
   };
@@ -29,13 +30,14 @@ function refreshExpiresAt() {
   return date;
 }
 
-async function createRefreshTokenRecord({ principalType, userId, deviceId, ipAddress, userAgent }) {
+async function createRefreshTokenRecord({ principalType, userId, deviceId, sessionVersion = 0, ipAddress, userAgent }) {
   const refreshToken = generateRefreshToken();
   const tokenHash = hashToken(refreshToken);
 
   await prisma.refreshToken.create({
     data: {
       principalType,
+      sessionVersion,
       userId,
       deviceId,
       tokenHash,
@@ -54,6 +56,7 @@ async function issueUserSession(user, context = {}) {
   const refreshToken = await createRefreshTokenRecord({
     principalType: 'USER',
     userId: profiledUser.id,
+    sessionVersion: profiledUser.sessionVersion || 0,
     ipAddress: context.ipAddress,
     userAgent: context.userAgent
   });
@@ -70,6 +73,7 @@ async function issueDeviceSession(device, context = {}) {
   const refreshToken = await createRefreshTokenRecord({
     principalType: 'DEVICE',
     deviceId: device.id,
+    sessionVersion: 0,
     ipAddress: context.ipAddress,
     userAgent: context.userAgent
   });
@@ -235,7 +239,7 @@ export async function refreshSession({ refreshToken, context = {} }) {
   let nextSession;
   if (record.principalType === 'USER' && record.userId) {
     const user = await prisma.user.findUnique({ where: { id: record.userId } });
-    if (!user) {
+    if (!user || record.sessionVersion !== (user.sessionVersion || 0)) {
       throw new Error('INVALID_REFRESH_TOKEN');
     }
     nextSession = await issueUserSession(user, context);
@@ -271,7 +275,7 @@ export async function revokeRefreshToken(refreshToken) {
 export async function getPrincipalFromJwtPayload(payload) {
   if (payload.pt === 'USER' && payload.uid) {
     const user = await prisma.user.findUnique({ where: { id: payload.uid } });
-    if (!user) {
+    if (!user || Number(payload.sv || 0) !== (user.sessionVersion || 0)) {
       return null;
     }
     const profiledUser = await ensureUserProfile(user);

@@ -1,5 +1,7 @@
 import { FlagSource, PrincipalType } from '@prisma/client';
 import { prisma } from '../db.js';
+import { hashPassword } from '../utils/crypto.js';
+import { generateTemporaryPassword } from '../utils/password.js';
 import { serializeSave } from './saveService.js';
 
 export async function getAdminOverview() {
@@ -35,7 +37,7 @@ export async function listUsers({ page = 1, pageSize = 20, search = '', filter =
 
   const filters = [];
   if (query) {
-    filters.push({ OR: [{ email: { contains: query } }, { displayName: { contains: query } }] });
+    filters.push({ OR: [{ id: { contains: query } }, { publicId: { contains: query } }, { email: { contains: query } }, { displayName: { contains: query } }] });
   }
   if (filter === 'flagged') {
     filters.push({ isFlagged: true });
@@ -54,6 +56,7 @@ export async function listUsers({ page = 1, pageSize = 20, search = '', filter =
       take: normalizedPageSize,
       select: {
         id: true,
+        publicId: true,
         email: true,
         displayName: true,
         role: true,
@@ -108,6 +111,7 @@ export async function getUserDetails(userId) {
 
   return {
     id: user.id,
+    publicId: user.publicId,
     email: user.email,
     displayName: user.displayName,
     role: user.role,
@@ -125,6 +129,51 @@ export async function getUserDetails(userId) {
       createdAt: link.device.createdAt
     }))
   };
+}
+
+export async function resetUserPassword({ adminUserId, userId }) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true }
+  });
+  if (!user) {
+    throw new Error('USER_NOT_FOUND');
+  }
+  if (user.id === adminUserId) {
+    throw new Error('CANNOT_RESET_OWN_PASSWORD');
+  }
+  if (!user.email) {
+    throw new Error('PASSWORD_LOGIN_UNAVAILABLE');
+  }
+
+  const temporaryPassword = generateTemporaryPassword();
+  const passwordHash = await hashPassword(temporaryPassword);
+
+  const revokedSessions = await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash,
+        sessionVersion: { increment: 1 }
+      }
+    });
+    const revoked = await tx.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() }
+    });
+    await tx.auditLog.create({
+      data: {
+        adminUserId,
+        action: 'ADMIN_RESET_USER_PASSWORD',
+        targetType: 'User',
+        targetId: userId,
+        details: { revokedSessions: revoked.count }
+      }
+    });
+    return revoked.count;
+  });
+
+  return { temporaryPassword, revokedSessions };
 }
 
 export async function setUserFlag({ adminUserId, userId, flagged, reason }) {

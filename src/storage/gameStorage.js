@@ -1,8 +1,10 @@
 import { clamp, clampCurrency, clampFoxPosition } from '../game/economy';
 import { MAX_FOXES_LIMIT, MAX_TIER } from '../game/constants';
 import { createInitialState } from './defaultState';
+import { SAVE_DATA_VERSION, sanitizePokedex } from '../game/progression.mjs';
 import {
   apiRequest,
+  acknowledgeAdminMessage,
   acceptFriendRequest,
   completeOAuthLogin,
   consumeOAuthTokensFromUrl,
@@ -10,6 +12,7 @@ import {
   fetchFriends,
   fetchMe,
   fetchLeaderboard,
+  fetchPendingAdminMessage,
   getCurrentPrincipal,
   isRemoteApiEnabled,
   loginAccount,
@@ -34,6 +37,11 @@ function toUiNumber(value) {
     return 0;
   }
   return clampCurrency(num);
+}
+
+function sanitizeIsoTimestamp(value, fallback) {
+  const parsed = typeof value === 'string' ? new Date(value).getTime() : NaN;
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : fallback;
 }
 
 function getUiVersionFallback() {
@@ -176,13 +184,19 @@ function sanitizeState(rawState, nowTs = Date.now()) {
 
   const daily = rawState.stats?.daily || {};
   const weekly = rawState.stats?.weekly || {};
+  const lifetimeStats = Object.fromEntries(
+    Object.entries(base.stats)
+      .filter(([key, value]) => key !== 'daily' && key !== 'weekly' && typeof value === 'number')
+      .map(([key, fallback]) => [key, clampCurrency(rawState.stats?.[key] ?? fallback)])
+  );
+  const currentHighestTier = foxes.reduce((max, fox) => Math.max(max, fox.tier), 0);
+  const currentHighestBaseTier = foxes.reduce((max, fox) => fox.evolution ? max : Math.max(max, fox.tier), 0);
+  const currentHighestElementalTier = foxes.reduce((max, fox) => fox.evolution ? Math.max(max, fox.tier) : max, 0);
   const stats = {
-    lifetimeCoinsEarned: clampCurrency(rawState.stats?.lifetimeCoinsEarned ?? base.stats.lifetimeCoinsEarned),
-    lifetimeMerges: clampCurrency(rawState.stats?.lifetimeMerges ?? base.stats.lifetimeMerges),
-    lifetimeClicks: clampCurrency(rawState.stats?.lifetimeClicks ?? base.stats.lifetimeClicks),
-    lifetimeBuys: clampCurrency(rawState.stats?.lifetimeBuys ?? base.stats.lifetimeBuys),
-    lifetimeRebirths: clampCurrency(rawState.stats?.lifetimeRebirths ?? base.stats.lifetimeRebirths),
-    lifetimeGemDrops: clampCurrency(rawState.stats?.lifetimeGemDrops ?? base.stats.lifetimeGemDrops),
+    ...lifetimeStats,
+    highestTier: clamp(Math.max(lifetimeStats.highestTier, currentHighestTier), 0, MAX_TIER),
+    highestBaseTier: clamp(Math.max(lifetimeStats.highestBaseTier, currentHighestBaseTier), 0, 15),
+    highestElementalTier: clamp(Math.max(lifetimeStats.highestElementalTier, currentHighestElementalTier), 0, MAX_TIER),
     daily: {
       merges: clampCurrency(daily.merges ?? 0),
       clicks: clampCurrency(daily.clicks ?? 0),
@@ -245,6 +259,7 @@ function sanitizeState(rawState, nowTs = Date.now()) {
   return {
     ...base,
     version: rawState.version || base.version,
+    dataVersion: SAVE_DATA_VERSION,
     currencies,
     upgrades,
     temporaryBoosts,
@@ -260,13 +275,16 @@ function sanitizeState(rawState, nowTs = Date.now()) {
     },
     stats,
     quests,
+    pokedex: sanitizePokedex(rawState.pokedex, foxes, nowTs),
     meta: {
       nextFoxId: Math.max(
         base.meta.nextFoxId,
         clampCurrency(rawState.meta?.nextFoxId ?? base.meta.nextFoxId),
         foxes.reduce((max, fox) => Math.max(max, fox.id + 1), 1)
       ),
-      gemDropCounter: clampCurrency(rawState.meta?.gemDropCounter ?? base.meta.gemDropCounter)
+      gemDropCounter: clampCurrency(rawState.meta?.gemDropCounter ?? base.meta.gemDropCounter),
+      createdAt: sanitizeIsoTimestamp(rawState.meta?.createdAt, base.meta.createdAt),
+      lastPlayedAt: sanitizeIsoTimestamp(rawState.meta?.lastPlayedAt, base.meta.lastPlayedAt)
     },
     arena: {
       width: arenaWidth,
@@ -293,7 +311,7 @@ function getSlotStorageKey(slotId) {
 
 function buildLocalSummary(state) {
   const foxMaxTier = Array.isArray(state.foxes) ? state.foxes.reduce((max, fox) => Math.max(max, fox?.tier || 1), 1) : 1;
-  const highestTier = Math.max(foxMaxTier, Number(state.stats?.daily?.maxTier) || 1);
+  const highestTier = Math.max(foxMaxTier, Number(state.stats?.highestTier) || 0, Number(state.stats?.daily?.maxTier) || 1);
   return {
     coins: clampCurrency(state.currencies?.coins || 0),
     gems: clampCurrency(state.currencies?.gems || 0),
@@ -730,6 +748,21 @@ export async function fetchLeaderboardCategory(category, limit = 10) {
   }
 
   return fetchLeaderboard(category, limit);
+}
+
+export async function fetchGameAdminMessage() {
+  if (!isRemoteApiEnabled() || getCurrentPrincipal()?.type !== 'USER') {
+    return null;
+  }
+  return fetchPendingAdminMessage();
+}
+
+export async function acknowledgeGameAdminMessage(deliveryId) {
+  if (!isRemoteApiEnabled()) {
+    return false;
+  }
+  await acknowledgeAdminMessage(deliveryId);
+  return true;
 }
 
 export async function hydrateSessionFromOAuthRedirect() {

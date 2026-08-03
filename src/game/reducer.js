@@ -1,4 +1,5 @@
 import { createInitialState } from '../storage/defaultState';
+import { recordFoxDiscovery } from './progression.mjs';
 import {
   buildWaterBuffMap,
   clamp,
@@ -56,7 +57,8 @@ export const ACTIONS = {
   TOGGLE_SETTING: 'TOGGLE_SETTING',
   SET_VOLUME: 'SET_VOLUME',
   REBIRTH: 'REBIRTH',
-  HARD_RESET_STATE: 'HARD_RESET_STATE'
+  HARD_RESET_STATE: 'HARD_RESET_STATE',
+  RECORD_PLAY_TIME: 'RECORD_PLAY_TIME'
 };
 
 const TOGGLEABLE_SETTING_KEYS = new Set(['sound', 'animations', 'musicMuted', 'sfxMuted']);
@@ -100,7 +102,14 @@ function withNormalizedSettings(state) {
   };
 }
 
-function withCoinsGain(state, coins) {
+const COIN_SOURCE_STAT_KEYS = {
+  click: 'lifetimeCoinsFromClicks',
+  passive: 'lifetimeCoinsFromPassive',
+  sale: 'lifetimeCoinsFromSales',
+  instantCash: 'lifetimeCoinsFromInstantCash'
+};
+
+function withCoinsGain(state, coins, source = null) {
   const safeCoins = clampCurrency(coins);
   if (safeCoins <= 0) {
     return state;
@@ -115,6 +124,9 @@ function withCoinsGain(state, coins) {
     stats: {
       ...state.stats,
       lifetimeCoinsEarned: clampCurrency(state.stats.lifetimeCoinsEarned + safeCoins),
+      ...(COIN_SOURCE_STAT_KEYS[source]
+        ? { [COIN_SOURCE_STAT_KEYS[source]]: clampCurrency((state.stats[COIN_SOURCE_STAT_KEYS[source]] || 0) + safeCoins) }
+        : {}),
       daily: {
         ...state.stats.daily,
         coinsEarned: clampCurrency(state.stats.daily.coinsEarned + safeCoins)
@@ -123,6 +135,23 @@ function withCoinsGain(state, coins) {
         ...state.stats.weekly,
         coinsEarned: clampCurrency(state.stats.weekly.coinsEarned + safeCoins)
       }
+    }
+  };
+}
+
+function withFoxProgress(state, fox, nowTs) {
+  if (!fox) {
+    return state;
+  }
+  const isElemental = Boolean(fox.evolution);
+  return {
+    ...state,
+    pokedex: recordFoxDiscovery(state.pokedex, fox, nowTs),
+    stats: {
+      ...state.stats,
+      highestTier: Math.max(state.stats.highestTier || 0, fox.tier),
+      highestBaseTier: isElemental ? state.stats.highestBaseTier || 0 : Math.max(state.stats.highestBaseTier || 0, fox.tier),
+      highestElementalTier: isElemental ? Math.max(state.stats.highestElementalTier || 0, fox.tier) : state.stats.highestElementalTier || 0
     }
   };
 }
@@ -199,6 +228,24 @@ export function gameReducer(state, action) {
     case ACTIONS.CHECK_RESETS:
       return next;
 
+    case ACTIONS.RECORD_PLAY_TIME: {
+      const seconds = clampCurrency(action.seconds || 0);
+      if (seconds <= 0) {
+        return next;
+      }
+      return {
+        ...next,
+        stats: {
+          ...next.stats,
+          playTimeSeconds: clampCurrency((next.stats.playTimeSeconds || 0) + seconds)
+        },
+        meta: {
+          ...next.meta,
+          lastPlayedAt: new Date(nowTs).toISOString()
+        }
+      };
+    }
+
     case ACTIONS.SET_ARENA_SIZE: {
       const width = Math.max(320, Math.floor(action.width || next.arena.width));
       const height = Math.max(240, Math.floor(action.height || next.arena.height));
@@ -246,6 +293,7 @@ export function gameReducer(state, action) {
         },
         stats: {
           ...next.stats,
+          lifetimeCoinsSpent: clampCurrency((next.stats.lifetimeCoinsSpent || 0) + cost),
           lifetimeBuys: clampCurrency(next.stats.lifetimeBuys + 1),
           daily: {
             ...next.stats.daily,
@@ -260,7 +308,7 @@ export function gameReducer(state, action) {
         }
       };
 
-      return refreshQuestProgress(updated);
+      return refreshQuestProgress(withFoxProgress(updated, newFox, nowTs));
     }
 
     case ACTIONS.MOVE_FOX: {
@@ -341,7 +389,8 @@ export function gameReducer(state, action) {
         }
       };
 
-      return refreshQuestProgress(updated);
+      const mergedFox = mergedFoxes.find((fox) => fox.id === target.id);
+      return refreshQuestProgress(withFoxProgress(updated, mergedFox, nowTs));
     }
 
     case ACTIONS.CLICK_FOX: {
@@ -350,7 +399,7 @@ export function gameReducer(state, action) {
         return next;
       }
       const gain = getFoxClickValue(fox, next, nowTs);
-      const clicked = withCoinsGain(next, gain);
+      const clicked = withCoinsGain(next, gain, 'click');
       const updated = {
         ...clicked,
         stats: {
@@ -377,9 +426,13 @@ export function gameReducer(state, action) {
       const gain = getFoxSellValue(fox, next, nowTs);
       const withoutFox = {
         ...next,
-        foxes: next.foxes.filter((item) => item.id !== action.id)
+        foxes: next.foxes.filter((item) => item.id !== action.id),
+        stats: {
+          ...next.stats,
+          lifetimeSells: clampCurrency((next.stats.lifetimeSells || 0) + 1)
+        }
       };
-      return withCoinsGain(withoutFox, gain);
+      return withCoinsGain(withoutFox, gain, 'sale');
     }
 
     case ACTIONS.EVOLVE_FOX: {
@@ -396,7 +449,7 @@ export function gameReducer(state, action) {
         return next;
       }
 
-      return {
+      const evolved = {
         ...next,
         currencies: {
           ...next.currencies,
@@ -413,8 +466,14 @@ export function gameReducer(state, action) {
             ...fox,
             evolution: evo.id
           };
-        })
+        }),
+        stats: {
+          ...next.stats,
+          lifetimeGemsSpent: clampCurrency((next.stats.lifetimeGemsSpent || 0) + EVOLUTION_COST_GEMS),
+          lifetimeEvolutions: clampCurrency((next.stats.lifetimeEvolutions || 0) + 1)
+        }
       };
+      return withFoxProgress(evolved, evolved.foxes.find((fox) => fox.id === action.id), nowTs);
     }
 
     case ACTIONS.BUY_UPGRADE: {
@@ -441,6 +500,13 @@ export function gameReducer(state, action) {
         upgrades: {
           ...next.upgrades,
           [action.upgradeId]: currentLevel + 1
+        },
+        stats: {
+          ...next.stats,
+          lifetimeCoinsSpent: clampCurrency((next.stats.lifetimeCoinsSpent || 0) + (config.currency === 'coins' ? cost : 0)),
+          lifetimeGemsSpent: clampCurrency((next.stats.lifetimeGemsSpent || 0) + (config.currency === 'gems' ? cost : 0)),
+          lifetimeRebirthTokensSpent: clampCurrency((next.stats.lifetimeRebirthTokensSpent || 0) + (config.currency === 'rebirthTokens' ? cost : 0)),
+          lifetimeUpgradesBought: clampCurrency((next.stats.lifetimeUpgradesBought || 0) + 1)
         }
       };
     }
@@ -468,6 +534,11 @@ export function gameReducer(state, action) {
         temporaryBoosts: {
           ...normalizeTemporaryBoosts(next.temporaryBoosts),
           [boost.id]: nextUntil
+        },
+        stats: {
+          ...next.stats,
+          lifetimeGemsSpent: clampCurrency((next.stats.lifetimeGemsSpent || 0) + duration.cost),
+          lifetimeTemporaryBoostsBought: clampCurrency((next.stats.lifetimeTemporaryBoostsBought || 0) + 1)
         }
       };
     }
@@ -492,10 +563,15 @@ export function gameReducer(state, action) {
         currencies: {
           ...next.currencies,
           gems: clampCurrency(next.currencies.gems - duration.cost)
+        },
+        stats: {
+          ...next.stats,
+          lifetimeGemsSpent: clampCurrency((next.stats.lifetimeGemsSpent || 0) + duration.cost),
+          lifetimeInstantCashBuys: clampCurrency((next.stats.lifetimeInstantCashBuys || 0) + 1)
         }
       };
 
-      return refreshQuestProgress(withCoinsGain(withSpentGems, instantCoins));
+      return refreshQuestProgress(withCoinsGain(withSpentGems, instantCoins, 'instantCash'));
     }
 
     case ACTIONS.APPLY_TICK: {
@@ -517,7 +593,7 @@ export function gameReducer(state, action) {
         coinsGained += getFoxIncomePerTickCached(fox, next, waterBuffMap, nowTs);
       });
 
-      let updated = withCoinsGain(next, coinsGained);
+      let updated = withCoinsGain(next, coinsGained, 'passive');
       updated = {
         ...updated,
         currencies: {
@@ -530,7 +606,9 @@ export function gameReducer(state, action) {
         },
         stats: {
           ...updated.stats,
-          lifetimeGemDrops: clampCurrency(updated.stats.lifetimeGemDrops + gemDropHits)
+          lifetimeGemDrops: clampCurrency(updated.stats.lifetimeGemDrops + gemDropHits),
+          lifetimeGemsEarned: clampCurrency((updated.stats.lifetimeGemsEarned || 0) + gemsGained),
+          lifetimeGemsFromDrops: clampCurrency((updated.stats.lifetimeGemsFromDrops || 0) + gemsGained)
         }
       };
 
@@ -603,9 +681,16 @@ export function gameReducer(state, action) {
         temporaryBoosts: normalizeTemporaryBoosts(next.temporaryBoosts),
         stats: {
           ...next.stats,
-          lifetimeRebirths: clampCurrency(next.stats.lifetimeRebirths + 1)
+          lifetimeRebirths: clampCurrency(next.stats.lifetimeRebirths + 1),
+          lifetimeRebirthTokensEarned: clampCurrency((next.stats.lifetimeRebirthTokensEarned || 0) + earned)
         },
         quests: next.quests,
+        pokedex: next.pokedex,
+        meta: {
+          ...fresh.meta,
+          createdAt: next.meta.createdAt,
+          lastPlayedAt: new Date(nowTs).toISOString()
+        },
         arena: next.arena
       };
 

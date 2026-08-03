@@ -4,7 +4,7 @@ import { formatNumber } from '../game/format';
 import AudioVolumeControl from './AudioVolumeControl';
 import GuiIcon from './GuiIcon';
 
-function RootMenu({ onContinue, onNew, onOpenLoad, onOpenRanking, onOpenSettings, onOpenProfile, onOpenFriends, onExit, hasSaves, isRemoteEnabled, principal, gameVersion }) {
+function RootMenu({ onContinue, onNew, onOpenLoad, onOpenRanking, onOpenSettings, onOpenHelp, onOpenProfile, onOpenFriends, onExit, hasSaves, isRemoteEnabled, principal, gameVersion }) {
   const isUser = principal?.type === 'USER';
 
   return (
@@ -68,6 +68,10 @@ function RootMenu({ onContinue, onNew, onOpenLoad, onOpenRanking, onOpenSettings
             <GuiIcon name="settings" alt="Ustawienia" size={20} />
             Ustawienia
           </button>
+          <button type="button" className="shop-tab main-menu-square-action" onClick={onOpenHelp}>
+            <GuiIcon name="quest" alt="" size={20} />
+            Pomocne informacje
+          </button>
         </div>
 
         <button type="button" className="main-menu-exit" onClick={onExit}>
@@ -79,7 +83,7 @@ function RootMenu({ onContinue, onNew, onOpenLoad, onOpenRanking, onOpenSettings
   );
 }
 
-function LoadMenu({ slots, onLoad, onNew, onDelete, onBack }) {
+function LoadMenu({ slots, onLoad, onNew, onDelete, onStats, onBack }) {
   return (
     <div className="panel mx-auto w-full max-w-3xl p-6">
       <div className="mb-4 flex items-center justify-between">
@@ -119,6 +123,14 @@ function LoadMenu({ slots, onLoad, onNew, onDelete, onBack }) {
                 </p>
               </div>
               <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="flex items-center gap-1 rounded-lg bg-cyan-700/80 px-3 py-1 text-xs font-bold"
+                  onClick={() => onStats(slot)}
+                >
+                  <GuiIcon name="trophy" alt="" size={14} />
+                  Statystyki
+                </button>
                 <button
                   type="button"
                   className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold"
@@ -661,6 +673,7 @@ export default function MainMenu({
   onOpenLoad,
   onOpenRanking,
   onOpenSettings,
+  onOpenHelp,
   onOpenProfile,
   onOpenFriends,
   onExit,
@@ -668,6 +681,7 @@ export default function MainMenu({
   onLoad,
   onNew,
   onDelete,
+  onOpenStats,
   onToggleSettings,
   onSetSettingsVolume,
   isRemoteEnabled,
@@ -689,7 +703,7 @@ export default function MainMenu({
   gameVersion
 }) {
   if (view === 'load') {
-    return <LoadMenu slots={meta.slots} onLoad={onLoad} onNew={onNew} onDelete={onDelete} onBack={onBack} />;
+    return <LoadMenu slots={meta.slots} onLoad={onLoad} onNew={onNew} onDelete={onDelete} onStats={onOpenStats} onBack={onBack} />;
   }
   if (view === 'ranking') {
     return (
@@ -735,6 +749,7 @@ export default function MainMenu({
       onOpenLoad={onOpenLoad}
       onOpenRanking={onOpenRanking}
       onOpenSettings={onOpenSettings}
+      onOpenHelp={onOpenHelp}
       onOpenProfile={onOpenProfile}
       onOpenFriends={onOpenFriends}
       onExit={onExit}

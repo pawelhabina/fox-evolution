@@ -54,13 +54,13 @@ test('main menu uses the official game icon instead of the paw glyph', () => {
   assert.doesNotMatch(mainMenu, /<GuiIcon name="pet" alt="" size=\{64\} \/>/);
 });
 
-test('version 1.2.2 is visibly marked as Early Access', () => {
+test('version 1.2.3 is visibly marked as Early Access', () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
   const constants = fs.readFileSync(path.join(projectRoot, 'src/game/constants.js'), 'utf8');
   const mainMenu = fs.readFileSync(path.join(projectRoot, 'src/components/MainMenu.jsx'), 'utf8');
 
-  assert.equal(packageJson.version, '1.2.2');
-  assert.match(constants, /GAME_VERSION = '1\.2\.2'/);
+  assert.equal(packageJson.version, '1.2.3');
+  assert.match(constants, /GAME_VERSION = '1\.2\.3'/);
   assert.match(constants, /RELEASE_CHANNEL = 'EARLY ACCESS'/);
   assert.match(mainMenu, /EARLY ACCESS/);
   assert.match(mainMenu, /Wczesna wersja gry/);
@@ -68,11 +68,16 @@ test('version 1.2.2 is visibly marked as Early Access', () => {
 
 test('production deployment publishes Windows and macOS update artifacts', () => {
   const deployScript = fs.readFileSync(path.join(projectRoot, 'scripts/deploy-s1.mjs'), 'utf8');
+  const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
 
   for (const include of ['*.exe', '*.zip', '*.dmg', 'latest.yml', 'latest-mac.yml']) {
     assert.match(deployScript, new RegExp(`--include=${include.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
   }
   assert.match(deployScript, /\[ ! -f \$\{targetUpdates\}\/latest\.yml \] && \[ ! -f \$\{targetUpdates\}\/latest-mac\.yml \]/);
+  assert.ok(packageJson.build.files.includes('!dist/*.dmg'));
+  assert.ok(packageJson.build.files.includes('!dist/*.zip'));
+  assert.ok(packageJson.build.files.includes('!dist/*.blockmap'));
+  assert.ok(packageJson.build.files.includes('!dist/mac{,/**/*}'));
 });
 
 test('GitHub releases are published as restartable Early Access prereleases', () => {

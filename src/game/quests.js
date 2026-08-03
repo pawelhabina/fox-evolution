@@ -305,6 +305,12 @@ export function claimDailyQuest(state, questId) {
       ...state.currencies,
       gems: state.currencies.gems + targetQuest.reward
     },
+    stats: {
+      ...state.stats,
+      lifetimeGemsEarned: (state.stats.lifetimeGemsEarned || 0) + targetQuest.reward,
+      lifetimeGemsFromQuests: (state.stats.lifetimeGemsFromQuests || 0) + targetQuest.reward,
+      lifetimeDailyQuestsClaimed: (state.stats.lifetimeDailyQuestsClaimed || 0) + 1
+    },
     quests: {
       ...state.quests,
       daily: state.quests.daily.map((quest) => {
@@ -331,6 +337,12 @@ export function claimWeeklyQuest(state, questId) {
     currencies: {
       ...state.currencies,
       gems: state.currencies.gems + targetQuest.reward
+    },
+    stats: {
+      ...state.stats,
+      lifetimeGemsEarned: (state.stats.lifetimeGemsEarned || 0) + targetQuest.reward,
+      lifetimeGemsFromQuests: (state.stats.lifetimeGemsFromQuests || 0) + targetQuest.reward,
+      lifetimeWeeklyQuestsClaimed: (state.stats.lifetimeWeeklyQuestsClaimed || 0) + 1
     },
     quests: {
       ...state.quests,
@@ -404,6 +416,12 @@ export function claimLoginReward(state) {
     currencies: {
       ...state.currencies,
       gems: state.currencies.gems + info.amount
+    },
+    stats: {
+      ...state.stats,
+      lifetimeGemsEarned: (state.stats.lifetimeGemsEarned || 0) + info.amount,
+      lifetimeGemsFromLoginRewards: (state.stats.lifetimeGemsFromLoginRewards || 0) + info.amount,
+      lifetimeLoginRewardsClaimed: (state.stats.lifetimeLoginRewardsClaimed || 0) + 1
     },
     quests: {
       ...state.quests,

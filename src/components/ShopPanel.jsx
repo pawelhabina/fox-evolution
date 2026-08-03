@@ -64,7 +64,7 @@ function getCurrentUpgradeValue(state, upgradeId) {
     case 'clickBonus':
       return `Aktualny mnoznik klikniec: ${formatCompact(getClickMultiplier(state), 2)}x`;
     case 'foxLimit':
-      return `Sloty z coinów: ${state.upgrades.foxLimit || 0} | Limit łącznie: ${getFoxLimit(state)}`;
+      return `Sloty z rebirthów: ${state.upgrades.foxLimit || 0}/45 | Limit łącznie: ${getFoxLimit(state)}`;
     case 'gemIncomeMultiplier':
       return `Aktualny mnożnik zarobków: ${formatCompact(getGemIncomeMultiplier(state), 1)}x`;
     case 'gemFoxLimit':

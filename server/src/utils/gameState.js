@@ -10,7 +10,10 @@ export function summarizeState(state) {
   const foxMaxTier = Array.isArray(state?.foxes)
     ? state.foxes.reduce((maxTier, fox) => Math.max(maxTier, clampInt(fox?.tier, 1, MAX_TOP_TIER, 1)), 1)
     : 1;
-  const statsTier = clampInt(state?.stats?.daily?.maxTier, 1, MAX_TOP_TIER, 1);
+  const statsTier = Math.max(
+    clampInt(state?.stats?.daily?.maxTier, 1, MAX_TOP_TIER, 1),
+    clampInt(state?.stats?.highestTier, 0, MAX_TOP_TIER, 0)
+  );
   const topTier = Math.max(foxMaxTier, statsTier);
 
   return {

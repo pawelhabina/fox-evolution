@@ -20,15 +20,20 @@ test('public site contains the complete download journey and required assets', (
   assert.match(html, /id="gra"/);
   assert.match(html, /id="ewolucja"/);
   assert.match(html, /id="funkcje"/);
+  assert.match(html, /id="poradnik"/);
   assert.match(html, /id="faq"/);
+  assert.match(html, /href="#poradnik">Poradnik/);
+  assert.equal((html.match(/class="guide-card(?: |")/g) || []).length, 6);
+  assert.match(html, /twardy reset usuwa postęp aktualnego save/i);
+  assert.match(html, /Pokédex zapisuje pierwsze odkrycie/);
   assert.match(html, /data-merge-stage/);
   assert.equal((html.match(/data-merge-fox/g) || []).length, 2);
   assert.equal((html.match(/data-evolution-node/g) || []).length, 4);
   assert.equal((html.match(/data-tilt/g) || []).length, 3);
   assert.match(html, /data-scroll-progress/);
   assert.match(html, /data-motion-toggle/);
-  assert.match(html, /site\.css\?v=1\.2\.2/);
-  assert.match(html, /site\.js\?v=1\.2\.2/);
+  assert.match(html, /site\.css\?v=1\.2\.3/);
+  assert.match(html, /site\.js\?v=1\.2\.3/);
 
   assert.match(script, /completeMergeDemo/);
   assert.match(script, /startAutomaticMergeDemo/);
@@ -38,6 +43,7 @@ test('public site contains the complete download journey and required assets', (
   assert.match(script, /--scroll-progress/);
   assert.match(script, /motion-enabled/);
   assert.match(css, /@keyframes particle-burst/);
+  assert.match(css, /\.guide-grid/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 
   assert.ok(fs.existsSync(path.join(siteDir, 'og.png')), 'missing social preview image');
