@@ -36,6 +36,14 @@ import {
   UPGRADE_DEFS
 } from './constants';
 import { claimDailyQuest, claimLoginReward, claimWeeklyQuest, ensureTemporalResets, refreshQuestProgress } from './quests';
+import {
+  ELEMENTAL_BOSS_DAMAGE,
+  ELEMENTAL_BOSS_MAX_HP,
+  ELEMENTAL_BOSS_REWARD_GEMS,
+  ELEMENTAL_TEAM_MAX_HP,
+  canChallengeElementalBoss,
+  getElementalTeamAttackPower
+} from './bossBattle';
 
 export const ACTIONS = {
   INIT_FROM_SAVE: 'INIT_FROM_SAVE',
@@ -47,6 +55,9 @@ export const ACTIONS = {
   CLICK_FOX: 'CLICK_FOX',
   SELL_FOX: 'SELL_FOX',
   EVOLVE_FOX: 'EVOLVE_FOX',
+  START_BOSS_BATTLE: 'START_BOSS_BATTLE',
+  ATTACK_BOSS: 'ATTACK_BOSS',
+  LEAVE_BOSS_BATTLE: 'LEAVE_BOSS_BATTLE',
   BUY_UPGRADE: 'BUY_UPGRADE',
   BUY_TEMP_BOOST: 'BUY_TEMP_BOOST',
   BUY_INSTANT_CASH: 'BUY_INSTANT_CASH',
@@ -476,6 +487,91 @@ export function gameReducer(state, action) {
       return withFoxProgress(evolved, evolved.foxes.find((fox) => fox.id === action.id), nowTs);
     }
 
+    case ACTIONS.START_BOSS_BATTLE: {
+      if (!canChallengeElementalBoss(next)) {
+        return next;
+      }
+      return {
+        ...next,
+        bossBattle: {
+          ...next.bossBattle,
+          status: 'battle',
+          bossHp: ELEMENTAL_BOSS_MAX_HP,
+          teamHp: ELEMENTAL_TEAM_MAX_HP,
+          attacks: 0,
+          lastDamage: 0,
+          critical: false
+        }
+      };
+    }
+
+    case ACTIONS.ATTACK_BOSS: {
+      if (next.bossBattle?.status !== 'battle') {
+        return next;
+      }
+      const baseDamage = getElementalTeamAttackPower(next);
+      if (baseDamage <= 0) {
+        return next;
+      }
+
+      const critical = (action.roll ?? Math.random()) < 0.15;
+      const damage = baseDamage * (critical ? 2 : 1);
+      const bossHp = Math.max(0, next.bossBattle.bossHp - damage);
+      const attacks = (next.bossBattle.attacks || 0) + 1;
+
+      if (bossHp <= 0) {
+        return {
+          ...next,
+          currencies: {
+            ...next.currencies,
+            gems: clampCurrency(next.currencies.gems + ELEMENTAL_BOSS_REWARD_GEMS)
+          },
+          bossBattle: {
+            ...next.bossBattle,
+            status: 'victory',
+            defeated: true,
+            bossHp: 0,
+            attacks,
+            lastDamage: damage,
+            critical
+          },
+          stats: {
+            ...next.stats,
+            lifetimeBossVictories: clampCurrency((next.stats.lifetimeBossVictories || 0) + 1),
+            lifetimeGemsEarned: clampCurrency((next.stats.lifetimeGemsEarned || 0) + ELEMENTAL_BOSS_REWARD_GEMS)
+          }
+        };
+      }
+
+      const teamHp = Math.max(0, next.bossBattle.teamHp - ELEMENTAL_BOSS_DAMAGE);
+      return {
+        ...next,
+        bossBattle: {
+          ...next.bossBattle,
+          status: teamHp <= 0 ? 'defeat' : 'battle',
+          bossHp,
+          teamHp,
+          attacks,
+          lastDamage: damage,
+          critical
+        }
+      };
+    }
+
+    case ACTIONS.LEAVE_BOSS_BATTLE:
+      return {
+        ...next,
+        bossBattle: {
+          ...next.bossBattle,
+          status: 'idle',
+          bossHp: ELEMENTAL_BOSS_MAX_HP,
+          teamHp: ELEMENTAL_TEAM_MAX_HP,
+          attacks: 0,
+          lastDamage: 0,
+          critical: false
+        }
+      };
+
     case ACTIONS.BUY_UPGRADE: {
       const config = UPGRADE_DEFS[action.upgradeId];
       if (!config) {
@@ -686,6 +782,15 @@ export function gameReducer(state, action) {
         },
         quests: next.quests,
         pokedex: next.pokedex,
+        bossBattle: {
+          ...next.bossBattle,
+          status: 'idle',
+          bossHp: ELEMENTAL_BOSS_MAX_HP,
+          teamHp: ELEMENTAL_TEAM_MAX_HP,
+          attacks: 0,
+          lastDamage: 0,
+          critical: false
+        },
         meta: {
           ...fresh.meta,
           createdAt: next.meta.createdAt,

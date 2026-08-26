@@ -16,6 +16,7 @@ import tier15 from '../../assets/sprites/foxes/fox-tier-15.png';
 import fire from '../../assets/sprites/foxes/fox-element-fire.png';
 import electric from '../../assets/sprites/foxes/fox-element-electric.png';
 import water from '../../assets/sprites/foxes/fox-element-water.png';
+import elementalProgressionAtlas from '../../assets/sprites/foxes/fox-element-progression-atlas-v2.png';
 
 const TIER_SPRITES = [
   tier01,
@@ -48,4 +49,33 @@ export function getFoxSprite(tier, evolution) {
 
   const safeTier = Math.max(1, Math.min(TIER_SPRITES.length, Math.floor(Number(tier) || 1)));
   return TIER_SPRITES[safeTier - 1];
+}
+
+const ELEMENT_ATLAS_ROWS = {
+  fire: 0,
+  electric: 1,
+  water: 2
+};
+
+function getElementStage(tier) {
+  const safeTier = Math.max(15, Math.min(30, Math.floor(Number(tier) || 15)));
+  return Math.min(5, safeTier - 15);
+}
+
+export function getFoxSpritePresentation(tier, evolution) {
+  const row = ELEMENT_ATLAS_ROWS[evolution];
+  if (row === undefined) {
+    return { src: getFoxSprite(tier, evolution), style: null };
+  }
+
+  const column = getElementStage(tier);
+  return {
+    src: null,
+    style: {
+      backgroundImage: `url(${elementalProgressionAtlas})`,
+      backgroundPosition: `${column * 20}% ${row * 50}%`,
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: '600% 300%'
+    }
+  };
 }

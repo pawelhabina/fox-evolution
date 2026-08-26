@@ -3,6 +3,11 @@ import { MAX_FOXES_LIMIT, MAX_TIER } from '../game/constants';
 import { createInitialState } from './defaultState';
 import { SAVE_DATA_VERSION, sanitizePokedex } from '../game/progression.mjs';
 import {
+  ELEMENTAL_BOSS_MAX_HP,
+  ELEMENTAL_TEAM_MAX_HP,
+  createBossBattleState
+} from '../game/bossBattle';
+import {
   apiRequest,
   acknowledgeAdminMessage,
   acceptFriendRequest,
@@ -256,6 +261,22 @@ function sanitizeState(rawState, nowTs = Date.now()) {
     }
   };
 
+  const defaultBossBattle = createBossBattleState();
+  const bossStatus = ['idle', 'battle', 'victory', 'defeat'].includes(rawState.bossBattle?.status)
+    ? rawState.bossBattle.status
+    : defaultBossBattle.status;
+  const rawBossHp = Number(rawState.bossBattle?.bossHp);
+  const rawTeamHp = Number(rawState.bossBattle?.teamHp);
+  const bossBattle = {
+    status: bossStatus,
+    defeated: Boolean(rawState.bossBattle?.defeated),
+    bossHp: clamp(Number.isFinite(rawBossHp) ? rawBossHp : ELEMENTAL_BOSS_MAX_HP, 0, ELEMENTAL_BOSS_MAX_HP),
+    teamHp: clamp(Number.isFinite(rawTeamHp) ? rawTeamHp : ELEMENTAL_TEAM_MAX_HP, 0, ELEMENTAL_TEAM_MAX_HP),
+    attacks: clampCurrency(rawState.bossBattle?.attacks || 0),
+    lastDamage: clampCurrency(rawState.bossBattle?.lastDamage || 0),
+    critical: Boolean(rawState.bossBattle?.critical)
+  };
+
   return {
     ...base,
     version: rawState.version || base.version,
@@ -276,6 +297,7 @@ function sanitizeState(rawState, nowTs = Date.now()) {
     stats,
     quests,
     pokedex: sanitizePokedex(rawState.pokedex, foxes, nowTs),
+    bossBattle,
     meta: {
       nextFoxId: Math.max(
         base.meta.nextFoxId,

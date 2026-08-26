@@ -40,7 +40,7 @@ export default function FoxContextMenu({ menu, info, onClose, onSell, onEvolve }
       <div className="mt-3 grid gap-2">
         <button type="button" className="flex items-center justify-center gap-2 rounded-lg bg-rose-500/80 px-3 py-2 text-xs font-bold" onClick={onSell}>
           <GuiIcon name="foxSell" alt="Sell" />
-          Sell
+          Usuń / sprzedaj
         </button>
 
         {canEvolve && (

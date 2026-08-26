@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { ALL_FOX_TIERS, EVOLUTION_TYPES } from '../game/constants';
 import { formatNumber } from '../game/format';
 import { getAllFoxDiscoveryKeys, POKEDEX_ENTRY_COUNT } from '../game/progression.mjs';
-import { getFoxSprite } from '../assets/foxSprites';
+import { getFoxSpritePresentation } from '../assets/foxSprites';
 import GuiIcon from './GuiIcon';
 
 const FILTERS = [
@@ -34,7 +34,7 @@ function makeEntries(discoveries) {
       evolution,
       discoveredAt,
       name: evolutionData ? `${evolutionData.name} Lv ${tier}` : tierData.name,
-      sprite: getFoxSprite(tier, evolution),
+      sprite: getFoxSpritePresentation(tier, evolution),
       income: Math.floor(tierData.baseIncomePerTick * (evolutionData?.incomeMultiplier || 1)),
       click: Math.floor(tierData.clickValue * (evolutionData?.clickMultiplier || 1)),
       sell: tierData.sellValue
@@ -94,8 +94,20 @@ export default function PokedexModal({ pokedex, onClose }) {
               <article key={entry.key} className={`pokedex-card pokedex-card--${entry.kind} ${discovered ? 'is-discovered' : 'is-locked'}`}>
                 <div className="pokedex-card-number">#{String(entries.indexOf(entry) + 1).padStart(3, '0')}</div>
                 <div className="pokedex-sprite-wrap">
-                  <img src={entry.sprite} alt={discovered ? entry.name : ''} draggable={false} />
+                  {entry.sprite.src ? (
+                    <img src={entry.sprite.src} alt={discovered ? entry.name : ''} draggable={false} />
+                  ) : (
+                    <span
+                      className="pokedex-sprite-atlas"
+                      style={entry.sprite.style}
+                      role="img"
+                      aria-label={discovered ? entry.name : ''}
+                    />
+                  )}
                   {!discovered && <span className="pokedex-lock" aria-label="Nieodkryty">?</span>}
+                  {discovered && entry.evolution && entry.tier > 20 && (
+                    <span className={`pokedex-rare-level pokedex-rare-level--${entry.evolution}`}>◆ {entry.tier}</span>
+                  )}
                 </div>
                 <div className="pokedex-card-copy">
                   <small>Tier {entry.tier}</small>

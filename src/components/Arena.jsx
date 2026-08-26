@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { getTierData, getEvolutionData } from '../game/economy';
 import { MEGA_TIER } from '../game/constants';
 import { formatNumber } from '../game/format';
-import { getFoxSprite } from '../assets/foxSprites';
+import { getFoxSpritePresentation } from '../assets/foxSprites';
 import GuiIcon from './GuiIcon';
 
 const DEFAULT_MERGE_COLORS = ['#fbbf24', '#fb7185', '#22d3ee', '#a78bfa', '#f97316', '#f8fafc'];
@@ -52,7 +52,10 @@ export default function Arena({
   buyCost,
   canBuyFox,
   buyBlockedReason,
-  onBuyFox
+  onBuyFox,
+  canCombineElements,
+  bossDefeated,
+  onCombineElements
 }) {
   const arenaRef = useRef(null);
   const mergeEffectIdRef = useRef(0);
@@ -233,7 +236,7 @@ export default function Arena({
         )}
 
         {foxes.map((fox) => {
-          const sprite = getFoxSprite(fox.tier, fox.evolution);
+          const sprite = getFoxSpritePresentation(fox.tier, fox.evolution);
           const evolutionReady = fox.tier === MEGA_TIER && !fox.evolution;
           return (
             <button
@@ -266,11 +269,20 @@ export default function Arena({
               onContextMenu={(event) => onFoxContextMenu(event, fox.id)}
             >
               <div className="pointer-events-none relative flex h-full items-center justify-center">
-                <img className="fox-sprite" src={sprite} alt={foxLabel(fox)} draggable={false} />
+                {sprite.src ? (
+                  <img className="fox-sprite" src={sprite.src} alt={foxLabel(fox)} draggable={false} />
+                ) : (
+                  <span className="fox-sprite fox-sprite--atlas" style={sprite.style} role="img" aria-label={foxLabel(fox)} />
+                )}
                 {evolutionReady && (
                   <span className="fox-evolution-ready-marker" aria-hidden="true">
                     <span>◆</span>
                     EVO!
+                  </span>
+                )}
+                {fox.evolution && fox.tier > 20 && (
+                  <span className={`fox-rare-level-marker fox-rare-level-marker--${fox.evolution}`}>
+                    ◆ LV {fox.tier}
                   </span>
                 )}
               </div>
@@ -317,6 +329,19 @@ export default function Arena({
             +{formatNumber(effect.amount)}
           </span>
         ))}
+
+        {(canCombineElements || bossDefeated) && (
+          <div className="elemental-fusion-dock">
+            {canCombineElements ? (
+              <button type="button" className="elemental-fusion-btn" onClick={onCombineElements}>
+                <span className="elemental-fusion-orbs" aria-hidden="true"><i /><i /><i /></span>
+                <span><strong>Połącz żywioły</strong><small>Hydra czeka na wyzwanie</small></span>
+              </button>
+            ) : (
+              <div className="elemental-fusion-complete"><strong>HYDRA POKONANA</strong><small>Próba żywiołów ukończona</small></div>
+            )}
+          </div>
+        )}
 
         <div className="arena-buy-dock">
           <button

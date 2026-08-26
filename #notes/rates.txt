@@ -7,7 +7,7 @@ GENERAL
 - Base fox board limit: 5
 - Maximum fox board limit: 100
 - Base higher-tier purchase chance: 5%
-- Base gem drop rate per fox per tick: 1%
+- Base gem drop rate per fox per tick: 0.8%
 - Evolution cost: 2 gems
 
 BUY FOX
@@ -55,12 +55,6 @@ COIN UPGRADES
 - Max level: 40
 - Cost formula: 100 * 1.42^level
 
-5. Fox limit
-- Effect: +1 fox slot per level
-- Max level: 45
-- Cost formula: 140 * 1.28^level
-- Coin-based slots go from 5 to 50 total on their own
-
 GEM SHOP
 1. Income multiplier
 - Base value: 1.0x
@@ -76,7 +70,13 @@ GEM SHOP
 - Total global fox cap with all slot upgrades: 100
 
 REBIRTH SHOP
-1. Tick duration
+1. Fox limit
+- Effect: +1 fox slot per level
+- Max level: 45
+- Cost formula: floor(1 * 1.35^level), minimum 1
+- Rebirth slots go from 5 to 50 total on their own
+
+2. Tick duration
 - Effect: -0.1s tick duration per level
 - Base value: 5.0s
 - Minimum value: 1.0s
@@ -87,7 +87,7 @@ REBIRTH SHOP
   - each next level costs +10 more than previous
 - Max level: 40
 
-2. Higher-tier purchase chance
+3. Higher-tier purchase chance
 - Effect: +1% chance per level to buy a fox one tier higher
 - Base chance: 5%
 - Maximum total chance: 100%
@@ -95,9 +95,9 @@ REBIRTH SHOP
 - Cost level 1: 2 rebirth points
 - Cost growth: x2 every level
 
-3. Gem drop rate
+4. Gem drop rate
 - Effect: +0.2% gem drop rate per level
-- Base drop rate: 1%
+- Base drop rate: 0.8%
 - Maximum total drop rate: 25%
 - Upgrade max level: 120
 - Cost level 1: 2 rebirth points

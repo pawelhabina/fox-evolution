@@ -47,7 +47,7 @@ body {
 .electron-drag-region {
   position: fixed;
   top: 0;
-  right: 140px;
+  right: 0;
   left: 0;
   z-index: 1000;
   height: 28px;
@@ -66,6 +66,10 @@ body {
   height: 6px;
   transform: translateX(-50%);
   background: repeating-linear-gradient(90deg, #475569 0 4px, transparent 4px 8px);
+}
+
+.electron-shell .update-overlay {
+  top: 36px;
 }
 
 #root {
@@ -334,6 +338,20 @@ body {
   background: #1f1017;
   font-size: 0.68rem;
 }
+
+.main-menu-update-status {
+  min-height: 1rem;
+  margin: 0.1rem 0 0;
+  color: #94a3b8;
+  font-size: 0.58rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.main-menu-update-status--downloaded { color: #86efac; }
+.main-menu-update-status--downloading,
+.main-menu-update-status--checking { color: #7dd3fc; }
+.main-menu-update-status--error { color: #fda4af; }
 
 .account-panel {
   max-height: calc(100vh - 5rem);
@@ -814,6 +832,46 @@ body {
   transform: translateX(-50%);
 }
 
+.elemental-fusion-dock {
+  position: absolute;
+  top: clamp(0.7rem, 1.2vw, 1.1rem);
+  left: 50%;
+  z-index: 28;
+  transform: translateX(-50%);
+}
+
+.elemental-fusion-btn {
+  display: flex;
+  min-width: 230px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.8rem;
+  border: 2px solid #e2e8f0;
+  color: #f8fafc;
+  background: linear-gradient(90deg, #9a3412, #4338ca 50%, #0369a1);
+  box-shadow: inset 0 0 0 2px #020617, 4px 4px 0 #020617;
+  animation: elemental-fusion-pulse 1.4s steps(2, end) infinite;
+}
+
+.elemental-fusion-btn:hover { filter: brightness(1.18); }
+.elemental-fusion-btn strong, .elemental-fusion-btn small { display: block; }
+.elemental-fusion-btn strong { font-family: 'Press Start 2P', monospace; font-size: 0.62rem; }
+.elemental-fusion-btn small { margin-top: 0.3rem; color: #e2e8f0; font-size: 0.58rem; }
+.elemental-fusion-orbs { display: flex; gap: 3px; }
+.elemental-fusion-orbs i { width: 9px; height: 9px; border: 1px solid #fff; box-shadow: 0 0 8px currentColor; }
+.elemental-fusion-orbs i:nth-child(1) { color: #fb923c; background: #f97316; }
+.elemental-fusion-orbs i:nth-child(2) { color: #fde047; background: #fde047; }
+.elemental-fusion-orbs i:nth-child(3) { color: #38bdf8; background: #38bdf8; }
+.elemental-fusion-complete { padding: 0.45rem 0.75rem; border: 1px solid #22c55e; color: #bbf7d0; background: rgba(5, 46, 22, 0.9); box-shadow: 3px 3px 0 #020617; text-align: center; }
+.elemental-fusion-complete strong, .elemental-fusion-complete small { display: block; }
+.elemental-fusion-complete strong { font-family: 'Press Start 2P', monospace; font-size: 0.55rem; }
+.elemental-fusion-complete small { margin-top: 0.25rem; color: #86efac; font-size: 0.55rem; }
+
+@keyframes elemental-fusion-pulse {
+  50% { box-shadow: inset 0 0 0 2px #020617, 4px 4px 0 #020617, 0 0 18px rgba(125, 211, 252, 0.55); }
+}
+
 .buy-fox-btn {
   display: flex;
   min-width: clamp(170px, 14vw, 220px);
@@ -1099,6 +1157,11 @@ body {
   image-rendering: pixelated;
 }
 
+.fox-sprite--atlas {
+  display: block;
+  flex: 0 0 auto;
+}
+
 .fox-evolution-ready-marker {
   position: absolute;
   top: 0;
@@ -1122,6 +1185,27 @@ body {
   text-shadow: 1px 1px 0 #78350f;
   animation: fox-evolution-ready-bob 900ms steps(2, end) infinite;
 }
+
+.fox-rare-level-marker {
+  position: absolute;
+  right: -3px;
+  bottom: 1px;
+  z-index: 6;
+  padding: 2px 3px;
+  border: 1px solid currentColor;
+  color: #f8fafc;
+  background: rgba(2, 6, 23, 0.92);
+  box-shadow: 2px 2px 0 #020617;
+  font-family: 'Courier New', monospace;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.fox-rare-level-marker--fire { color: #fdba74; }
+.fox-rare-level-marker--electric { color: #fde047; }
+.fox-rare-level-marker--water { color: #7dd3fc; }
 
 .fox-evolution-ready-marker span {
   color: #22d3ee;
@@ -1420,6 +1504,8 @@ body {
   gap: 0.45rem;
   padding: 0.75rem 1.15rem;
   overflow-x: auto;
+  scrollbar-color: #0891b2 #020617;
+  scrollbar-width: thin;
 }
 
 .pokedex-filters button {
@@ -1446,7 +1532,18 @@ body {
   min-height: 0;
   padding: 0 1.15rem 1.15rem;
   overflow-y: auto;
+  scrollbar-color: #22d3ee #020617;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
 }
+
+.pokedex-grid::-webkit-scrollbar { width: 12px; }
+.pokedex-grid::-webkit-scrollbar-track { border-left: 1px solid #334155; background: #020617; }
+.pokedex-grid::-webkit-scrollbar-thumb { border: 3px solid #020617; background: linear-gradient(#22d3ee, #0891b2); box-shadow: inset 0 0 0 1px #67e8f9; }
+.pokedex-grid::-webkit-scrollbar-thumb:hover { background: linear-gradient(#67e8f9, #06b6d4); }
+.pokedex-filters::-webkit-scrollbar { height: 8px; }
+.pokedex-filters::-webkit-scrollbar-track { background: #020617; }
+.pokedex-filters::-webkit-scrollbar-thumb { border: 2px solid #020617; background: #0891b2; }
 
 .pokedex-card {
   position: relative;
@@ -1466,7 +1563,13 @@ body {
 .pokedex-card-number { position: absolute; top: 0.4rem; right: 0.5rem; color: #64748b; font-family: monospace; font-size: 0.62rem; font-weight: 900; }
 .pokedex-sprite-wrap { position: relative; display: grid; min-height: 100%; place-items: center; border-right: 1px solid #334155; background: rgba(2, 6, 23, 0.58); }
 .pokedex-sprite-wrap img { width: 72px; height: 72px; object-fit: contain; image-rendering: pixelated; }
-.pokedex-card.is-locked .pokedex-sprite-wrap img { filter: grayscale(1) brightness(0.12); opacity: 0.65; }
+.pokedex-sprite-atlas { display: block; width: 72px; height: 72px; image-rendering: pixelated; }
+.pokedex-rare-level { position: absolute; right: 4px; bottom: 4px; padding: 2px 3px; border: 1px solid currentColor; background: rgba(2, 6, 23, 0.9); font-size: 0.5rem; font-weight: 900; }
+.pokedex-rare-level--fire { color: #fdba74; }
+.pokedex-rare-level--electric { color: #fde047; }
+.pokedex-rare-level--water { color: #7dd3fc; }
+.pokedex-card.is-locked .pokedex-sprite-wrap img,
+.pokedex-card.is-locked .pokedex-sprite-atlas { filter: grayscale(1) brightness(0.12); opacity: 0.65; }
 .pokedex-lock { position: absolute; display: grid; width: 30px; height: 30px; place-items: center; border: 2px solid #64748b; color: #cbd5e1; background: #0f172a; font-family: 'Press Start 2P', monospace; font-size: 0.7rem; }
 .pokedex-card-copy { min-width: 0; padding: 1rem 0.7rem 0.65rem; }
 .pokedex-card-copy > small { color: #64748b; font-size: 0.58rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -1577,6 +1680,9 @@ body {
 
 .game-modal--evolution { width: min(100%, 620px); border-color: #f59e0b; }
 .game-modal--rebirth { border-color: #818cf8; text-align: center; }
+.game-modal--delete { border-color: #fb7185; text-align: center; }
+.game-modal--delete .game-modal-lead strong { color: #fbbf24; }
+.game-modal--boss { width: min(100%, 720px); border-color: #fbbf24; text-align: center; overflow: hidden; }
 
 .game-modal-icon {
   display: grid;
@@ -1591,6 +1697,7 @@ body {
 
 .game-modal-icon--evolution { border-color: #f59e0b; color: #fbbf24; }
 .game-modal-icon--rebirth { border-color: #818cf8; color: #c4b5fd; }
+.game-modal-icon--delete { border-color: #fb7185; color: #fda4af; }
 .game-modal-kicker { color: #22d3ee; font-family: 'Press Start 2P', 'Courier New', monospace; font-size: 0.58rem; letter-spacing: 0.12em; text-align: center; }
 .game-modal h3 { margin-top: 0.65rem; color: #f8fafc; font-family: 'Press Start 2P', 'Courier New', monospace; font-size: clamp(1rem, 2.5vw, 1.45rem); line-height: 1.45; text-align: center; }
 .game-modal-lead { max-width: 480px; margin: 0.7rem auto 0; color: #94a3b8; font-size: 0.82rem; line-height: 1.55; text-align: center; }
@@ -1647,10 +1754,36 @@ body {
 .game-modal-cancel, .game-modal-close { color: #cbd5e1; background: #1e293b; }
 .game-modal-confirm { border-color: #f59e0b; color: #fff7d6; background: #92400e; box-shadow: 3px 3px 0 #451a03; }
 .game-modal-confirm--rebirth { border-color: #818cf8; background: #4338ca; box-shadow: 3px 3px 0 #1e1b4b; }
+.game-modal-confirm--delete { border-color: #fb7185; background: #be123c; box-shadow: 3px 3px 0 #4c0519; }
 .evolution-confirm--fire { border-color: #f97316; background: #c2410c; }
 .evolution-confirm--electric { border-color: #c084fc; background: #7e22ce; }
 .evolution-confirm--water { border-color: #38bdf8; background: #0369a1; }
 .game-modal-close { width: 100%; margin-top: 0.8rem; }
+
+.boss-backdrop { background: radial-gradient(circle at 50% 38%, rgba(67, 56, 202, 0.3), rgba(2, 6, 23, 0.96) 56%); }
+.boss-stage { position: relative; display: grid; height: clamp(180px, 35vh, 310px); margin: 0.7rem auto 0.8rem; place-items: center; overflow: hidden; }
+.boss-stage img { position: relative; z-index: 2; width: min(78%, 330px); max-height: 100%; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 0 16px rgba(250, 204, 21, 0.38)); animation: boss-hover 1.2s steps(3, end) infinite; }
+.boss-stage.is-defeated img { transform: rotate(-4deg) translateY(22px); filter: grayscale(0.55) brightness(0.6); animation: none; }
+.boss-aura { position: absolute; z-index: 1; width: 58%; aspect-ratio: 1; border: 3px solid rgba(250, 204, 21, 0.28); transform: rotate(45deg); background: radial-gradient(circle, rgba(37, 99, 235, 0.22), transparent 68%); box-shadow: 0 0 40px rgba(249, 115, 22, 0.22); }
+.boss-damage { position: absolute; top: 14%; left: 61%; z-index: 4; color: #f8fafc; font-family: 'Press Start 2P', monospace; font-size: 0.7rem; text-shadow: 2px 2px 0 #7f1d1d; animation: boss-damage-pop 420ms steps(3, end) both; }
+.boss-damage.is-critical { color: #fde047; font-size: 0.8rem; }
+.boss-health { margin-top: 0.55rem; text-align: left; }
+.boss-health > div:first-child { display: flex; justify-content: space-between; color: #cbd5e1; font-family: 'Press Start 2P', monospace; font-size: 0.52rem; }
+.boss-health-track { height: 13px; margin-top: 0.3rem; border: 2px solid #020617; outline: 1px solid #475569; background: #111827; }
+.boss-health-track span { display: block; height: 100%; transition: width 160ms steps(4, end); }
+.boss-health--boss .boss-health-track span { background: linear-gradient(90deg, #dc2626, #f97316, #facc15); }
+.boss-health--team .boss-health-track span { background: linear-gradient(90deg, #0284c7, #22d3ee, #4ade80); }
+.boss-team { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.45rem; margin-top: 0.75rem; }
+.boss-team-member { display: flex; justify-content: space-between; padding: 0.45rem 0.55rem; border: 1px solid #475569; background: rgba(15, 23, 42, 0.85); font-size: 0.62rem; }
+.boss-team-member--fire { border-color: #f97316; color: #fdba74; }
+.boss-team-member--electric { border-color: #fde047; color: #fde68a; }
+.boss-team-member--water { border-color: #38bdf8; color: #7dd3fc; }
+.boss-hint { margin-top: 0.7rem; color: #94a3b8; font-size: 0.62rem; line-height: 1.45; }
+.boss-attack-btn { width: 100%; min-height: 48px; margin-top: 0.8rem; border: 2px solid #fde047; color: #fff7d6; background: linear-gradient(90deg, #c2410c, #6d28d9 50%, #0369a1); box-shadow: inset 0 0 0 2px #020617, 4px 4px 0 #020617; font-family: 'Press Start 2P', monospace; font-size: 0.68rem; }
+.boss-attack-btn:hover { filter: brightness(1.18); }
+
+@keyframes boss-hover { 50% { transform: translateY(-5px); } }
+@keyframes boss-damage-pop { from { opacity: 0; transform: translateY(16px) scale(0.8); } to { opacity: 1; transform: translateY(-8px) scale(1); } }
 
 @keyframes game-modal-in {
   from { opacity: 0; transform: translateY(12px) scale(0.97); }

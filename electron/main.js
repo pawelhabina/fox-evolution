@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Notification, powerMonitor } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -16,7 +16,12 @@ try {
 let mainWindow;
 let updateCheckInterval = null;
 let updaterInitialized = false;
+let updateCheckInFlight = null;
+let lastUpdateCheckStartedAt = 0;
+let lastNotifiedUpdateVersion = null;
 let pendingOAuthCallback = null;
+const UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1000;
+const FOCUS_UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 const oauthProtocol = 'fox-evolution';
 const updaterState = {
   enabled: false,
@@ -228,23 +233,66 @@ function setUpdaterState(partial) {
   broadcastUpdaterState();
 }
 
+function showUpdateReadyNotification(version) {
+  const safeVersion = String(version || '').trim() || 'najnowsza';
+  if (!Notification.isSupported() || lastNotifiedUpdateVersion === safeVersion) {
+    return;
+  }
+  lastNotifiedUpdateVersion = safeVersion;
+  const notification = new Notification({
+    title: 'Fox Evolution — aktualizacja gotowa',
+    body: `Wersja ${safeVersion} została pobrana. Otwórz grę, aby ją zainstalować.`,
+    silent: false
+  });
+  notification.on('click', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      return;
+    }
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.show();
+    mainWindow.focus();
+  });
+  notification.show();
+}
+
 async function checkForUpdates() {
   if (!updaterInitialized || !updaterState.enabled || !autoUpdater) {
     return { ...updaterState };
   }
 
+  if (['downloading', 'downloaded', 'installing'].includes(updaterState.status)) {
+    return { ...updaterState };
+  }
+
+  if (updateCheckInFlight) {
+    await updateCheckInFlight;
+    return { ...updaterState };
+  }
+
+  lastUpdateCheckStartedAt = Date.now();
+  updateCheckInFlight = (async () => {
+    try {
+      appendUpdateInstallLog(`Checking for updates from ${getUpdateServerUrl()}`);
+      setUpdaterState({
+        status: 'checking',
+        message: 'Sprawdzanie aktualizacji...'
+      });
+      await autoUpdater.checkForUpdates();
+    } catch (error) {
+      appendUpdateInstallLog(`Updater check failed: ${error?.stack || error?.message || error}`);
+      setUpdaterState({
+        status: 'error',
+        message: error?.message || 'Nie udało się sprawdzić aktualizacji'
+      });
+    }
+  })();
+
   try {
-    appendUpdateInstallLog(`Checking for updates from ${getUpdateServerUrl()}`);
-    setUpdaterState({
-      status: 'checking',
-      message: 'Sprawdzanie aktualizacji...'
-    });
-    await autoUpdater.checkForUpdates();
-  } catch (error) {
-    setUpdaterState({
-      status: 'error',
-      message: error?.message || 'Nie udało się sprawdzić aktualizacji'
-    });
+    await updateCheckInFlight;
+  } finally {
+    updateCheckInFlight = null;
   }
   return { ...updaterState };
 }
@@ -339,6 +387,7 @@ function initAutoUpdater() {
       progress: 100,
       updateVersion: info?.version || updaterState.updateVersion
     });
+    showUpdateReadyNotification(info?.version || updaterState.updateVersion);
   });
 
   autoUpdater.on('update-not-available', () => {
@@ -362,7 +411,7 @@ function initAutoUpdater() {
   checkForUpdates();
   updateCheckInterval = setInterval(() => {
     checkForUpdates();
-  }, 5 * 60 * 1000);
+  }, UPDATE_CHECK_INTERVAL_MS);
 }
 
 async function loadSlot(slotId) {
@@ -442,6 +491,15 @@ function saveSlotSync({ slotId, state, name }) {
 }
 
 async function createWindow() {
+  const nativeTitleBarOptions = process.platform === 'darwin'
+    ? { trafficLightPosition: { x: 12, y: 9 } }
+    : {
+        titleBarOverlay: {
+          color: '#030712',
+          symbolColor: '#f8fafc',
+          height: 32
+        }
+      };
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 860,
@@ -451,11 +509,7 @@ async function createWindow() {
     backgroundColor: '#030712',
     autoHideMenuBar: true,
     titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#030712',
-      symbolColor: '#f8fafc',
-      height: 32
-    },
+    ...nativeTitleBarOptions,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -475,6 +529,11 @@ async function createWindow() {
     broadcastUpdaterState();
     if (pendingOAuthCallback) {
       deliverOAuthCallback(pendingOAuthCallback);
+    }
+  });
+  mainWindow.on('focus', () => {
+    if (Date.now() - lastUpdateCheckStartedAt >= FOCUS_UPDATE_CHECK_INTERVAL_MS) {
+      void checkForUpdates();
     }
   });
 }
@@ -582,6 +641,10 @@ app.whenReady().then(() => {
 
   createWindow().then(() => {
     initAutoUpdater();
+  });
+
+  powerMonitor.on('resume', () => {
+    void checkForUpdates();
   });
 
   app.on('activate', () => {

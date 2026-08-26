@@ -3,6 +3,8 @@ import GuiIcon from './components/GuiIcon';
 import AdminMessageModal from './components/AdminMessageModal';
 import Arena from './components/Arena';
 import EvolutionModal from './components/EvolutionModal';
+import DeleteFoxModal from './components/DeleteFoxModal';
+import ElementalBossModal from './components/ElementalBossModal';
 import FoxContextMenu from './components/FoxContextMenu';
 import Hud from './components/Hud';
 import HelpModal from './components/HelpModal';
@@ -35,6 +37,7 @@ import {
 } from './game/economy';
 import { gameReducer, ACTIONS, getFoxInfoForMenu } from './game/reducer';
 import { getResetCountdowns } from './game/quests';
+import { canChallengeElementalBoss } from './game/bossBattle';
 import { registerFoxClick } from './game/clickRateLimit.mjs';
 import { createInitialState } from './storage/defaultState';
 import {
@@ -141,7 +144,7 @@ function UpdateOverlay({ updateState, onInstall, onCheck }) {
   const progress = Math.max(0, Math.min(100, Number(updateState?.progress) || 0));
 
   return (
-    <div className="pointer-events-none fixed left-1/2 top-4 z-[120] w-[min(560px,calc(100%-2rem))] -translate-x-1/2">
+    <div className="update-overlay pointer-events-none fixed left-1/2 top-4 z-[120] w-[min(560px,calc(100%-2rem))] -translate-x-1/2">
       <div className="pointer-events-auto rounded-xl border border-amber-400/50 bg-slate-950/95 p-3 shadow-2xl">
         <p className="text-sm font-bold text-amber-300">Aktualizacja gry</p>
         <p className="mt-1 text-sm text-slate-200">
@@ -211,6 +214,7 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [friendsModalOpen, setFriendsModalOpen] = useState(false);
   const [evolutionTargetId, setEvolutionTargetId] = useState(null);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [gameVersion, setGameVersion] = useState('dev');
   const stateRef = useRef(state);
@@ -241,6 +245,11 @@ export default function App() {
     () => state.foxes.find((fox) => fox.id === evolutionTargetId) || null,
     [evolutionTargetId, state.foxes]
   );
+  const deleteFoxInfo = useMemo(
+    () => (deleteTargetId ? getFoxInfoForMenu(state, deleteTargetId) : null),
+    [deleteTargetId, state]
+  );
+  const elementalBossReady = useMemo(() => canChallengeElementalBoss(state), [state]);
 
   const withGlobalSettings = useCallback((nextState) => ({
     ...nextState,
@@ -388,16 +397,25 @@ export default function App() {
     }
   }, [remoteEnabled]);
 
-  const checkForUpdatesNow = useCallback(async () => {
+  const checkForUpdatesNow = useCallback(async (announceResult = false) => {
     try {
       const next = await checkForGameUpdates();
       if (next) {
         setUpdateState((prev) => ({ ...prev, ...next }));
+        if (announceResult && next.status === 'idle') {
+          pushToast(next.message || 'Gra jest aktualna');
+        } else if (announceResult && next.status === 'disabled') {
+          pushToast(next.message || 'Aktualizacje są niedostępne');
+        } else if (announceResult && next.status === 'error') {
+          pushToast(next.message || 'Nie udało się sprawdzić aktualizacji');
+        }
       }
     } catch (_error) {
-      // ignore
+      if (announceResult) {
+        pushToast('Nie udało się sprawdzić aktualizacji');
+      }
     }
-  }, []);
+  }, [pushToast]);
 
   const installUpdateNow = useCallback(async () => {
     if (appScreen === 'game' && currentSlotId) {
@@ -836,6 +854,8 @@ export default function App() {
             isRemoteEnabled={remoteEnabled}
             principal={authPrincipal}
             gameVersion={gameVersion}
+            updateState={updateState}
+            onCheckForUpdates={() => checkForUpdatesNow(true)}
             leaderboardData={leaderboardData}
             leaderboardLoading={leaderboardLoading}
             leaderboardError={leaderboardError}
@@ -1135,6 +1155,18 @@ export default function App() {
               <GuiIcon name="quest" alt="" />
               Pomocne informacje
             </button>
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-lg bg-sky-700/80 px-3 py-2 text-left text-sm text-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!updateState.enabled || ['checking', 'downloading', 'installing'].includes(updateState.status)}
+              onClick={() => {
+                void checkForUpdatesNow(true);
+                setSystemMenuOpen(false);
+              }}
+            >
+              <GuiIcon name="refresh" alt="" />
+              {updateState.status === 'checking' ? 'Sprawdzanie aktualizacji...' : 'Sprawdź aktualizacje'}
+            </button>
             {remoteEnabled && (
               <button
                 type="button"
@@ -1262,6 +1294,12 @@ export default function App() {
                 : ''
           }
           onBuyFox={buyFox}
+          canCombineElements={elementalBossReady}
+          bossDefeated={Boolean(state.bossBattle?.defeated)}
+          onCombineElements={() => {
+            dispatch({ type: ACTIONS.START_BOSS_BATTLE, nowTs: Date.now() });
+            playSfx('evolve');
+          }}
         />
 
         <div className="shop-region">
@@ -1360,8 +1398,7 @@ export default function App() {
           if (!contextMenu) {
             return;
           }
-          dispatch({ type: ACTIONS.SELL_FOX, id: contextMenu.foxId, nowTs: Date.now() });
-          playSfx('sell');
+          setDeleteTargetId(contextMenu.foxId);
           setContextMenu(null);
         }}
         onEvolve={() => {
@@ -1377,6 +1414,32 @@ export default function App() {
           setEvolutionTargetId(contextMenu.foxId);
           setContextMenu(null);
         }}
+      />
+
+      <DeleteFoxModal
+        info={deleteFoxInfo}
+        onConfirm={() => {
+          if (!deleteTargetId) {
+            return;
+          }
+          dispatch({ type: ACTIONS.SELL_FOX, id: deleteTargetId, nowTs: Date.now() });
+          playSfx('sell');
+          setDeleteTargetId(null);
+        }}
+        onClose={() => setDeleteTargetId(null)}
+      />
+
+      <ElementalBossModal
+        state={state}
+        onAttack={() => {
+          dispatch({ type: ACTIONS.ATTACK_BOSS, nowTs: Date.now() });
+          playSfx('click');
+        }}
+        onRetry={() => {
+          dispatch({ type: ACTIONS.LEAVE_BOSS_BATTLE, nowTs: Date.now() });
+          window.setTimeout(() => dispatch({ type: ACTIONS.START_BOSS_BATTLE, nowTs: Date.now() }), 0);
+        }}
+        onClose={() => dispatch({ type: ACTIONS.LEAVE_BOSS_BATTLE, nowTs: Date.now() })}
       />
 
       <EvolutionModal

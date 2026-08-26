@@ -1,6 +1,7 @@
 import { GAME_VERSION } from '../game/constants';
 import { SAVE_DATA_VERSION } from '../game/progression.mjs';
 import { createQuestState } from '../game/quests';
+import { createBossBattleState } from '../game/bossBattle';
 
 export function createInitialState(nowTs = Date.now()) {
   return {
@@ -61,6 +62,7 @@ export function createInitialState(nowTs = Date.now()) {
       lifetimeRebirths: 0,
       lifetimeGemDrops: 0,
       lifetimeEvolutions: 0,
+      lifetimeBossVictories: 0,
       lifetimeUpgradesBought: 0,
       lifetimeTemporaryBoostsBought: 0,
       lifetimeInstantCashBuys: 0,
@@ -89,6 +91,7 @@ export function createInitialState(nowTs = Date.now()) {
     pokedex: {
       discoveries: {}
     },
+    bossBattle: createBossBattleState(),
     meta: {
       nextFoxId: 1,
       gemDropCounter: 0,

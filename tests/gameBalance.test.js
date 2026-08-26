@@ -78,6 +78,23 @@ test('fox purchase always shows its price, including when blocked', () => {
   assert.match(arena, /\{formatNumber\(buyCost\)\} monet\{buyBlockedReason/);
 });
 
+test('late fox purchases use a soft-capped growth curve', () => {
+  const economy = read('src/game/economy.js');
+
+  assert.match(economy, /earlyPurchases = Math\.min\(purchaseCount, 60\)/);
+  assert.match(economy, /midPurchases \* 0\.45 \+ latePurchases \* 0\.18/);
+});
+
+test('selling a fox requires an in-game confirmation modal', () => {
+  const app = read('src/App.jsx');
+  const modal = read('src/components/DeleteFoxModal.jsx');
+
+  assert.match(app, /<DeleteFoxModal/);
+  assert.match(modal, /role="dialog"/);
+  assert.match(modal, /Usuń i sprzedaj/);
+  assert.doesNotMatch(modal, /window\.confirm/);
+});
+
 test('evolution and rebirth use in-game confirmation modals', () => {
   const evolution = read('src/components/EvolutionModal.jsx');
   const shop = read('src/components/ShopPanel.jsx');

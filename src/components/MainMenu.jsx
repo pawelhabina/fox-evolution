@@ -4,8 +4,14 @@ import { formatNumber } from '../game/format';
 import AudioVolumeControl from './AudioVolumeControl';
 import GuiIcon from './GuiIcon';
 
-function RootMenu({ onContinue, onNew, onOpenLoad, onOpenRanking, onOpenSettings, onOpenHelp, onOpenProfile, onOpenFriends, onExit, hasSaves, isRemoteEnabled, principal, gameVersion }) {
+function RootMenu({ onContinue, onNew, onOpenLoad, onOpenRanking, onOpenSettings, onOpenHelp, onOpenProfile, onOpenFriends, onCheckForUpdates, onExit, hasSaves, isRemoteEnabled, principal, gameVersion, updateState }) {
   const isUser = principal?.type === 'USER';
+  const updateBusy = ['checking', 'downloading', 'installing'].includes(updateState?.status);
+  const updateButtonLabel = updateState?.status === 'checking'
+    ? 'Sprawdzanie...'
+    : updateState?.status === 'downloaded'
+      ? 'Aktualizacja gotowa'
+      : 'Sprawdź aktualizacje';
 
   return (
     <div className="panel main-menu-panel mx-auto w-full max-w-5xl p-7">
@@ -72,7 +78,20 @@ function RootMenu({ onContinue, onNew, onOpenLoad, onOpenRanking, onOpenSettings
             <GuiIcon name="quest" alt="" size={20} />
             Pomocne informacje
           </button>
+          <button
+            type="button"
+            className="shop-tab main-menu-square-action"
+            disabled={!updateState?.enabled || updateBusy}
+            onClick={onCheckForUpdates}
+          >
+            <GuiIcon name="refresh" alt="" size={20} />
+            {updateButtonLabel}
+          </button>
         </div>
+
+        <p className={`main-menu-update-status main-menu-update-status--${updateState?.status || 'disabled'}`}>
+          {updateState?.message || 'Status aktualizacji jest jeszcze niedostępny'}
+        </p>
 
         <button type="button" className="main-menu-exit" onClick={onExit}>
           <GuiIcon name="power" alt="" size={17} />
@@ -676,6 +695,7 @@ export default function MainMenu({
   onOpenHelp,
   onOpenProfile,
   onOpenFriends,
+  onCheckForUpdates,
   onExit,
   onBack,
   onLoad,
@@ -700,7 +720,8 @@ export default function MainMenu({
   onSendFriendRequest,
   onAcceptFriendRequest,
   onRemoveFriendship,
-  gameVersion
+  gameVersion,
+  updateState
 }) {
   if (view === 'load') {
     return <LoadMenu slots={meta.slots} onLoad={onLoad} onNew={onNew} onDelete={onDelete} onStats={onOpenStats} onBack={onBack} />;
@@ -752,11 +773,13 @@ export default function MainMenu({
       onOpenHelp={onOpenHelp}
       onOpenProfile={onOpenProfile}
       onOpenFriends={onOpenFriends}
+      onCheckForUpdates={onCheckForUpdates}
       onExit={onExit}
       hasSaves={meta.slots.length > 0}
       isRemoteEnabled={isRemoteEnabled}
       principal={principal}
       gameVersion={gameVersion}
+      updateState={updateState}
     />
   );
 }

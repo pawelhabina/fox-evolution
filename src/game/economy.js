@@ -129,7 +129,11 @@ export function getGemDropRate(state) {
 export function getBuyFoxCost(state, nowTs = Date.now()) {
   const purchaseCount = state.purchaseCount || 0;
   const baseCost = 25;
-  const curve = Math.floor(baseCost * 1.17 ** purchaseCount);
+  const earlyPurchases = Math.min(purchaseCount, 60);
+  const midPurchases = Math.min(Math.max(purchaseCount - 60, 0), 120);
+  const latePurchases = Math.max(purchaseCount - 180, 0);
+  const effectivePurchaseCount = earlyPurchases + midPurchases * 0.45 + latePurchases * 0.18;
+  const curve = Math.floor(baseCost * 1.17 ** effectivePurchaseCount);
   return Math.max(5, Math.floor(curve * getBuyDiscountMultiplier(state, nowTs)));
 }
 

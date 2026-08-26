@@ -46,6 +46,41 @@ test('waits for Windows file handles before starting the downloaded installer', 
   assert.doesNotMatch(electronMain, /launchWindowsUpdateHandoff/);
 });
 
+test('checks for updates periodically, after resume, and from both game menus', () => {
+  const electronMain = fs.readFileSync(path.join(projectRoot, 'electron/main.js'), 'utf8');
+  const app = fs.readFileSync(path.join(projectRoot, 'src/App.jsx'), 'utf8');
+  const mainMenu = fs.readFileSync(path.join(projectRoot, 'src/components/MainMenu.jsx'), 'utf8');
+
+  assert.match(electronMain, /UPDATE_CHECK_INTERVAL_MS = 10 \* 60 \* 1000/);
+  assert.match(electronMain, /powerMonitor\.on\('resume'/);
+  assert.match(electronMain, /mainWindow\.on\('focus'/);
+  assert.match(electronMain, /showUpdateReadyNotification/);
+  assert.match(app, /Sprawdź aktualizacje/);
+  assert.match(mainMenu, /Sprawdź aktualizacje/);
+});
+
+test('uses a full-width draggable title bar with native macOS traffic lights', () => {
+  const electronMain = fs.readFileSync(path.join(projectRoot, 'electron/main.js'), 'utf8');
+  const styles = fs.readFileSync(path.join(projectRoot, 'src/styles.css'), 'utf8');
+  const dragRegion = styles.match(/\.electron-drag-region \{[\s\S]*?\n\}/);
+
+  assert.ok(dragRegion);
+  assert.match(dragRegion[0], /right: 0/);
+  assert.match(dragRegion[0], /left: 0/);
+  assert.match(electronMain, /trafficLightPosition: \{ x: 12, y: 9 \}/);
+});
+
+test('elemental fox atlas covers levels 15 through 20 and marks rarer levels', () => {
+  const sprites = fs.readFileSync(path.join(projectRoot, 'src/assets/foxSprites.js'), 'utf8');
+  const arena = fs.readFileSync(path.join(projectRoot, 'src/components/Arena.jsx'), 'utf8');
+
+  assert.match(sprites, /fox-element-progression-atlas-v2\.png/);
+  assert.match(sprites, /Math\.min\(5, safeTier - 15\)/);
+  assert.match(sprites, /backgroundSize: '600% 300%'/);
+  assert.match(arena, /fox\.evolution && fox\.tier > 20/);
+  assert.match(arena, /fox-rare-level-marker/);
+});
+
 test('main menu uses the official game icon instead of the paw glyph', () => {
   const mainMenu = fs.readFileSync(path.join(projectRoot, 'src/components/MainMenu.jsx'), 'utf8');
 
@@ -54,13 +89,13 @@ test('main menu uses the official game icon instead of the paw glyph', () => {
   assert.doesNotMatch(mainMenu, /<GuiIcon name="pet" alt="" size=\{64\} \/>/);
 });
 
-test('version 1.2.3 is visibly marked as Early Access', () => {
+test('version 1.2.4 is visibly marked as Early Access', () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
   const constants = fs.readFileSync(path.join(projectRoot, 'src/game/constants.js'), 'utf8');
   const mainMenu = fs.readFileSync(path.join(projectRoot, 'src/components/MainMenu.jsx'), 'utf8');
 
-  assert.equal(packageJson.version, '1.2.3');
-  assert.match(constants, /GAME_VERSION = '1\.2\.3'/);
+  assert.equal(packageJson.version, '1.2.4');
+  assert.match(constants, /GAME_VERSION = '1\.2\.4'/);
   assert.match(constants, /RELEASE_CHANNEL = 'EARLY ACCESS'/);
   assert.match(mainMenu, /EARLY ACCESS/);
   assert.match(mainMenu, /Wczesna wersja gry/);

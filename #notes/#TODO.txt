@@ -18,9 +18,9 @@ Funkcje sieciowe:
 
 
 ot
-- zapisywanie się ustawień
+d- zapisywanie się ustawień
 - dodanie więcej questów
-- osobne guziki do wyciszenia muzyki i sfx
+d- osobne guziki do wyciszenia muzyki i sfx
 - lekko zwiększyć czcionkę na górnym pasku
 - naprawić problem braku możliwości przesuwania okana
 - dodać komunikat nie ma miejsca na planszy zamiast tylko wyszarzać przycisk kupna lista
@@ -28,4 +28,22 @@ ot
 - rework/redesign menu głównego
 - dodatkowe opcje konta
 
-NADAL BŁąD INSTALATORA
+
+particle od boostującego mega foxa aby było widać którego lisa on boostuje
+rozdzielenie konto i znajomi na 2 osobne zakładki oraz w menu w samej grze opcja znajomi
+
+
+- pokedex
+- zakładka pomocne informacje w menu gry oraz na stronie
+- statystyki danego savea
+- opcja wyświetl wiadomość dla gracza w panelu admina
+- ma być widoczne całe id konta w panelu admina
+- ma być opcja resetuj hasło w panelu admina
+- balans pomiędzy limitem lisów (wywalić za coiny i dać do rebirthów)
+- naprawa logowania (czasami samo wylogowuje z konta po resecie gry)
+
+
+- modal do potwierdzenia usuwania lisa
+- ładniejszy scorrbar w pokedexie
+- po zrobieniu wszystkich 3 żywiołowych lisów na maxymalny poziom pojawia się opcja połącz żywioły. w tedy uruchomi się walka z bosem (boss to będzie hydra z 3 głowami odpowiednimi do żywiołów chodzi o to żeby był boss wyglądający jak 3 żywiołowe lisy połączone w jeden jako hydra)
+- drop rate diamentow z rebirth shop zaczyna się z 0.8% zamiast 1%
