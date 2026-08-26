@@ -118,6 +118,8 @@ test('production deployment publishes Windows and macOS update artifacts', () =>
 test('GitHub releases are published as restartable Early Access prereleases', () => {
   const workflow = fs.readFileSync(path.join(projectRoot, '.github/workflows/release.yml'), 'utf8');
 
+  assert.match(workflow, /workflow_dispatch:[\s\S]*release_tag:/);
+  assert.match(workflow, /inputs\.release_tag \|\| github\.ref/);
   assert.match(workflow, /Fox Evolution \$version Early Access/);
   assert.match(workflow, /gh release upload .* --clobber/);
   assert.match(workflow, /gh release edit .* --prerelease/);

@@ -2,6 +2,11 @@ name: GitHub Release
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Tag wydania do zbudowania (np. v1.2.4)
+        required: true
+        type: string
   push:
     tags:
       - 'v*'
@@ -15,6 +20,8 @@ jobs:
     steps:
       - name: Check out release commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -24,8 +31,10 @@ jobs:
 
       - name: Validate tag and release threshold
         shell: pwsh
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
-          node -e "const p=require('./package.json'); const tag=process.env.GITHUB_REF_NAME.replace(/^v/, ''); const [major,minor]=p.version.split('.').map(Number); if(tag!==p.version) throw new Error('Tag '+tag+' does not match package version '+p.version); if(major<1 || (major===1 && minor<2)) throw new Error('GitHub Releases start at version 1.2.0');"
+          node -e "const p=require('./package.json'); const tag=process.env.RELEASE_TAG.replace(/^v/, ''); const [major,minor]=p.version.split('.').map(Number); if(tag!==p.version) throw new Error('Tag '+tag+' does not match package version '+p.version); if(major<1 || (major===1 && minor<2)) throw new Error('GitHub Releases start at version 1.2.0');"
 
       - name: Install dependencies
         run: npm ci
@@ -40,13 +49,14 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
           $version = node -p "require('./package.json').version"
           $installer = "dist/Fox-Evolution-$version-x64.exe"
-          gh release view $env:GITHUB_REF_NAME --json tagName *> $null
+          gh release view $env:RELEASE_TAG --json tagName *> $null
           if ($LASTEXITCODE -eq 0) {
-            gh release upload $env:GITHUB_REF_NAME $installer "$installer.blockmap" "dist/latest.yml" --clobber
-            gh release edit $env:GITHUB_REF_NAME --title "Fox Evolution $version Early Access" --prerelease
+            gh release upload $env:RELEASE_TAG $installer "$installer.blockmap" "dist/latest.yml" --clobber
+            gh release edit $env:RELEASE_TAG --title "Fox Evolution $version Early Access" --prerelease
           } else {
-            gh release create $env:GITHUB_REF_NAME $installer "$installer.blockmap" "dist/latest.yml" --verify-tag --title "Fox Evolution $version Early Access" --generate-notes --prerelease
+            gh release create $env:RELEASE_TAG $installer "$installer.blockmap" "dist/latest.yml" --verify-tag --title "Fox Evolution $version Early Access" --generate-notes --prerelease
           }
