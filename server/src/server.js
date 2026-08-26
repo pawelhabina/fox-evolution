@@ -36,7 +36,7 @@ function setUpdateHeaders(res, filePath) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     return;
   }
-  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  res.setHeader('Cache-Control', 'no-cache, must-revalidate');
 }
 
 app.use(

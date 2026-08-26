@@ -16,7 +16,7 @@ server {
     location /updates/ {
         alias /var/www/fox-evo/updates/;
         add_header Access-Control-Allow-Origin *;
-        add_header Cache-Control "public, max-age=14400";
+        add_header Cache-Control "no-cache, must-revalidate";
         try_files $uri =404;
     }
 

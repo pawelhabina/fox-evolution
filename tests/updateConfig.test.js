@@ -103,6 +103,8 @@ test('version 1.2.4 is visibly marked as Early Access', () => {
 
 test('production deployment publishes Windows and macOS update artifacts', () => {
   const deployScript = fs.readFileSync(path.join(projectRoot, 'scripts/deploy-s1.mjs'), 'utf8');
+  const nginxConfig = fs.readFileSync(path.join(projectRoot, 'deploy/s1/foxevo.mionix.pl.nginx'), 'utf8');
+  const serverEntry = fs.readFileSync(path.join(projectRoot, 'server/src/server.js'), 'utf8');
   const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
 
   for (const include of ['*.exe', '*.zip', '*.dmg', 'latest.yml', 'latest-mac.yml']) {
@@ -113,6 +115,8 @@ test('production deployment publishes Windows and macOS update artifacts', () =>
   assert.ok(packageJson.build.files.includes('!dist/*.zip'));
   assert.ok(packageJson.build.files.includes('!dist/*.blockmap'));
   assert.ok(packageJson.build.files.includes('!dist/mac{,/**/*}'));
+  assert.match(nginxConfig, /location \/updates\/[\s\S]*Cache-Control "no-cache, must-revalidate"/);
+  assert.match(serverEntry, /setHeader\('Cache-Control', 'no-cache, must-revalidate'\)/);
 });
 
 test('GitHub releases are published as restartable Early Access prereleases', () => {
