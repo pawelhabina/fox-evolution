@@ -13,9 +13,9 @@ test('in-game help covers the complete player journey', () => {
   const content = read('src/game/helpContent.js');
   const modal = read('src/components/HelpModal.jsx');
 
-  ['Pierwsze kroki', 'Ekonomia i sklep', 'Ewolucje żywiołów', 'Rebirth', 'Zadania i kolekcja', 'Zapisy i konto', 'Problemy i bezpieczeństwo']
+  ['Pierwsze kroki', 'Ekonomia i sklep', 'Ewolucje żywiołów', 'Kopalnia Duchów', 'Rebirth', 'Zadania i kolekcja', 'Zapisy i konto', 'Problemy i bezpieczeństwo']
     .forEach((title) => assert.match(content, new RegExp(title)));
-  assert.equal((content.match(/id: '/g) || []).length, 7);
+  assert.equal((content.match(/id: '/g) || []).length, 8);
   assert.match(content, /Fire Fox.*\+50%/s);
   assert.match(content, /Electric Fox.*\+50%/s);
   assert.match(content, /Water Fox.*50%/s);

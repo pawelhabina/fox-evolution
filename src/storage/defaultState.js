@@ -2,6 +2,7 @@ import { GAME_VERSION } from '../game/constants';
 import { SAVE_DATA_VERSION } from '../game/progression.mjs';
 import { createQuestState } from '../game/quests';
 import { createBossBattleState } from '../game/bossBattle';
+import { createSpiritMineState } from '../game/spiritMine';
 
 export function createInitialState(nowTs = Date.now()) {
   return {
@@ -10,7 +11,8 @@ export function createInitialState(nowTs = Date.now()) {
     currencies: {
       coins: 120,
       gems: 0,
-      rebirthTokens: 0
+      rebirthTokens: 0,
+      essence: 0
     },
     foxes: [],
     upgrades: {
@@ -92,11 +94,18 @@ export function createInitialState(nowTs = Date.now()) {
       discoveries: {}
     },
     bossBattle: createBossBattleState(),
+    tutorials: {
+      elementalFusionSeen: false
+    },
+    realms: {
+      spiritMine: createSpiritMineState()
+    },
     meta: {
       nextFoxId: 1,
       gemDropCounter: 0,
       createdAt: new Date(nowTs).toISOString(),
-      lastPlayedAt: new Date(nowTs).toISOString()
+      lastPlayedAt: new Date(nowTs).toISOString(),
+      lastEconomyAt: new Date(nowTs).toISOString()
     },
     arena: {
       width: 900,

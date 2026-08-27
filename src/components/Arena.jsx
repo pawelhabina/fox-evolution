@@ -4,6 +4,7 @@ import { MEGA_TIER } from '../game/constants';
 import { formatNumber } from '../game/format';
 import { getFoxSpritePresentation } from '../assets/foxSprites';
 import GuiIcon from './GuiIcon';
+import hydraSprite from '../../assets/sprites/foxes/fox-elemental-hydra-boss.png';
 
 const DEFAULT_MERGE_COLORS = ['#fbbf24', '#fb7185', '#22d3ee', '#a78bfa', '#f97316', '#f8fafc'];
 const ELEMENT_MERGE_COLORS = {
@@ -30,6 +31,9 @@ function makeMergeParticles(tier, evolution) {
 }
 
 function foxLabel(fox) {
+  if (fox.kind === 'hydra') {
+    return 'Hydra Trójżywiołu';
+  }
   const tier = getTierData(fox.tier);
   const evolution = getEvolutionData(fox.evolution);
   if (evolution) {
@@ -236,14 +240,16 @@ export default function Arena({
         )}
 
         {foxes.map((fox) => {
-          const sprite = getFoxSpritePresentation(fox.tier, fox.evolution);
-          const evolutionReady = fox.tier === MEGA_TIER && !fox.evolution;
+          const sprite = fox.kind === 'hydra'
+            ? { src: hydraSprite, style: null }
+            : getFoxSpritePresentation(fox.tier, fox.evolution);
+          const evolutionReady = fox.kind !== 'hydra' && fox.tier === MEGA_TIER && !fox.evolution;
           return (
             <button
               key={fox.id}
               type="button"
               data-fox-id={fox.id}
-              className={`fox-tile ${evolutionReady ? 'evolution-ready' : ''} ${dragging?.id === fox.id ? 'dragging' : ''}`}
+              className={`fox-tile ${fox.kind === 'hydra' ? 'fox-tile--hydra' : ''} ${evolutionReady ? 'evolution-ready' : ''} ${dragging?.id === fox.id ? 'dragging' : ''}`}
               title={evolutionReady ? `${foxLabel(fox)} — gotowy do ewolucji (kliknij prawym przyciskiem)` : foxLabel(fox)}
               style={{
                 left: `${fox.x}px`,
@@ -270,7 +276,7 @@ export default function Arena({
             >
               <div className="pointer-events-none relative flex h-full items-center justify-center">
                 {sprite.src ? (
-                  <img className="fox-sprite" src={sprite.src} alt={foxLabel(fox)} draggable={false} />
+                  <img className={`fox-sprite ${fox.kind === 'hydra' ? 'fox-sprite--hydra' : ''}`} src={sprite.src} alt={foxLabel(fox)} draggable={false} />
                 ) : (
                   <span className="fox-sprite fox-sprite--atlas" style={sprite.style} role="img" aria-label={foxLabel(fox)} />
                 )}
@@ -285,6 +291,7 @@ export default function Arena({
                     ◆ LV {fox.tier}
                   </span>
                 )}
+                {fox.kind === 'hydra' && <span className="hydra-board-marker">OGIEŃ · PRĄD · WODA</span>}
               </div>
             </button>
           );
@@ -338,7 +345,7 @@ export default function Arena({
                 <span><strong>Połącz żywioły</strong><small>Hydra czeka na wyzwanie</small></span>
               </button>
             ) : (
-              <div className="elemental-fusion-complete"><strong>HYDRA POKONANA</strong><small>Próba żywiołów ukończona</small></div>
+              <div className="elemental-fusion-complete"><strong>HYDRA OSWOJONA</strong><small>Trzy efekty działają na planszy</small></div>
             )}
           </div>
         )}

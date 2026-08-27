@@ -1,7 +1,7 @@
 import { formatCompact, formatNumber } from '../game/format';
 import GuiIcon from './GuiIcon';
 
-export default function Hud({ coins, gems, rebirthTokens, coinsPerSecond, countdown, foxCount, foxLimit, onOpenModesMenu, onOpenSystemMenu }) {
+export default function Hud({ coins, gems, rebirthTokens, essence, essenceUnlocked, coinsPerSecond, countdown, foxCount, foxLimit, onOpenModesMenu, onOpenSystemMenu }) {
   const stats = [
     {
       id: 'coins',
@@ -50,7 +50,15 @@ export default function Hud({ coins, gems, rebirthTokens, coinsPerSecond, countd
       value: formatNumber(rebirthTokens),
       tone: 'text-indigo-300',
       description: 'Tokeny zdobywane po rebirth, używane do stałych bonusów.'
-    }
+    },
+    ...(essenceUnlocked ? [{
+      id: 'essence',
+      icon: 'diamond',
+      label: 'Esencja',
+      value: `◈ ${formatNumber(essence)}`,
+      tone: 'text-violet-300',
+      description: 'Esencja Hydry napędza rozwój Kopalni Duchów.'
+    }] : [])
   ];
 
   return (

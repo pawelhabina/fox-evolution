@@ -19,7 +19,7 @@ export const HELP_SECTIONS = [
     icon: 'coin',
     summary: 'Monety napędzają bieżący cykl, diamenty dają specjalne bonusy, a Rebirth points zapewniają trwały rozwój.',
     tips: [
-      ['Pasywny income', 'Każdy lis wypłaca monety przy globalnym ticku. Wyższy tier oznacza większy dochód.'],
+      ['Pasywny income', 'Każdy lis wypłaca monety przy globalnym ticku. Zarobki są liczone z rzeczywistego czasu także po zminimalizowaniu okna i po powrocie do gry.'],
       ['Monety', 'Wydawaj je na lisy oraz ulepszenia bieżącej rozgrywki: income, kliknięcia, rabat i wyższy tier zakupów.'],
       ['Diamenty', 'Wypadają podczas pasywnego zarabiania oraz pochodzą z zadań i nagród logowania. Służą do ewolucji, boostów i ulepszeń premium.'],
       ['Rebirth points', 'Kupują trwałe ulepszenia, między innymi limit lisów, szybkość ticka i szansę zakupu wyższego tieru.'],
@@ -39,9 +39,26 @@ export const HELP_SECTIONS = [
       ['Electric Fox', 'Zapewnia +50% własnego pasywnego income. Pomaga szybciej rozbudowywać ekonomię.'],
       ['Water Fox', 'Wzmacnia najbliższego lisa o 50%. Pozycja lisa na planszy ma znaczenie.'],
       ['Dalsze łączenie', 'Łączyć można dwa lisy tego samego tieru i tego samego żywiołu. Elementalne lisy rozwijają się do tieru 30.'],
-      ['Różne żywioły', 'Lisów różnych żywiołów nie można ze sobą połączyć. Zaplanuj kolekcję przed wyborem ewolucji.']
+      ['Różne żywioły', 'Zwykle lisów różnych żywiołów nie można połączyć. Wyjątkiem jest drużyna Ogień, Prąd i Woda na poziomie 20, która otwiera próbę Hydry.'],
+      ['Walka z Hydrą', 'Naciskaj w czasie pojawiające się klawisze. Szybkie reakcje budują combo i zwiększają obrażenia, a pomyłki mocno ranią drużynę.'],
+      ['Oswojona Hydra', 'Po zwycięstwie trzy lisy znikają, a na planszy pojawia się Hydra łącząca dochód Prądu, klik Ognia i aurę Wody.']
     ],
     callout: 'Wodnego lisa ustaw blisko najsilniejszego źródła income, aby jego aura trafiała we właściwy cel.'
+  },
+  {
+    id: 'mine',
+    title: 'Kopalnia Duchów',
+    icon: 'diamond',
+    summary: 'Po pierwszej Hydrze odblokujesz Esencję i automatyczną krainę działającą jak idle miner.',
+    tips: [
+      ['Odblokowanie', 'Pokonaj Hydrę po połączeniu trzech żywiołowych lisów na poziomie 20. Otrzymasz pierwsze 25 Esencji Hydry.'],
+      ['Automatyczne szyby', 'Szyby Magmy, Burzy i Głębin produkują Esencję samodzielnie aż do zapełnienia swoich magazynów.'],
+      ['Odbieranie', 'Przycisk na środku przenosi urobek ze wszystkich szybów do portfela Esencji.'],
+      ['Górnicy i poziomy', 'Pogłębianie szybu i zatrudnianie kolejnych lisów zwiększa jego tempo produkcji.'],
+      ['Winda i magazyn', 'Winda wzmacnia produkcję wszystkich szybów, a magazyn zwiększa maksymalną ilość urobku.'],
+      ['Minimalizacja', 'Gra rozlicza upływ rzeczywistego czasu. Zminimalizowane okno nie zatrzymuje planszy ani kopalni.']
+    ],
+    callout: 'Odbieraj urobek przed zapełnieniem szybów — pełny magazyn zatrzymuje produkcję danego żywiołu.'
   },
   {
     id: 'rebirth',
@@ -50,8 +67,8 @@ export const HELP_SECTIONS = [
     summary: 'Resetuje bieżącą ekonomię w zamian za punkty, które przyspieszają wszystkie kolejne cykle.',
     tips: [
       ['Kiedy jest dostępny', 'Punkty otrzymujesz za lisy od tieru 15 wzwyż. Im wyższy tier, tym szybciej rośnie nagroda.'],
-      ['Co zostaje', 'Zachowujesz diamenty, dotychczasowe Rebirth points, trwałe ulepszenia, ustawienia, statystyki, zadania i odkrycia Pokédexu.'],
-      ['Co się resetuje', 'Plansza, monety, licznik zakupów oraz ulepszenia kupowane za monety wracają do stanu początkowego.'],
+      ['Co zostaje', 'Zachowujesz diamenty, Esencję, Hydrę, Kopalnię Duchów, dotychczasowe Rebirth points, trwałe ulepszenia, ustawienia, statystyki, zadania i odkrycia Pokédexu.'],
+      ['Co się resetuje', 'Zwykłe i żywiołowe lisy poza Hydrą, monety, licznik zakupów oraz ulepszenia kupowane za monety wracają do stanu początkowego.'],
       ['Limit lisów', 'Ulepszenie limitu kupione za Rebirth points pozostaje po resecie i pozwala budować większą planszę w przyszłości.'],
       ['Dobry moment', 'Wykonaj Rebirth, gdy nowy trwały zakup wyraźnie przyspieszy następny cykl lub obecny rozwój mocno zwolnił.']
     ],

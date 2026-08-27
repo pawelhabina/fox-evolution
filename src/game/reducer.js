@@ -5,7 +5,6 @@ import {
   clamp,
   clampCurrency,
   clampFoxPosition,
-  gemsFromDrop,
   getBasePurchaseTier,
   getBuyFoxCost,
   getExpectedCoinsPerSecond,
@@ -39,11 +38,20 @@ import { claimDailyQuest, claimLoginReward, claimWeeklyQuest, ensureTemporalRese
 import {
   ELEMENTAL_BOSS_DAMAGE,
   ELEMENTAL_BOSS_MAX_HP,
+  ELEMENTAL_BOSS_REWARD_ESSENCE,
   ELEMENTAL_BOSS_REWARD_GEMS,
   ELEMENTAL_TEAM_MAX_HP,
   canChallengeElementalBoss,
+  getElementalBossTeam,
   getElementalTeamAttackPower
 } from './bossBattle';
+import {
+  advanceSpiritMine,
+  getMineFacilityCost,
+  getMineMinerCost,
+  getMineShaftUpgradeCost,
+  getMineStoredTotal
+} from './spiritMine';
 
 export const ACTIONS = {
   INIT_FROM_SAVE: 'INIT_FROM_SAVE',
@@ -58,6 +66,12 @@ export const ACTIONS = {
   START_BOSS_BATTLE: 'START_BOSS_BATTLE',
   ATTACK_BOSS: 'ATTACK_BOSS',
   LEAVE_BOSS_BATTLE: 'LEAVE_BOSS_BATTLE',
+  ACK_ELEMENTAL_FUSION_TUTORIAL: 'ACK_ELEMENTAL_FUSION_TUTORIAL',
+  MINE_COLLECT: 'MINE_COLLECT',
+  MINE_UPGRADE_SHAFT: 'MINE_UPGRADE_SHAFT',
+  MINE_HIRE_MINER: 'MINE_HIRE_MINER',
+  MINE_UPGRADE_ELEVATOR: 'MINE_UPGRADE_ELEVATOR',
+  MINE_UPGRADE_WAREHOUSE: 'MINE_UPGRADE_WAREHOUSE',
   BUY_UPGRADE: 'BUY_UPGRADE',
   BUY_TEMP_BOOST: 'BUY_TEMP_BOOST',
   BUY_INSTANT_CASH: 'BUY_INSTANT_CASH',
@@ -184,9 +198,25 @@ function clampStateCurrencies(state) {
     currencies: {
       coins: clampCurrency(state.currencies.coins),
       gems: clampCurrency(state.currencies.gems),
-      rebirthTokens: clampCurrency(state.currencies.rebirthTokens)
+      rebirthTokens: clampCurrency(state.currencies.rebirthTokens),
+      essence: clampCurrency(state.currencies.essence || 0)
     }
   };
+}
+
+function sampleBinomial(trials, probability) {
+  const safeTrials = Math.max(0, Math.floor(trials));
+  if (safeTrials <= 2000) {
+    let hits = 0;
+    for (let index = 0; index < safeTrials; index += 1) {
+      if (Math.random() < probability) hits += 1;
+    }
+    return hits;
+  }
+  const mean = safeTrials * probability;
+  const spread = Math.sqrt(safeTrials * probability * (1 - probability));
+  const normalish = Array.from({ length: 6 }, () => Math.random()).reduce((sum, value) => sum + value, 0) - 3;
+  return clamp(Math.round(mean + normalish * spread), 0, safeTrials);
 }
 
 function normalizeTemporaryBoosts(temporaryBoosts) {
@@ -346,6 +376,9 @@ export function gameReducer(state, action) {
       if (!source || !target || source.id === target.id) {
         return next;
       }
+      if (source.kind === 'hydra' || target.kind === 'hydra') {
+        return next;
+      }
       if (source.tier !== target.tier) {
         return next;
       }
@@ -434,6 +467,9 @@ export function gameReducer(state, action) {
       if (!fox) {
         return next;
       }
+      if (fox.kind === 'hydra') {
+        return next;
+      }
       const gain = getFoxSellValue(fox, next, nowTs);
       const withoutFox = {
         ...next,
@@ -491,6 +527,7 @@ export function gameReducer(state, action) {
       if (!canChallengeElementalBoss(next)) {
         return next;
       }
+      const team = getElementalBossTeam(next.foxes);
       return {
         ...next,
         bossBattle: {
@@ -500,7 +537,12 @@ export function gameReducer(state, action) {
           teamHp: ELEMENTAL_TEAM_MAX_HP,
           attacks: 0,
           lastDamage: 0,
-          critical: false
+          critical: false,
+          combo: 0,
+          bestCombo: 0,
+          lastResult: null,
+          teamFoxIds: team.map((fox) => fox.id),
+          teamSnapshot: team.map((fox) => ({ evolution: fox.evolution, tier: fox.tier }))
         }
       };
     }
@@ -514,18 +556,45 @@ export function gameReducer(state, action) {
         return next;
       }
 
-      const critical = (action.roll ?? Math.random()) < 0.15;
-      const damage = baseDamage * (critical ? 2 : 1);
+      const success = Boolean(action.success);
+      const responseMs = Math.max(0, Number(action.responseMs) || 0);
+      const allowedMs = Math.max(500, Number(action.allowedMs) || 1600);
+      const accuracy = success ? clamp(1 - responseMs / allowedMs, 0, 1) : 0;
+      const combo = success ? (next.bossBattle.combo || 0) + 1 : 0;
+      const criticalChance = 0.08 + accuracy * 0.22;
+      const critical = success && (action.roll ?? Math.random()) < criticalChance;
+      const timingMultiplier = 0.8 + accuracy * 0.8 + Math.min(combo, 10) * 0.04;
+      const damage = success ? Math.max(1, Math.floor(baseDamage * timingMultiplier * (critical ? 2 : 1))) : 0;
       const bossHp = Math.max(0, next.bossBattle.bossHp - damage);
       const attacks = (next.bossBattle.attacks || 0) + 1;
 
       if (bossHp <= 0) {
+        const selectedTeam = next.bossBattle.teamFoxIds
+          .map((id) => next.foxes.find((fox) => fox.id === id))
+          .filter(Boolean);
+        if (selectedTeam.length !== 3) {
+          return next;
+        }
+        const teamIdSet = new Set(selectedTeam.map((fox) => fox.id));
+        const hydraX = selectedTeam.reduce((sum, fox) => sum + fox.x, 0) / selectedTeam.length;
+        const hydraY = selectedTeam.reduce((sum, fox) => sum + fox.y, 0) / selectedTeam.length;
+        const hydra = {
+          id: next.meta.nextFoxId,
+          kind: 'hydra',
+          tier: Math.max(...selectedTeam.map((fox) => fox.tier)),
+          x: hydraX,
+          y: hydraY,
+          evolution: null,
+          elementTiers: Object.fromEntries(selectedTeam.map((fox) => [fox.evolution, fox.tier]))
+        };
         return {
           ...next,
           currencies: {
             ...next.currencies,
-            gems: clampCurrency(next.currencies.gems + ELEMENTAL_BOSS_REWARD_GEMS)
+            gems: clampCurrency(next.currencies.gems + ELEMENTAL_BOSS_REWARD_GEMS),
+            essence: clampCurrency((next.currencies.essence || 0) + ELEMENTAL_BOSS_REWARD_ESSENCE)
           },
+          foxes: [...next.foxes.filter((fox) => !teamIdSet.has(fox.id)), hydra],
           bossBattle: {
             ...next.bossBattle,
             status: 'victory',
@@ -533,7 +602,22 @@ export function gameReducer(state, action) {
             bossHp: 0,
             attacks,
             lastDamage: damage,
-            critical
+            critical,
+            combo,
+            bestCombo: Math.max(next.bossBattle.bestCombo || 0, combo),
+            lastResult: 'success'
+          },
+          realms: {
+            ...next.realms,
+            spiritMine: {
+              ...next.realms.spiritMine,
+              unlocked: true,
+              lastAdvancedAt: new Date(nowTs).toISOString()
+            }
+          },
+          meta: {
+            ...next.meta,
+            nextFoxId: next.meta.nextFoxId + 1
           },
           stats: {
             ...next.stats,
@@ -543,7 +627,8 @@ export function gameReducer(state, action) {
         };
       }
 
-      const teamHp = Math.max(0, next.bossBattle.teamHp - ELEMENTAL_BOSS_DAMAGE);
+      const counterDamage = success ? ELEMENTAL_BOSS_DAMAGE : ELEMENTAL_BOSS_DAMAGE * 4;
+      const teamHp = Math.max(0, next.bossBattle.teamHp - counterDamage);
       return {
         ...next,
         bossBattle: {
@@ -553,7 +638,10 @@ export function gameReducer(state, action) {
           teamHp,
           attacks,
           lastDamage: damage,
-          critical
+          critical,
+          combo,
+          bestCombo: Math.max(next.bossBattle.bestCombo || 0, combo),
+          lastResult: success ? 'success' : 'miss'
         }
       };
     }
@@ -568,7 +656,21 @@ export function gameReducer(state, action) {
           teamHp: ELEMENTAL_TEAM_MAX_HP,
           attacks: 0,
           lastDamage: 0,
-          critical: false
+          critical: false,
+          combo: 0,
+          bestCombo: 0,
+          lastResult: null,
+          teamFoxIds: [],
+          teamSnapshot: []
+        }
+      };
+
+    case ACTIONS.ACK_ELEMENTAL_FUSION_TUTORIAL:
+      return {
+        ...next,
+        tutorials: {
+          ...next.tutorials,
+          elementalFusionSeen: true
         }
       };
 
@@ -670,23 +772,88 @@ export function gameReducer(state, action) {
       return refreshQuestProgress(withCoinsGain(withSpentGems, instantCoins, 'instantCash'));
     }
 
+    case ACTIONS.MINE_COLLECT: {
+      const mine = next.realms?.spiritMine;
+      const collected = getMineStoredTotal(mine);
+      if (!mine?.unlocked || collected <= 0) return next;
+      return {
+        ...next,
+        currencies: {
+          ...next.currencies,
+          essence: clampCurrency((next.currencies.essence || 0) + collected)
+        },
+        realms: {
+          ...next.realms,
+          spiritMine: {
+            ...mine,
+            totalCollected: clampCurrency((mine.totalCollected || 0) + collected),
+            shafts: mine.shafts.map((shaft) => ({ ...shaft, stored: 0 }))
+          }
+        }
+      };
+    }
+
+    case ACTIONS.MINE_UPGRADE_SHAFT:
+    case ACTIONS.MINE_HIRE_MINER: {
+      const mine = next.realms?.spiritMine;
+      const shaft = mine?.shafts?.find((item) => item.element === action.element);
+      if (!mine?.unlocked || !shaft) return next;
+      const cost = action.type === ACTIONS.MINE_UPGRADE_SHAFT
+        ? getMineShaftUpgradeCost(shaft)
+        : getMineMinerCost(shaft);
+      if ((next.currencies.essence || 0) < cost) return next;
+      return {
+        ...next,
+        currencies: { ...next.currencies, essence: clampCurrency(next.currencies.essence - cost) },
+        realms: {
+          ...next.realms,
+          spiritMine: {
+            ...mine,
+            shafts: mine.shafts.map((item) => item.element !== action.element ? item : {
+              ...item,
+              ...(action.type === ACTIONS.MINE_UPGRADE_SHAFT
+                ? { level: item.level + 1 }
+                : { miners: item.miners + 1 })
+            })
+          }
+        }
+      };
+    }
+
+    case ACTIONS.MINE_UPGRADE_ELEVATOR:
+    case ACTIONS.MINE_UPGRADE_WAREHOUSE: {
+      const mine = next.realms?.spiritMine;
+      if (!mine?.unlocked) return next;
+      const key = action.type === ACTIONS.MINE_UPGRADE_ELEVATOR ? 'elevatorLevel' : 'warehouseLevel';
+      const cost = getMineFacilityCost(mine[key]);
+      if ((next.currencies.essence || 0) < cost) return next;
+      return {
+        ...next,
+        currencies: { ...next.currencies, essence: clampCurrency(next.currencies.essence - cost) },
+        realms: {
+          ...next.realms,
+          spiritMine: { ...mine, [key]: mine[key] + 1 }
+        }
+      };
+    }
+
     case ACTIONS.APPLY_TICK: {
+      const requestedTickCount = action.tickCount === undefined ? 1 : Number(action.tickCount);
+      const tickCount = clamp(Math.floor(Number.isFinite(requestedTickCount) ? requestedTickCount : 1), 0, 12 * 60 * 60 / 0.3);
+      const elapsedSeconds = Math.min(12 * 60 * 60, Math.max(0, Number(action.elapsedSeconds) || 0));
       let coinsGained = 0;
       let gemsGained = 0;
       let gemDropCounter = next.meta.gemDropCounter || 0;
       let gemDropHits = 0;
       const waterBuffMap = buildWaterBuffMap(next);
+      const dropRate = getGemDropRate(next);
 
       next.foxes.forEach((fox) => {
-        const roll = Math.random();
-        if (roll < getGemDropRate(next)) {
-          const drop = gemsFromDrop(gemDropCounter, next.upgrades.gemDropRate || 0);
-          gemDropCounter = drop.nextCounter;
-          gemsGained += drop.gems;
-          gemDropHits += 1;
-          return;
-        }
-        coinsGained += getFoxIncomePerTickCached(fox, next, waterBuffMap, nowTs);
+        const hits = sampleBinomial(tickCount, dropRate);
+        gemDropHits += hits;
+        gemsGained += hits;
+        gemDropCounter += hits;
+        coinsGained += getFoxIncomePerTickCached(fox, next, waterBuffMap, nowTs) * Math.max(0, tickCount - hits);
       });
 
       let updated = withCoinsGain(next, coinsGained, 'passive');
@@ -698,7 +865,12 @@ export function gameReducer(state, action) {
         },
         meta: {
           ...updated.meta,
-          gemDropCounter
+          gemDropCounter,
+          lastEconomyAt: new Date(nowTs).toISOString()
+        },
+        realms: {
+          ...updated.realms,
+          spiritMine: advanceSpiritMine(updated.realms?.spiritMine, elapsedSeconds, nowTs)
         },
         stats: {
           ...updated.stats,
@@ -767,8 +939,10 @@ export function gameReducer(state, action) {
         currencies: {
           ...fresh.currencies,
           gems: next.currencies.gems,
-          rebirthTokens: next.currencies.rebirthTokens + earned
+          rebirthTokens: next.currencies.rebirthTokens + earned,
+          essence: next.currencies.essence || 0
         },
+        foxes: next.foxes.filter((fox) => fox.kind === 'hydra'),
         upgrades: {
           ...fresh.upgrades,
           ...preservedUpgrades
@@ -782,6 +956,8 @@ export function gameReducer(state, action) {
         },
         quests: next.quests,
         pokedex: next.pokedex,
+        tutorials: next.tutorials,
+        realms: next.realms,
         bossBattle: {
           ...next.bossBattle,
           status: 'idle',
@@ -789,12 +965,17 @@ export function gameReducer(state, action) {
           teamHp: ELEMENTAL_TEAM_MAX_HP,
           attacks: 0,
           lastDamage: 0,
-          critical: false
+          critical: false,
+          combo: 0,
+          bestCombo: next.bossBattle.bestCombo || 0,
+          lastResult: null
         },
         meta: {
           ...fresh.meta,
+          nextFoxId: next.meta.nextFoxId,
           createdAt: next.meta.createdAt,
-          lastPlayedAt: new Date(nowTs).toISOString()
+          lastPlayedAt: new Date(nowTs).toISOString(),
+          lastEconomyAt: new Date(nowTs).toISOString()
         },
         arena: next.arena
       };

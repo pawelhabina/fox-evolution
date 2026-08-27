@@ -144,9 +144,14 @@ export function getFoxIncomePerTick(fox, state, nowTs = Date.now()) {
 
 function getFoxIncomePerTickWithBuffs(fox, state, waterBuffMap, nowTs = Date.now()) {
   const tierData = getTierData(fox.tier);
-  const evolutionMultiplier = getEvolutionData(fox.evolution)?.incomeMultiplier || 1;
+  const hydraIncome = fox.kind === 'hydra'
+    ? Object.values(fox.elementTiers || {}).reduce((sum, tier) => sum + getTierData(tier).baseIncomePerTick, 0)
+    : null;
+  const evolutionMultiplier = fox.kind === 'hydra'
+    ? EVOLUTION_TYPES.electric.incomeMultiplier
+    : getEvolutionData(fox.evolution)?.incomeMultiplier || 1;
   const waterMultiplier = getWaterBuffMultiplier(fox.id, waterBuffMap);
-  const value = tierData.baseIncomePerTick * getPassiveIncomeMultiplier(state, nowTs) * evolutionMultiplier * waterMultiplier;
+  const value = (hydraIncome || tierData.baseIncomePerTick) * getPassiveIncomeMultiplier(state, nowTs) * evolutionMultiplier * waterMultiplier;
   return Math.max(1, Math.floor(value));
 }
 
@@ -157,9 +162,14 @@ export function getFoxClickValue(fox, state, nowTs = Date.now()) {
 
 function getFoxClickValueWithBuffs(fox, state, waterBuffMap, nowTs = Date.now()) {
   const tierData = getTierData(fox.tier);
-  const evolutionMultiplier = getEvolutionData(fox.evolution)?.clickMultiplier || 1;
+  const hydraClick = fox.kind === 'hydra'
+    ? Object.values(fox.elementTiers || {}).reduce((sum, tier) => sum + getTierData(tier).clickValue, 0)
+    : null;
+  const evolutionMultiplier = fox.kind === 'hydra'
+    ? EVOLUTION_TYPES.fire.clickMultiplier
+    : getEvolutionData(fox.evolution)?.clickMultiplier || 1;
   const waterMultiplier = getWaterBuffMultiplier(fox.id, waterBuffMap);
-  const value = tierData.clickValue * getClickMultiplier(state, nowTs) * evolutionMultiplier * waterMultiplier;
+  const value = (hydraClick || tierData.clickValue) * getClickMultiplier(state, nowTs) * evolutionMultiplier * waterMultiplier;
   return Math.max(1, Math.floor(value));
 }
 
@@ -169,6 +179,9 @@ export function getFoxSellValue(fox, state, nowTs = Date.now()) {
 }
 
 function getFoxSellValueWithBuffs(fox, state, waterBuffMap, nowTs = Date.now()) {
+  if (fox.kind === 'hydra') {
+    return 0;
+  }
   const tierData = getTierData(fox.tier);
   const waterMultiplier = getWaterBuffMultiplier(fox.id, waterBuffMap);
   const value = tierData.sellValue * getPassiveIncomeMultiplier(state, nowTs) * waterMultiplier;
@@ -184,7 +197,7 @@ export function getExpectedCoinsPerSecond(state, nowTs = Date.now()) {
 
 export function buildWaterBuffMap(state) {
   const buffs = new Map();
-  const waterFoxes = state.foxes.filter((fox) => fox.evolution === 'water');
+  const waterFoxes = state.foxes.filter((fox) => fox.evolution === 'water' || fox.kind === 'hydra');
 
   waterFoxes.forEach((waterFox) => {
     let nearestTargetId = null;

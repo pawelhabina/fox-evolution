@@ -342,6 +342,23 @@ export function playSfx(name) {
       });
       scheduleNoise({ time: now + 0.4, duration: 0.25, gain: 0.08, highpass: 1300 });
       break;
+    case 'qtePrompt':
+      tone(0, 86, 0.05, 'square', 0.1);
+      tone(0.055, 91, 0.07, 'square', 0.08);
+      break;
+    case 'qteHit':
+      tone(0, 67, 0.07, 'square', 0.15);
+      tone(0.055, 79, 0.1, 'triangle', 0.17);
+      tone(0.11, 86, 0.14, 'square', 0.14);
+      scheduleNoise({ time: now + 0.02, duration: 0.08, gain: 0.045, highpass: 2400 });
+      break;
+    case 'qteMiss':
+      tone(0, 45, 0.14, 'sawtooth', 0.13, 38);
+      scheduleNoise({ time: now, duration: 0.16, gain: 0.07, highpass: 500 });
+      break;
+    case 'mineCollect':
+      [72, 76, 79, 84].forEach((note, index) => tone(index * 0.055, note, 0.12, 'triangle', 0.12));
+      break;
     case 'error':
       tone(0, 45, 0.12, 'sawtooth', 0.1, 41);
       tone(0.11, 41, 0.14, 'sawtooth', 0.09, 38);

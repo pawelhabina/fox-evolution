@@ -5,6 +5,7 @@ import Arena from './components/Arena';
 import EvolutionModal from './components/EvolutionModal';
 import DeleteFoxModal from './components/DeleteFoxModal';
 import ElementalBossModal from './components/ElementalBossModal';
+import ElementalFusionTutorialModal from './components/ElementalFusionTutorialModal';
 import FoxContextMenu from './components/FoxContextMenu';
 import Hud from './components/Hud';
 import HelpModal from './components/HelpModal';
@@ -14,6 +15,7 @@ import PokedexModal from './components/PokedexModal';
 import SettingsModal from './components/SettingsModal';
 import StatisticsModal from './components/StatisticsModal';
 import ShopPanel from './components/ShopPanel';
+import SpiritMineRealm from './components/SpiritMineRealm';
 import ToastStack from './components/ToastStack';
 import { configureAudio, playSfx, shutdownAudio, startBackgroundMusic } from './audio/gameAudio';
 import {
@@ -215,6 +217,7 @@ export default function App() {
   const [friendsModalOpen, setFriendsModalOpen] = useState(false);
   const [evolutionTargetId, setEvolutionTargetId] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [activeRealm, setActiveRealm] = useState('merge');
   const [isLoaded, setIsLoaded] = useState(false);
   const [gameVersion, setGameVersion] = useState('dev');
   const stateRef = useRef(state);
@@ -223,6 +226,7 @@ export default function App() {
   const updateDownloadedToastShownRef = useRef(false);
   const foxClickTimestampsRef = useRef([]);
   const adminMessageRef = useRef(null);
+  const economyClockRef = useRef({ lastTs: Date.now(), accumulatedMs: 0 });
   const { toasts, pushToast } = useToasts();
   stateRef.current = state;
   adminMessageRef.current = adminMessage;
@@ -250,6 +254,9 @@ export default function App() {
     [deleteTargetId, state]
   );
   const elementalBossReady = useMemo(() => canChallengeElementalBoss(state), [state]);
+  const showElementalFusionTutorial = appScreen === 'game'
+    && !state.tutorials?.elementalFusionSeen
+    && state.foxes.some((fox) => fox.evolution && fox.tier >= 20);
 
   const withGlobalSettings = useCallback((nextState) => ({
     ...nextState,
@@ -434,8 +441,17 @@ export default function App() {
   }, [appScreen, currentSlotId, pushToast]);
 
   const enterGameWithState = useCallback((nextState, slotId, remoteUpdatedAt = null) => {
+    const nowTs = Date.now();
     const syncedState = withGlobalSettings(nextState);
-    dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: syncedState, nowTs: Date.now() });
+    dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: syncedState, nowTs });
+    const previousEconomyTs = new Date(syncedState.meta?.lastEconomyAt || syncedState.meta?.lastPlayedAt || nowTs).getTime();
+    const elapsedSeconds = Math.min(12 * 60 * 60, Math.max(0, (nowTs - previousEconomyTs) / 1000));
+    const savedTickDuration = getTickDurationSeconds(syncedState, nowTs);
+    const offlineTicks = Math.floor(elapsedSeconds / savedTickDuration);
+    if (elapsedSeconds >= 1) {
+      dispatch({ type: ACTIONS.APPLY_TICK, tickCount: offlineTicks, elapsedSeconds, nowTs });
+    }
+    economyClockRef.current = { lastTs: nowTs, accumulatedMs: 0 };
     setCurrentSlotId(slotId);
     remoteSlotUpdatedAtRef.current = remoteUpdatedAt || null;
     setShopTab('Ulepszenia');
@@ -443,6 +459,7 @@ export default function App() {
     setIncomePulse(null);
     setContextMenu(null);
     setEvolutionTargetId(null);
+    setActiveRealm('merge');
     setAppScreen('game');
   }, [withGlobalSettings]);
 
@@ -569,31 +586,44 @@ export default function App() {
       return undefined;
     }
 
-    const interval = setInterval(() => {
-      setTickCountdown((prev) => {
-        const nextCountdown = roundToTenth(prev - 0.1);
-        if (nextCountdown <= 0) {
-          const nowTs = Date.now();
-          const currentState = stateRef.current;
-          if (currentState.settings.animations && currentState.foxes.length > 0) {
-            incomePulseIdRef.current += 1;
-            setIncomePulse({
-              id: incomePulseIdRef.current,
-              entries: currentState.foxes.map((fox) => ({
-                foxId: fox.id,
-                amount: getFoxIncomePerTick(fox, currentState, nowTs)
-              }))
-            });
-          }
-          dispatch({ type: ACTIONS.APPLY_TICK, nowTs });
-          return tickDuration;
-        }
-        return nextCountdown;
-      });
-    }, 100);
+    economyClockRef.current.lastTs = Date.now();
+    const advanceEconomyClock = () => {
+      const nowTs = Date.now();
+      const clock = economyClockRef.current;
+      const elapsedMs = Math.min(12 * 60 * 60 * 1000, Math.max(0, nowTs - clock.lastTs));
+      clock.lastTs = nowTs;
+      clock.accumulatedMs += elapsedMs;
+      const currentState = stateRef.current;
+      const currentTickMs = getTickDurationSeconds(currentState, nowTs) * 1000;
+      const tickCount = Math.floor(clock.accumulatedMs / currentTickMs);
+      setTickCountdown(roundToTenth(Math.max(0, (currentTickMs - clock.accumulatedMs) / 1000)));
+      if (tickCount <= 0) return;
 
-    return () => clearInterval(interval);
-  }, [appScreen, isLoaded, tickDuration]);
+      const accountedMs = tickCount * currentTickMs;
+      clock.accumulatedMs -= accountedMs;
+      if (currentState.settings.animations && currentState.foxes.length > 0 && document.visibilityState === 'visible') {
+        incomePulseIdRef.current += 1;
+        setIncomePulse({
+          id: incomePulseIdRef.current,
+          entries: currentState.foxes.map((fox) => ({
+            foxId: fox.id,
+            amount: getFoxIncomePerTick(fox, currentState, nowTs) * tickCount
+          }))
+        });
+      }
+      dispatch({ type: ACTIONS.APPLY_TICK, tickCount, elapsedSeconds: accountedMs / 1000, nowTs });
+    };
+
+    const interval = window.setInterval(advanceEconomyClock, 200);
+    window.addEventListener('focus', advanceEconomyClock);
+    document.addEventListener('visibilitychange', advanceEconomyClock);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', advanceEconomyClock);
+      document.removeEventListener('visibilitychange', advanceEconomyClock);
+    };
+  }, [appScreen, isLoaded]);
 
   useEffect(() => {
     if (!isLoaded || appScreen !== 'game') {
@@ -613,9 +643,7 @@ export default function App() {
     }
 
     const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        dispatch({ type: ACTIONS.RECORD_PLAY_TIME, seconds: 1, nowTs: Date.now() });
-      }
+      dispatch({ type: ACTIONS.RECORD_PLAY_TIME, seconds: 1, nowTs: Date.now() });
     }, 1000);
 
     return () => clearInterval(interval);
@@ -962,6 +990,10 @@ export default function App() {
     if (!source || !target) {
       return;
     }
+    if (source.kind === 'hydra' || target.kind === 'hydra') {
+      playSfx('error');
+      return false;
+    }
     if (source.tier !== target.tier) {
       playSfx('error');
       return false;
@@ -1034,6 +1066,8 @@ export default function App() {
         coins={state.currencies.coins}
         gems={state.currencies.gems}
         rebirthTokens={state.currencies.rebirthTokens}
+        essence={state.currencies.essence || 0}
+        essenceUnlocked={Boolean(state.realms?.spiritMine?.unlocked)}
         coinsPerSecond={coinsPerSecond}
         countdown={tickCountdown}
         foxCount={state.foxes.length}
@@ -1062,13 +1096,25 @@ export default function App() {
           <div className="grid gap-2">
             <button
               type="button"
-              className="rounded-lg border border-emerald-400/80 bg-emerald-500/10 px-3 py-2 text-left text-sm text-emerald-200"
+              className={`rounded-lg border px-3 py-2 text-left text-sm ${activeRealm === 'merge' ? 'border-emerald-400/80 bg-emerald-500/10 text-emerald-200' : 'border-slate-600 bg-slate-800/70 text-slate-200'}`}
               onClick={() => {
+                setActiveRealm('merge');
                 setModeMenuOpen(false);
-                pushToast('Tryb Merge jest już aktywny');
               }}
             >
-              Merge (aktywny)
+              Plansza ewolucji {activeRealm === 'merge' ? '(aktywna)' : ''}
+            </button>
+            <button
+              type="button"
+              disabled={!state.realms?.spiritMine?.unlocked}
+              className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm ${state.realms?.spiritMine?.unlocked ? (activeRealm === 'mine' ? 'border-fuchsia-400 bg-fuchsia-500/15 text-fuchsia-100' : 'border-fuchsia-700 bg-fuchsia-950/30 text-fuchsia-200') : 'border-slate-700 bg-slate-800/70 text-slate-500'}`}
+              onClick={() => {
+                setActiveRealm('mine');
+                setModeMenuOpen(false);
+                playSfx('ui');
+              }}
+            >
+              <span>Kopalnia Duchów</span><span>{state.realms?.spiritMine?.unlocked ? '◈' : '🔒'}</span>
             </button>
             <button
               type="button"
@@ -1260,6 +1306,31 @@ export default function App() {
       )}
 
       <div className={`game-workspace min-h-0 flex-1 ${shopCollapsed ? 'shop-is-collapsed' : ''}`}>
+        {activeRealm === 'mine' ? (
+          <SpiritMineRealm
+            state={state}
+            onCollect={() => {
+              dispatch({ type: ACTIONS.MINE_COLLECT, nowTs: Date.now() });
+              playSfx('mineCollect');
+            }}
+            onUpgradeShaft={(element) => {
+              dispatch({ type: ACTIONS.MINE_UPGRADE_SHAFT, element, nowTs: Date.now() });
+              playSfx('upgrade');
+            }}
+            onHireMiner={(element) => {
+              dispatch({ type: ACTIONS.MINE_HIRE_MINER, element, nowTs: Date.now() });
+              playSfx('buy');
+            }}
+            onUpgradeElevator={() => {
+              dispatch({ type: ACTIONS.MINE_UPGRADE_ELEVATOR, nowTs: Date.now() });
+              playSfx('upgrade');
+            }}
+            onUpgradeWarehouse={() => {
+              dispatch({ type: ACTIONS.MINE_UPGRADE_WAREHOUSE, nowTs: Date.now() });
+              playSfx('upgrade');
+            }}
+          />
+        ) : <>
         <Arena
           foxes={state.foxes}
           arenaWidth={state.arena.width}
@@ -1388,6 +1459,7 @@ export default function App() {
             />
           )}
         </div>
+        </>}
       </div>
 
       <FoxContextMenu
@@ -1431,16 +1503,29 @@ export default function App() {
 
       <ElementalBossModal
         state={state}
-        onAttack={() => {
-          dispatch({ type: ACTIONS.ATTACK_BOSS, nowTs: Date.now() });
-          playSfx('click');
+        onAttack={(result) => {
+          dispatch({ type: ACTIONS.ATTACK_BOSS, ...result, nowTs: Date.now() });
         }}
         onRetry={() => {
           dispatch({ type: ACTIONS.LEAVE_BOSS_BATTLE, nowTs: Date.now() });
           window.setTimeout(() => dispatch({ type: ACTIONS.START_BOSS_BATTLE, nowTs: Date.now() }), 0);
         }}
         onClose={() => dispatch({ type: ACTIONS.LEAVE_BOSS_BATTLE, nowTs: Date.now() })}
+        onEnterMine={() => {
+          dispatch({ type: ACTIONS.LEAVE_BOSS_BATTLE, nowTs: Date.now() });
+          setActiveRealm('mine');
+          playSfx('mineCollect');
+        }}
       />
+
+      {showElementalFusionTutorial && (
+        <ElementalFusionTutorialModal
+          onClose={() => {
+            dispatch({ type: ACTIONS.ACK_ELEMENTAL_FUSION_TUTORIAL, nowTs: Date.now() });
+            playSfx('ui');
+          }}
+        />
+      )}
 
       <EvolutionModal
         fox={evolutionFox}

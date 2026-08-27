@@ -1162,6 +1162,12 @@ body {
   flex: 0 0 auto;
 }
 
+.fox-tile--hydra { width: 112px; height: 96px; z-index: 4 !important; }
+.fox-sprite--hydra { width: 108px; height: 88px; filter: drop-shadow(0 0 8px #f97316) drop-shadow(0 0 7px #38bdf8); animation: hydra-board-float 1.5s steps(3, end) infinite; }
+.fox-tile--hydra:hover .fox-sprite--hydra { filter: brightness(1.16) drop-shadow(0 0 11px #fde047) drop-shadow(0 0 9px #38bdf8); }
+.hydra-board-marker { position: absolute; left: 50%; bottom: -3px; width: max-content; transform: translateX(-50%); border: 1px solid #a78bfa; padding: 2px 4px; color: #f5d0fe; background: rgba(15, 23, 42, 0.95); box-shadow: 2px 2px 0 #020617; font-family: 'Press Start 2P', monospace; font-size: 6px; }
+@keyframes hydra-board-float { 50% { transform: translateY(-4px); } }
+
 .fox-evolution-ready-marker {
   position: absolute;
   top: 0;
@@ -1761,12 +1767,18 @@ body {
 .game-modal-close { width: 100%; margin-top: 0.8rem; }
 
 .boss-backdrop { background: radial-gradient(circle at 50% 38%, rgba(67, 56, 202, 0.3), rgba(2, 6, 23, 0.96) 56%); }
+.boss-backdrop--success { animation: boss-screen-hit 280ms steps(2, end); }
+.boss-backdrop--miss { animation: boss-screen-miss 280ms steps(2, end); }
 .boss-stage { position: relative; display: grid; height: clamp(180px, 35vh, 310px); margin: 0.7rem auto 0.8rem; place-items: center; overflow: hidden; }
 .boss-stage img { position: relative; z-index: 2; width: min(78%, 330px); max-height: 100%; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 0 16px rgba(250, 204, 21, 0.38)); animation: boss-hover 1.2s steps(3, end) infinite; }
 .boss-stage.is-defeated img { transform: rotate(-4deg) translateY(22px); filter: grayscale(0.55) brightness(0.6); animation: none; }
 .boss-aura { position: absolute; z-index: 1; width: 58%; aspect-ratio: 1; border: 3px solid rgba(250, 204, 21, 0.28); transform: rotate(45deg); background: radial-gradient(circle, rgba(37, 99, 235, 0.22), transparent 68%); box-shadow: 0 0 40px rgba(249, 115, 22, 0.22); }
+.boss-lightning { position: absolute; z-index: 3; width: 68%; height: 90%; opacity: 0.4; background: linear-gradient(115deg, transparent 44%, #fde047 45% 47%, transparent 48% 60%, #38bdf8 61% 62%, transparent 63%); clip-path: polygon(0 0, 100% 0, 75% 38%, 94% 38%, 20% 100%, 42% 52%, 18% 52%); animation: boss-lightning-flicker 900ms steps(2, end) infinite; }
+.boss-stage.is-success img { animation: boss-hit-flash 300ms steps(3, end), boss-hover 1.2s 300ms steps(3, end) infinite; }
+.boss-stage.is-miss { filter: saturate(0.75); }
 .boss-damage { position: absolute; top: 14%; left: 61%; z-index: 4; color: #f8fafc; font-family: 'Press Start 2P', monospace; font-size: 0.7rem; text-shadow: 2px 2px 0 #7f1d1d; animation: boss-damage-pop 420ms steps(3, end) both; }
 .boss-damage.is-critical { color: #fde047; font-size: 0.8rem; }
+.boss-miss { position: absolute; top: 18%; left: 21%; z-index: 5; color: #fb7185; font-family: 'Press Start 2P', monospace; font-size: 0.74rem; text-shadow: 2px 2px 0 #4c0519; animation: boss-damage-pop 420ms steps(3, end) both; }
 .boss-health { margin-top: 0.55rem; text-align: left; }
 .boss-health > div:first-child { display: flex; justify-content: space-between; color: #cbd5e1; font-family: 'Press Start 2P', monospace; font-size: 0.52rem; }
 .boss-health-track { height: 13px; margin-top: 0.3rem; border: 2px solid #020617; outline: 1px solid #475569; background: #111827; }
@@ -1781,6 +1793,57 @@ body {
 .boss-hint { margin-top: 0.7rem; color: #94a3b8; font-size: 0.62rem; line-height: 1.45; }
 .boss-attack-btn { width: 100%; min-height: 48px; margin-top: 0.8rem; border: 2px solid #fde047; color: #fff7d6; background: linear-gradient(90deg, #c2410c, #6d28d9 50%, #0369a1); box-shadow: inset 0 0 0 2px #020617, 4px 4px 0 #020617; font-family: 'Press Start 2P', monospace; font-size: 0.68rem; }
 .boss-attack-btn:hover { filter: brightness(1.18); }
+.boss-qte-zone { position: relative; min-height: 172px; margin-top: 0.65rem; }
+.boss-qte-key { display: grid; width: min(100%, 210px); min-height: 94px; margin: 0.55rem auto 0; place-items: center; border: 3px solid #fde047; color: #fff; background: radial-gradient(circle, #7c3aed, #1e1b4b 68%); box-shadow: inset 0 0 0 3px #020617, 0 0 22px rgba(250, 204, 21, 0.38), 5px 5px 0 #020617; animation: boss-qte-pop 180ms steps(3, end) both; }
+.boss-qte-key strong { font-family: 'Press Start 2P', monospace; font-size: 2rem; line-height: 1; text-shadow: 3px 3px 0 #020617; }
+.boss-qte-key small { color: #fde68a; font-family: 'Press Start 2P', monospace; font-size: 0.45rem; }
+.boss-qte-timer { display: block; width: 82%; height: 8px; border: 1px solid #020617; background: #450a0a; }
+.boss-qte-timer i { display: block; height: 100%; background: linear-gradient(90deg, #ef4444, #fde047, #22c55e); transition: width 25ms linear; }
+.boss-qte-wait { display: grid; min-height: 94px; place-items: center; color: #a5b4fc; font-family: 'Press Start 2P', monospace; font-size: 0.55rem; animation: elemental-fusion-pulse 0.8s steps(2, end) infinite; }
+.boss-combo { position: absolute; top: 0; right: 0; z-index: 4; display: grid; text-align: right; }
+.boss-combo span, .boss-combo small { color: #94a3b8; font-size: 0.48rem; }
+.boss-combo strong { color: #fde047; font-family: 'Press Start 2P', monospace; font-size: 0.8rem; }
+.boss-victory-rewards { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.boss-victory-rewards .game-modal-reward { width: 100%; }
+.game-modal-reward.is-essence { border-color: #c084fc; background: rgba(88, 28, 135, 0.28); }
+.game-modal-reward.is-essence strong { color: #e9d5ff; font-size: 1.1rem; }
+
+.fusion-tutorial-backdrop { z-index: 115; background: radial-gradient(circle at 50% 38%, rgba(126, 34, 206, 0.36), rgba(2, 6, 23, 0.96) 58%); }
+.fusion-tutorial-modal { width: min(94vw, 560px); }
+.fusion-tutorial-hydra { width: min(72%, 300px); max-height: 220px; margin: 0.4rem auto; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 0 14px rgba(250, 204, 21, 0.35)); }
+.fusion-tutorial-lead { color: #e2e8f0; font-size: 0.76rem; line-height: 1.55; }
+.fusion-tutorial-steps { display: grid; gap: 0.42rem; margin-top: 0.8rem; text-align: left; }
+.fusion-tutorial-steps span { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.65rem; border: 1px solid #334155; color: #cbd5e1; background: rgba(15, 23, 42, 0.85); font-size: 0.68rem; }
+.fusion-tutorial-steps i { width: 12px; height: 12px; border: 1px solid #fff; box-shadow: 0 0 8px currentColor; }
+.fusion-tutorial-steps .is-fire { color: #f97316; background: #f97316; }.fusion-tutorial-steps .is-electric { color: #fde047; background: #fde047; }.fusion-tutorial-steps .is-water { color: #38bdf8; background: #38bdf8; }
+
+.spirit-mine { grid-column: 1 / -1; min-width: 0; min-height: 0; overflow: auto; padding: clamp(0.8rem, 2vw, 1.5rem); background: radial-gradient(circle at 50% -10%, rgba(147, 51, 234, 0.28), transparent 38%), linear-gradient(#080b1d, #12081f); scrollbar-color: #7e22ce #090713; scrollbar-width: thin; }
+.spirit-mine-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; max-width: 1120px; margin: 0 auto; padding: 1rem; border: 1px solid #7e22ce; background: rgba(15, 10, 35, 0.9); box-shadow: 5px 5px 0 #020617; }
+.spirit-mine-header small { color: #c084fc; font-family: 'Press Start 2P', monospace; font-size: 0.48rem; }.spirit-mine-header h2 { margin-top: 0.35rem; color: #f5f3ff; font-family: 'Press Start 2P', monospace; font-size: clamp(0.85rem, 2vw, 1.25rem); }.spirit-mine-header p { margin-top: 0.45rem; color: #94a3b8; font-size: 0.7rem; }
+.spirit-mine-wallet { display: grid; min-width: 170px; padding: 0.65rem; border: 1px solid #c084fc; text-align: right; background: #2e1065; }.spirit-mine-wallet span { color: #d8b4fe; font-size: 0.58rem; }.spirit-mine-wallet strong { color: #fff; font-family: 'Press Start 2P', monospace; font-size: 0.72rem; margin-top: 0.25rem; }
+.spirit-mine-facilities { display: grid; grid-template-columns: 1fr 1.1fr 1fr; gap: 0.7rem; max-width: 1120px; margin: 0.9rem auto; }.spirit-mine-facilities > div, .mine-collect-all { display: grid; gap: 0.25rem; padding: 0.65rem; border: 1px solid #475569; color: #e2e8f0; background: rgba(15, 23, 42, 0.9); }.spirit-mine-facilities small { color: #94a3b8; font-size: 0.57rem; }.spirit-mine-facilities button { margin-top: 0.25rem; padding: 0.42rem; border: 1px solid #a78bfa; color: #ede9fe; background: #4c1d95; font-size: 0.58rem; }.spirit-mine-facilities button:disabled { filter: grayscale(0.8); opacity: 0.45; }.mine-collect-all { place-items: center; border-color: #f0abfc; background: linear-gradient(135deg, #701a75, #4c1d95); }.mine-collect-all strong { color: #fff; font-family: 'Press Start 2P', monospace; font-size: 0.7rem; }
+.spirit-mine-shafts { display: grid; gap: 0.8rem; max-width: 1120px; margin: 0 auto; }.mine-shaft { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 0.7rem; padding: 0.7rem; border: 1px solid var(--mine-color); background: linear-gradient(90deg, color-mix(in srgb, var(--mine-color) 12%, #080b16), #0f172a 55%); box-shadow: 5px 5px 0 #020617; }.mine-shaft--fire { --mine-color: #f97316; }.mine-shaft--electric { --mine-color: #fde047; }.mine-shaft--water { --mine-color: #38bdf8; }
+.mine-shaft-scene { grid-row: 1 / 5; position: relative; min-height: 118px; overflow: hidden; border: 1px solid #334155; background: repeating-linear-gradient(90deg, transparent 0 28px, rgba(148, 163, 184, 0.12) 29px 31px), linear-gradient(#020617, #1e1b4b); }.mine-element-orb { position: absolute; right: 12px; bottom: 12px; display: grid; width: 42px; height: 42px; place-items: center; border: 2px solid var(--mine-color); background: #020617; box-shadow: 0 0 15px var(--mine-color); animation: mine-orb-pulse 1.2s steps(3, end) infinite; }.mine-shaft-scene i { position: absolute; left: 12px; bottom: 10px; font-style: normal; animation: mine-fox-work 2.2s var(--miner-delay) steps(6, end) infinite; }.mine-shaft-scene i:nth-of-type(2) { bottom: 36px; }.mine-shaft-scene i:nth-of-type(3) { bottom: 62px; }.mine-shaft-scene i:nth-of-type(4) { left: 70px; }.mine-shaft-scene i:nth-of-type(5) { left: 105px; bottom: 48px; }
+.mine-shaft-info { display: flex; align-items: center; justify-content: space-between; gap: 0.7rem; }.mine-shaft-info span { display: grid; }.mine-shaft-info strong { color: var(--mine-color); font-family: 'Press Start 2P', monospace; font-size: 0.64rem; }.mine-shaft-info small { margin-top: 0.35rem; color: #94a3b8; font-size: 0.58rem; }.mine-shaft-info b { color: #f8fafc; font-family: 'Press Start 2P', monospace; font-size: 0.55rem; }
+.mine-storage { position: relative; height: 19px; border: 2px solid #020617; outline: 1px solid #475569; background: #111827; }.mine-storage > span { display: block; height: 100%; background: linear-gradient(90deg, #7e22ce, var(--mine-color)); transition: width 300ms linear; }.mine-storage small { position: absolute; inset: 0; color: #fff; font-size: 0.52rem; line-height: 15px; text-align: center; text-shadow: 1px 1px #020617; }
+.mine-shaft-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }.mine-shaft-actions button { padding: 0.5rem; border: 1px solid var(--mine-color); color: #e2e8f0; background: #1e293b; font-size: 0.58rem; }.mine-shaft-actions button:disabled { opacity: 0.4; filter: grayscale(0.8); }
+
+@keyframes boss-screen-hit { 50% { background-color: rgba(250, 204, 21, 0.12); } }
+@keyframes boss-screen-miss { 50% { transform: translateX(4px); background-color: rgba(239, 68, 68, 0.12); } }
+@keyframes boss-hit-flash { 50% { transform: translateX(-7px); filter: brightness(2) drop-shadow(0 0 18px #fde047); } }
+@keyframes boss-lightning-flicker { 50% { opacity: 0.08; transform: scaleX(-1); } }
+@keyframes boss-qte-pop { from { opacity: 0; transform: scale(0.72); } to { opacity: 1; transform: scale(1); } }
+@keyframes mine-orb-pulse { 50% { transform: scale(1.08); filter: brightness(1.4); } }
+@keyframes mine-fox-work { 0% { transform: translateX(0); } 50% { transform: translateX(105px); } 100% { transform: translateX(0) scaleX(-1); } }
+
+@media (max-width: 850px) {
+  .spirit-mine-header { align-items: stretch; flex-direction: column; }
+  .spirit-mine-wallet { width: 100%; text-align: left; }
+  .spirit-mine-facilities { grid-template-columns: 1fr; }
+  .mine-shaft { grid-template-columns: 1fr; }
+  .mine-shaft-scene { grid-row: auto; min-height: 105px; }
+  .boss-victory-rewards { grid-template-columns: 1fr; }
+}
 
 @keyframes boss-hover { 50% { transform: translateY(-5px); } }
 @keyframes boss-damage-pop { from { opacity: 0; transform: translateY(16px) scale(0.8); } to { opacity: 1; transform: translateY(-8px) scale(1); } }

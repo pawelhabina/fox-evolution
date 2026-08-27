@@ -3,6 +3,7 @@ export const ELEMENTAL_BOSS_MAX_HP = 5000;
 export const ELEMENTAL_TEAM_MAX_HP = 120;
 export const ELEMENTAL_BOSS_DAMAGE = 4;
 export const ELEMENTAL_BOSS_REWARD_GEMS = 50;
+export const ELEMENTAL_BOSS_REWARD_ESSENCE = 25;
 
 const REQUIRED_ELEMENTS = ['fire', 'electric', 'water'];
 
@@ -22,7 +23,10 @@ export function canChallengeElementalBoss(state) {
 }
 
 export function getElementalTeamAttackPower(state) {
-  const team = getElementalBossTeam(state?.foxes);
+  const selectedIds = state?.bossBattle?.teamFoxIds;
+  const team = Array.isArray(selectedIds) && selectedIds.length === 3
+    ? selectedIds.map((id) => state?.foxes?.find((fox) => fox.id === id) || null)
+    : getElementalBossTeam(state?.foxes);
   if (!team.every(Boolean)) {
     return 0;
   }
@@ -38,6 +42,11 @@ export function createBossBattleState() {
     teamHp: ELEMENTAL_TEAM_MAX_HP,
     attacks: 0,
     lastDamage: 0,
-    critical: false
+    critical: false,
+    combo: 0,
+    bestCombo: 0,
+    lastResult: null,
+    teamFoxIds: [],
+    teamSnapshot: []
   };
 }

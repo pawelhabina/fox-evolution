@@ -1,6 +1,6 @@
 {
   "name": "fox-evolution-v2",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Merge Fox Tycoon",
   "main": "electron/main.js",
   "scripts": {
@@ -21,6 +21,7 @@
     "nextcloud:publish": "node scripts/publish-nextcloud.mjs"
   },
   "build": {
+    "afterPack": "scripts/after-pack.cjs",
     "appId": "com.foxevolution.app",
     "productName": "Fox Evolution",
     "artifactName": "Fox-Evolution-${version}-${arch}.${ext}",

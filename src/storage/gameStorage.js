@@ -7,6 +7,7 @@ import {
   ELEMENTAL_TEAM_MAX_HP,
   createBossBattleState
 } from '../game/bossBattle';
+import { SPIRIT_MINE_ELEMENTS, createSpiritMineState, getMineShaftCapacity } from '../game/spiritMine';
 import {
   apiRequest,
   acknowledgeAdminMessage,
@@ -145,7 +146,8 @@ function sanitizeState(rawState, nowTs = Date.now()) {
   const currencies = {
     coins: clampCurrency(rawState.currencies?.coins ?? base.currencies.coins),
     gems: clampCurrency(rawState.currencies?.gems ?? base.currencies.gems),
-    rebirthTokens: clampCurrency(rawState.currencies?.rebirthTokens ?? base.currencies.rebirthTokens)
+    rebirthTokens: clampCurrency(rawState.currencies?.rebirthTokens ?? base.currencies.rebirthTokens),
+    essence: clampCurrency(rawState.currencies?.essence ?? base.currencies.essence)
   };
 
   const upgrades = {
@@ -171,7 +173,7 @@ function sanitizeState(rawState, nowTs = Date.now()) {
   const arenaWidth = Math.max(300, Math.floor(rawState.arena?.width || base.arena.width));
   const arenaHeight = Math.max(260, Math.floor(rawState.arena?.height || base.arena.height));
 
-  const foxes = Array.isArray(rawState.foxes)
+  let foxes = Array.isArray(rawState.foxes)
     ? rawState.foxes
         .slice(0, MAX_FOXES_LIMIT)
         .map((fox) => {
@@ -182,7 +184,15 @@ function sanitizeState(rawState, nowTs = Date.now()) {
             tier,
             x: pos.x,
             y: pos.y,
-            evolution: fox.evolution || null
+            evolution: fox.kind === 'hydra' ? null : fox.evolution || null,
+            ...(fox.kind === 'hydra' ? {
+              kind: 'hydra',
+              elementTiers: {
+                fire: clamp(Number(fox.elementTiers?.fire) || tier, 20, MAX_TIER),
+                electric: clamp(Number(fox.elementTiers?.electric) || tier, 20, MAX_TIER),
+                water: clamp(Number(fox.elementTiers?.water) || tier, 20, MAX_TIER)
+              }
+            } : {})
           };
         })
     : [];
@@ -274,7 +284,64 @@ function sanitizeState(rawState, nowTs = Date.now()) {
     teamHp: clamp(Number.isFinite(rawTeamHp) ? rawTeamHp : ELEMENTAL_TEAM_MAX_HP, 0, ELEMENTAL_TEAM_MAX_HP),
     attacks: clampCurrency(rawState.bossBattle?.attacks || 0),
     lastDamage: clampCurrency(rawState.bossBattle?.lastDamage || 0),
-    critical: Boolean(rawState.bossBattle?.critical)
+    critical: Boolean(rawState.bossBattle?.critical),
+    combo: clampCurrency(rawState.bossBattle?.combo || 0),
+    bestCombo: clampCurrency(rawState.bossBattle?.bestCombo || 0),
+    lastResult: ['success', 'miss'].includes(rawState.bossBattle?.lastResult) ? rawState.bossBattle.lastResult : null,
+    teamFoxIds: Array.isArray(rawState.bossBattle?.teamFoxIds)
+      ? rawState.bossBattle.teamFoxIds.slice(0, 3).map((id) => Number(id)).filter(Number.isFinite)
+      : [],
+    teamSnapshot: Array.isArray(rawState.bossBattle?.teamSnapshot)
+      ? rawState.bossBattle.teamSnapshot.slice(0, 3).map((fox) => ({
+          evolution: fox?.evolution || null,
+          tier: clamp(Number(fox?.tier) || 20, 20, MAX_TIER)
+        }))
+      : []
+  };
+
+  if (bossBattle.defeated && !foxes.some((fox) => fox.kind === 'hydra')) {
+    const legacyTeam = ['fire', 'electric', 'water'].map((evolution) => foxes
+      .filter((fox) => fox.evolution === evolution && fox.tier >= 20)
+      .sort((a, b) => b.tier - a.tier)[0] || null);
+    if (legacyTeam.every(Boolean)) {
+      const legacyIds = new Set(legacyTeam.map((fox) => fox.id));
+      const hydraId = foxes.reduce((max, fox) => Math.max(max, fox.id + 1), 1);
+      foxes = [...foxes.filter((fox) => !legacyIds.has(fox.id)), {
+        id: hydraId,
+        kind: 'hydra',
+        tier: Math.max(...legacyTeam.map((fox) => fox.tier)),
+        x: legacyTeam.reduce((sum, fox) => sum + fox.x, 0) / 3,
+        y: legacyTeam.reduce((sum, fox) => sum + fox.y, 0) / 3,
+        evolution: null,
+        elementTiers: Object.fromEntries(legacyTeam.map((fox) => [fox.evolution, fox.tier]))
+      }];
+      bossBattle.teamSnapshot = legacyTeam.map((fox) => ({ evolution: fox.evolution, tier: fox.tier }));
+    }
+  }
+
+  const defaultMine = createSpiritMineState();
+  const rawMine = rawState.realms?.spiritMine;
+  const mineBase = {
+    ...defaultMine,
+    unlocked: Boolean(rawMine?.unlocked || bossBattle.defeated),
+    totalCollected: clampCurrency(rawMine?.totalCollected || 0),
+    lastAdvancedAt: sanitizeIsoTimestamp(rawMine?.lastAdvancedAt, base.meta.lastPlayedAt),
+    elevatorLevel: clamp(Number(rawMine?.elevatorLevel) || 1, 1, 100),
+    warehouseLevel: clamp(Number(rawMine?.warehouseLevel) || 1, 1, 100)
+  };
+  const spiritMine = {
+    ...mineBase,
+    shafts: SPIRIT_MINE_ELEMENTS.map((element) => {
+      const rawShaft = rawMine?.shafts?.find((shaft) => shaft?.element === element);
+      const fallback = defaultMine.shafts.find((shaft) => shaft.element === element);
+      const shaft = {
+        element,
+        level: clamp(Number(rawShaft?.level) || fallback.level, 1, 100),
+        miners: clamp(Number(rawShaft?.miners) || fallback.miners, 1, 25),
+        stored: Math.max(0, Number(rawShaft?.stored) || 0)
+      };
+      return { ...shaft, stored: Math.min(shaft.stored, getMineShaftCapacity(shaft, mineBase)) };
+    })
   };
 
   return {
@@ -298,6 +365,10 @@ function sanitizeState(rawState, nowTs = Date.now()) {
     quests,
     pokedex: sanitizePokedex(rawState.pokedex, foxes, nowTs),
     bossBattle,
+    tutorials: {
+      elementalFusionSeen: Boolean(rawState.tutorials?.elementalFusionSeen)
+    },
+    realms: { spiritMine },
     meta: {
       nextFoxId: Math.max(
         base.meta.nextFoxId,
@@ -306,7 +377,8 @@ function sanitizeState(rawState, nowTs = Date.now()) {
       ),
       gemDropCounter: clampCurrency(rawState.meta?.gemDropCounter ?? base.meta.gemDropCounter),
       createdAt: sanitizeIsoTimestamp(rawState.meta?.createdAt, base.meta.createdAt),
-      lastPlayedAt: sanitizeIsoTimestamp(rawState.meta?.lastPlayedAt, base.meta.lastPlayedAt)
+      lastPlayedAt: sanitizeIsoTimestamp(rawState.meta?.lastPlayedAt, base.meta.lastPlayedAt),
+      lastEconomyAt: sanitizeIsoTimestamp(rawState.meta?.lastEconomyAt || rawState.meta?.lastPlayedAt, base.meta.lastPlayedAt)
     },
     arena: {
       width: arenaWidth,

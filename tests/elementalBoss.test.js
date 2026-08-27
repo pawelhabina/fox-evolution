@@ -30,3 +30,21 @@ test('higher elemental levels increase team attack power', async () => {
   assert.equal(getElementalTeamAttackPower(makeState(20)), 160);
   assert.equal(getElementalTeamAttackPower(makeState(25)), 310);
 });
+
+test('boss battle keeps the selected team and exposes QTE progress fields', async () => {
+  const { createBossBattleState, getElementalTeamAttackPower } = await import('../src/game/bossBattle.js');
+  const battle = createBossBattleState();
+  assert.deepEqual(battle.teamFoxIds, []);
+  assert.equal(battle.combo, 0);
+  assert.equal(battle.bestCombo, 0);
+
+  const state = {
+    foxes: [
+      { id: 1, tier: 21, evolution: 'fire' },
+      { id: 2, tier: 22, evolution: 'electric' },
+      { id: 3, tier: 23, evolution: 'water' }
+    ],
+    bossBattle: { teamFoxIds: [1, 2, 3] }
+  };
+  assert.equal(getElementalTeamAttackPower(state), 220);
+});

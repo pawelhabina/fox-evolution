@@ -89,16 +89,25 @@ test('main menu uses the official game icon instead of the paw glyph', () => {
   assert.doesNotMatch(mainMenu, /<GuiIcon name="pet" alt="" size=\{64\} \/>/);
 });
 
-test('version 1.2.4 is visibly marked as Early Access', () => {
+test('version 1.2.5 is visibly marked as Early Access', () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
   const constants = fs.readFileSync(path.join(projectRoot, 'src/game/constants.js'), 'utf8');
   const mainMenu = fs.readFileSync(path.join(projectRoot, 'src/components/MainMenu.jsx'), 'utf8');
 
-  assert.equal(packageJson.version, '1.2.4');
-  assert.match(constants, /GAME_VERSION = '1\.2\.4'/);
+  assert.equal(packageJson.version, '1.2.5');
+  assert.match(constants, /GAME_VERSION = '1\.2\.5'/);
   assert.match(constants, /RELEASE_CHANNEL = 'EARLY ACCESS'/);
   assert.match(mainMenu, /EARLY ACCESS/);
   assert.match(mainMenu, /Wczesna wersja gry/);
+});
+
+test('macOS packages receive a complete stable ad-hoc signature', () => {
+  const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
+  const hook = fs.readFileSync(path.join(projectRoot, 'scripts/after-pack.cjs'), 'utf8');
+  assert.equal(packageJson.build.afterPack, 'scripts/after-pack.cjs');
+  assert.match(hook, /'--deep', '--sign', '-'/);
+  assert.match(hook, /designated => identifier \"com\.foxevolution\.app\"/);
+  assert.match(hook, /'--verify', '--deep', '--strict'/);
 });
 
 test('production deployment publishes Windows and macOS update artifacts', () => {
