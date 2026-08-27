@@ -12,7 +12,10 @@ export function createInitialState(nowTs = Date.now()) {
       coins: 120,
       gems: 0,
       rebirthTokens: 0,
-      essence: 0
+      essence: 0,
+      fireCoins: 0,
+      electricCoins: 0,
+      waterCoins: 0
     },
     foxes: [],
     upgrades: {

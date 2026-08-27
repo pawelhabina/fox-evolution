@@ -46,11 +46,15 @@ import {
   getElementalTeamAttackPower
 } from './bossBattle';
 import {
+  SPIRIT_MINE_CURRENCY_KEYS,
   advanceSpiritMine,
+  createMineShaft,
   getMineFacilityCost,
+  getMineCollectableByElement,
   getMineMinerCost,
+  getMineNextRoom,
   getMineShaftUpgradeCost,
-  getMineStoredTotal
+  getMineStoredByElement
 } from './spiritMine';
 
 export const ACTIONS = {
@@ -70,6 +74,7 @@ export const ACTIONS = {
   MINE_COLLECT: 'MINE_COLLECT',
   MINE_UPGRADE_SHAFT: 'MINE_UPGRADE_SHAFT',
   MINE_HIRE_MINER: 'MINE_HIRE_MINER',
+  MINE_UNLOCK_ROOM: 'MINE_UNLOCK_ROOM',
   MINE_UPGRADE_ELEVATOR: 'MINE_UPGRADE_ELEVATOR',
   MINE_UPGRADE_WAREHOUSE: 'MINE_UPGRADE_WAREHOUSE',
   BUY_UPGRADE: 'BUY_UPGRADE',
@@ -199,7 +204,10 @@ function clampStateCurrencies(state) {
       coins: clampCurrency(state.currencies.coins),
       gems: clampCurrency(state.currencies.gems),
       rebirthTokens: clampCurrency(state.currencies.rebirthTokens),
-      essence: clampCurrency(state.currencies.essence || 0)
+      essence: clampCurrency(state.currencies.essence || 0),
+      fireCoins: clampCurrency(state.currencies.fireCoins || 0),
+      electricCoins: clampCurrency(state.currencies.electricCoins || 0),
+      waterCoins: clampCurrency(state.currencies.waterCoins || 0)
     }
   };
 }
@@ -774,20 +782,30 @@ export function gameReducer(state, action) {
 
     case ACTIONS.MINE_COLLECT: {
       const mine = next.realms?.spiritMine;
-      const collected = getMineStoredTotal(mine);
-      if (!mine?.unlocked || collected <= 0) return next;
+      if (!mine?.unlocked) return next;
+      const storedByElement = getMineStoredByElement(mine);
+      const collectedByElement = getMineCollectableByElement(mine);
+      const collected = Object.values(collectedByElement).reduce((sum, amount) => sum + amount, 0);
+      if (collected <= 0) return next;
+      const remainderElements = new Set();
+      const currencies = { ...next.currencies };
+      Object.entries(collectedByElement).forEach(([element, amount]) => {
+        const currencyKey = SPIRIT_MINE_CURRENCY_KEYS[element];
+        currencies[currencyKey] = clampCurrency((currencies[currencyKey] || 0) + amount);
+      });
       return {
         ...next,
-        currencies: {
-          ...next.currencies,
-          essence: clampCurrency((next.currencies.essence || 0) + collected)
-        },
+        currencies,
         realms: {
           ...next.realms,
           spiritMine: {
             ...mine,
             totalCollected: clampCurrency((mine.totalCollected || 0) + collected),
-            shafts: mine.shafts.map((shaft) => ({ ...shaft, stored: 0 }))
+            shafts: mine.shafts.map((shaft) => {
+              if (remainderElements.has(shaft.element)) return { ...shaft, stored: 0 };
+              remainderElements.add(shaft.element);
+              return { ...shaft, stored: storedByElement[shaft.element] - collectedByElement[shaft.element] };
+            })
           }
         }
       };
@@ -796,25 +814,47 @@ export function gameReducer(state, action) {
     case ACTIONS.MINE_UPGRADE_SHAFT:
     case ACTIONS.MINE_HIRE_MINER: {
       const mine = next.realms?.spiritMine;
-      const shaft = mine?.shafts?.find((item) => item.element === action.element);
+      const shaft = mine?.shafts?.find((item) => item.id === action.roomId);
       if (!mine?.unlocked || !shaft) return next;
       const cost = action.type === ACTIONS.MINE_UPGRADE_SHAFT
         ? getMineShaftUpgradeCost(shaft)
         : getMineMinerCost(shaft);
-      if ((next.currencies.essence || 0) < cost) return next;
+      const currencyKey = SPIRIT_MINE_CURRENCY_KEYS[shaft.element];
+      if ((next.currencies[currencyKey] || 0) < cost) return next;
       return {
         ...next,
-        currencies: { ...next.currencies, essence: clampCurrency(next.currencies.essence - cost) },
+        currencies: { ...next.currencies, [currencyKey]: clampCurrency(next.currencies[currencyKey] - cost) },
         realms: {
           ...next.realms,
           spiritMine: {
             ...mine,
-            shafts: mine.shafts.map((item) => item.element !== action.element ? item : {
+            shafts: mine.shafts.map((item) => item.id !== action.roomId ? item : {
               ...item,
               ...(action.type === ACTIONS.MINE_UPGRADE_SHAFT
                 ? { level: item.level + 1 }
                 : { miners: item.miners + 1 })
             })
+          }
+        }
+      };
+    }
+
+    case ACTIONS.MINE_UNLOCK_ROOM: {
+      const mine = next.realms?.spiritMine;
+      const room = getMineNextRoom(mine);
+      if (!mine?.unlocked || !room) return next;
+      if ((next.currencies[room.currencyKey] || 0) < room.cost) return next;
+      return {
+        ...next,
+        currencies: {
+          ...next.currencies,
+          [room.currencyKey]: clampCurrency(next.currencies[room.currencyKey] - room.cost)
+        },
+        realms: {
+          ...next.realms,
+          spiritMine: {
+            ...mine,
+            shafts: [...mine.shafts, createMineShaft(room.room)]
           }
         }
       };
@@ -940,7 +980,10 @@ export function gameReducer(state, action) {
           ...fresh.currencies,
           gems: next.currencies.gems,
           rebirthTokens: next.currencies.rebirthTokens + earned,
-          essence: next.currencies.essence || 0
+          essence: next.currencies.essence || 0,
+          fireCoins: next.currencies.fireCoins || 0,
+          electricCoins: next.currencies.electricCoins || 0,
+          waterCoins: next.currencies.waterCoins || 0
         },
         foxes: next.foxes.filter((fox) => fox.kind === 'hydra'),
         upgrades: {

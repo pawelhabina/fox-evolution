@@ -7,7 +7,13 @@ import {
   ELEMENTAL_TEAM_MAX_HP,
   createBossBattleState
 } from '../game/bossBattle';
-import { SPIRIT_MINE_ELEMENTS, createSpiritMineState, getMineShaftCapacity } from '../game/spiritMine';
+import {
+  SPIRIT_MINE_MAX_ROOMS,
+  createMineShaft,
+  createSpiritMineState,
+  getMineRoomElement,
+  getMineShaftCapacity
+} from '../game/spiritMine';
 import {
   apiRequest,
   acknowledgeAdminMessage,
@@ -147,7 +153,10 @@ function sanitizeState(rawState, nowTs = Date.now()) {
     coins: clampCurrency(rawState.currencies?.coins ?? base.currencies.coins),
     gems: clampCurrency(rawState.currencies?.gems ?? base.currencies.gems),
     rebirthTokens: clampCurrency(rawState.currencies?.rebirthTokens ?? base.currencies.rebirthTokens),
-    essence: clampCurrency(rawState.currencies?.essence ?? base.currencies.essence)
+    essence: clampCurrency(rawState.currencies?.essence ?? base.currencies.essence),
+    fireCoins: clampCurrency(rawState.currencies?.fireCoins ?? base.currencies.fireCoins),
+    electricCoins: clampCurrency(rawState.currencies?.electricCoins ?? base.currencies.electricCoins),
+    waterCoins: clampCurrency(rawState.currencies?.waterCoins ?? base.currencies.waterCoins)
   };
 
   const upgrades = {
@@ -329,13 +338,18 @@ function sanitizeState(rawState, nowTs = Date.now()) {
     elevatorLevel: clamp(Number(rawMine?.elevatorLevel) || 1, 1, 100),
     warehouseLevel: clamp(Number(rawMine?.warehouseLevel) || 1, 1, 100)
   };
+  const rawShafts = Array.isArray(rawMine?.shafts) && rawMine.shafts.length > 0
+    ? rawMine.shafts.slice(0, SPIRIT_MINE_MAX_ROOMS)
+    : defaultMine.shafts;
   const spiritMine = {
     ...mineBase,
-    shafts: SPIRIT_MINE_ELEMENTS.map((element) => {
-      const rawShaft = rawMine?.shafts?.find((shaft) => shaft?.element === element);
-      const fallback = defaultMine.shafts.find((shaft) => shaft.element === element);
+    shafts: rawShafts.map((rawShaft, index) => {
+      const room = index + 1;
+      const fallback = createMineShaft(room);
       const shaft = {
-        element,
+        id: room,
+        room,
+        element: getMineRoomElement(room),
         level: clamp(Number(rawShaft?.level) || fallback.level, 1, 100),
         miners: clamp(Number(rawShaft?.miners) || fallback.miners, 1, 25),
         stored: Math.max(0, Number(rawShaft?.stored) || 0)

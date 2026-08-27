@@ -49,16 +49,18 @@ export const HELP_SECTIONS = [
     id: 'mine',
     title: 'Kopalnia Duchów',
     icon: 'diamond',
-    summary: 'Po pierwszej Hydrze odblokujesz Esencję i automatyczną krainę działającą jak idle miner.',
+    summary: 'Po pierwszej Hydrze odblokujesz Esencję i podziemne królestwo z maksymalnie 10 automatycznymi kopalniami.',
     tips: [
       ['Odblokowanie', 'Pokonaj Hydrę po połączeniu trzech żywiołowych lisów na poziomie 20. Otrzymasz pierwsze 25 Esencji Hydry.'],
-      ['Automatyczne szyby', 'Szyby Magmy, Burzy i Głębin produkują Esencję samodzielnie aż do zapełnienia swoich magazynów.'],
-      ['Odbieranie', 'Przycisk na środku przenosi urobek ze wszystkich szybów do portfela Esencji.'],
-      ['Górnicy i poziomy', 'Pogłębianie szybu i zatrudnianie kolejnych lisów zwiększa jego tempo produkcji.'],
-      ['Winda i magazyn', 'Winda wzmacnia produkcję wszystkich szybów, a magazyn zwiększa maksymalną ilość urobku.'],
+      ['Pierwsza kopalnia', 'Na początku działa tylko Kopalnia Ognia. Wytwarza Ogniste monety, którymi rozwiniesz pokój i odblokujesz Kopalnię Prądu.'],
+      ['Kolejne pokoje', 'Kopalnie odblokowują się w kolejności Ogień → Prąd → Woda. Koszt nowego pokoju płacisz monetami poprzedniego żywiołu. Możesz zbudować łącznie 10 kopalni.'],
+      ['Trzy waluty', 'Każdy żywioł ma własne monety. Ogniste, Elektryczne i Wodne monety ulepszają wyłącznie kopalnie odpowiadającego im typu.'],
+      ['Odbieranie', 'Przycisk „Odbierz urobek” przenosi zawartość wszystkich magazynów do trzech portfeli żywiołów.'],
+      ['Górnicy i poziomy', 'Pogłębianie kopalni i zatrudnianie kolejnych lisów zwiększa jej tempo produkcji. Głębsze pokoje dostają dodatkowy bonus.'],
+      ['Winda i magazyn', 'Widoczna winda obsługuje wszystkie piętra. Jej ulepszenia przyspieszają przejazd i produkcję, a magazyn zwiększa maksymalny urobek. Oba udogodnienia kupujesz za Esencję Hydry.'],
       ['Minimalizacja', 'Gra rozlicza upływ rzeczywistego czasu. Zminimalizowane okno nie zatrzymuje planszy ani kopalni.']
     ],
-    callout: 'Odbieraj urobek przed zapełnieniem szybów — pełny magazyn zatrzymuje produkcję danego żywiołu.'
+    callout: 'Odbieraj urobek przed zapełnieniem kopalni — pełny magazyn zatrzymuje produkcję danego pokoju.'
   },
   {
     id: 'rebirth',
@@ -67,7 +69,7 @@ export const HELP_SECTIONS = [
     summary: 'Resetuje bieżącą ekonomię w zamian za punkty, które przyspieszają wszystkie kolejne cykle.',
     tips: [
       ['Kiedy jest dostępny', 'Punkty otrzymujesz za lisy od tieru 15 wzwyż. Im wyższy tier, tym szybciej rośnie nagroda.'],
-      ['Co zostaje', 'Zachowujesz diamenty, Esencję, Hydrę, Kopalnię Duchów, dotychczasowe Rebirth points, trwałe ulepszenia, ustawienia, statystyki, zadania i odkrycia Pokédexu.'],
+      ['Co zostaje', 'Zachowujesz diamenty, Esencję, trzy waluty żywiołów, Hydrę, Kopalnię Duchów, dotychczasowe Rebirth points, trwałe ulepszenia, ustawienia, statystyki, zadania i odkrycia Pokédexu.'],
       ['Co się resetuje', 'Zwykłe i żywiołowe lisy poza Hydrą, monety, licznik zakupów oraz ulepszenia kupowane za monety wracają do stanu początkowego.'],
       ['Limit lisów', 'Ulepszenie limitu kupione za Rebirth points pozostaje po resecie i pozwala budować większą planszę w przyszłości.'],
       ['Dobry moment', 'Wykonaj Rebirth, gdy nowy trwały zakup wyraźnie przyspieszy następny cykl lub obecny rozwój mocno zwolnił.']

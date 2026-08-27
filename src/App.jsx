@@ -1313,12 +1313,16 @@ export default function App() {
               dispatch({ type: ACTIONS.MINE_COLLECT, nowTs: Date.now() });
               playSfx('mineCollect');
             }}
-            onUpgradeShaft={(element) => {
-              dispatch({ type: ACTIONS.MINE_UPGRADE_SHAFT, element, nowTs: Date.now() });
+            onUpgradeShaft={(roomId) => {
+              dispatch({ type: ACTIONS.MINE_UPGRADE_SHAFT, roomId, nowTs: Date.now() });
               playSfx('upgrade');
             }}
-            onHireMiner={(element) => {
-              dispatch({ type: ACTIONS.MINE_HIRE_MINER, element, nowTs: Date.now() });
+            onHireMiner={(roomId) => {
+              dispatch({ type: ACTIONS.MINE_HIRE_MINER, roomId, nowTs: Date.now() });
+              playSfx('buy');
+            }}
+            onUnlockRoom={() => {
+              dispatch({ type: ACTIONS.MINE_UNLOCK_ROOM, nowTs: Date.now() });
               playSfx('buy');
             }}
             onUpgradeElevator={() => {
