@@ -60,22 +60,49 @@ test('session refresh is shared between concurrent startup requests', () => {
   assert.match(remoteSession, /getStoredSession\(\)\.refreshToken === refreshToken/);
 });
 
-test('daily and weekly quests require sustained play', () => {
+test('daily and weekly quests use achievable idle-game targets', () => {
   const constants = read('src/game/constants.js');
   const quests = read('src/game/quests.js');
 
-  assert.match(constants, /target: 3000, type: 'clicks'/);
-  assert.match(constants, /target: 60000, type: 'clicks'/);
-  assert.match(constants, /target: 2400, type: 'merges'/);
-  assert.match(constants, /target: 5000, type: 'buys'/);
-  assert.match(constants, /target: 500000000, type: 'coinsEarned'/);
+  assert.match(constants, /target: 800, type: 'clicks'/);
+  assert.match(constants, /target: 10000, type: 'clicks'/);
+  assert.match(constants, /target: 350, type: 'merges'/);
+  assert.match(constants, /target: 600, type: 'buys'/);
+  assert.match(constants, /target: 25000000, type: 'coinsEarned'/);
   assert.match(quests, /syncQuestDefinitions\(nextState\.quests\.weekly/);
+});
+
+test('every rebirth shop cost doubles on each level and gem drop starts at 0.8%', () => {
+  const constants = read('src/game/constants.js');
+  const economy = read('src/game/economy.js');
+
+  assert.match(constants.match(/foxLimit: \{[\s\S]*?\n  \},\n  gemIncomeMultiplier:/)?.[0] || '', /growth: 2/);
+  assert.match(constants.match(/tickSpeed: \{[\s\S]*?\n  \},\n  purchaseTierChance:/)?.[0] || '', /growth: 2/);
+  assert.match(constants.match(/purchaseTierChance: \{[\s\S]*?\n  \},\n  gemDropRate:/)?.[0] || '', /growth: 2/);
+  assert.match(constants.match(/gemDropRate: \{[\s\S]*?\n  \}\n\};/)?.[0] || '', /growth: 2/);
+  assert.doesNotMatch(economy, /upgradeId === 'tickSpeed'/);
+  assert.match(constants, /BASE_GEM_DROP_RATE = 0\.008/);
 });
 
 test('fox purchase always shows its price, including when blocked', () => {
   const arena = read('src/components/Arena.jsx');
 
   assert.match(arena, /\{formatNumber\(buyCost\)\} monet\{buyBlockedReason/);
+});
+
+test('fox merge lock is persisted and highlighted with compatible targets', () => {
+  const reducer = read('src/game/reducer.js');
+  const storage = read('src/storage/gameStorage.js');
+  const arena = read('src/components/Arena.jsx');
+  const contextMenu = read('src/components/FoxContextMenu.jsx');
+
+  assert.match(reducer, /TOGGLE_FOX_LOCK/);
+  assert.match(reducer, /source\.locked \|\| target\.locked/);
+  assert.match(storage, /locked: Boolean\(fox\.locked\)/);
+  assert.match(arena, /fox-tile--same-family/);
+  assert.match(arena, /fox-tile--merge-compatible/);
+  assert.match(arena, /fox-tile--merge-hover-ok/);
+  assert.match(contextMenu, /Zablokuj przed łączeniem/);
 });
 
 test('late fox purchases use a soft-capped growth curve', () => {

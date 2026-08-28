@@ -45,9 +45,28 @@ function readCookie(req, name) {
   return entry ? decodeURIComponent(entry.slice(prefix.length)) : '';
 }
 
+function escapeHtml(value) {
+  return String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
+}
+
+function desktopOauthSuccessPage(callbackUrl) {
+  return `<!doctype html>
+<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Logowanie zakończone · Fox Evolution</title><style>
+html{color-scheme:dark}body{min-height:100vh;margin:0;display:grid;place-items:center;background:radial-gradient(circle at 50% 20%,#312e81,#020617 62%);color:#e2e8f0;font-family:Inter,system-ui,sans-serif}.card{width:min(88vw,520px);padding:36px;border:1px solid #22c55e;background:rgba(15,23,42,.94);box-shadow:8px 8px 0 #020617;text-align:center}.mark{display:grid;width:64px;height:64px;margin:0 auto 20px;place-items:center;border:2px solid #4ade80;border-radius:50%;color:#4ade80;font-size:32px}h1{margin:0;color:#f8fafc;font-size:24px}p{color:#94a3b8;line-height:1.55}.status{color:#86efac;font-weight:700}a{display:inline-block;margin-top:14px;padding:12px 18px;border:1px solid #fde047;color:#fff7d6;background:#92400e;text-decoration:none;font-weight:800}</style><script src="/oauth-complete.js" defer></script></head>
+<body><main class="card"><div class="mark">✓</div><h1>Pomyślnie zalogowano</h1><p class="status" id="oauth-status">Przekazuję logowanie do aplikacji Fox Evolution…</p><p>Możesz wrócić do gry. Ta karta potwierdza zakończenie logowania i można ją bezpiecznie zamknąć.</p><a id="open-fox-app" href="${escapeHtml(callbackUrl)}">Otwórz Fox Evolution</a></main></body></html>`;
+}
+
 function sendOauthSuccess(res, session, flow) {
   const url = new URL(flow.redirect);
   url.searchParams.set('code', createOAuthGrant(session, flow));
+  if (url.protocol === 'fox-evolution:') {
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(200).type('html').send(desktopOauthSuccessPage(url.toString()));
+  }
   return res.redirect(url.toString());
 }
 

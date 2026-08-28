@@ -867,6 +867,8 @@ body {
 .elemental-fusion-complete strong, .elemental-fusion-complete small { display: block; }
 .elemental-fusion-complete strong { font-family: 'Press Start 2P', monospace; font-size: 0.55rem; }
 .elemental-fusion-complete small { margin-top: 0.25rem; color: #86efac; font-size: 0.55rem; }
+.elemental-fusion-cooldown { border-color: #ef4444; color: #fecaca; background: rgba(69, 10, 10, 0.94); }
+.elemental-fusion-cooldown small { color: #fda4af; font-variant-numeric: tabular-nums; }
 
 @keyframes elemental-fusion-pulse {
   50% { box-shadow: inset 0 0 0 2px #020617, 4px 4px 0 #020617, 0 0 18px rgba(125, 211, 252, 0.55); }
@@ -1165,8 +1167,19 @@ body {
 .fox-tile--hydra { width: 112px; height: 96px; z-index: 4 !important; }
 .fox-sprite--hydra { width: 108px; height: 88px; filter: drop-shadow(0 0 8px #f97316) drop-shadow(0 0 7px #38bdf8); animation: hydra-board-float 1.5s steps(3, end) infinite; }
 .fox-tile--hydra:hover .fox-sprite--hydra { filter: brightness(1.16) drop-shadow(0 0 11px #fde047) drop-shadow(0 0 9px #38bdf8); }
+.fox-tile--hydra-level-2 .fox-sprite--hydra { filter: brightness(1.08) drop-shadow(0 0 10px #f97316) drop-shadow(0 0 9px #38bdf8); }
+.fox-tile--hydra-level-3 .fox-sprite--hydra { filter: brightness(1.16) saturate(1.12) drop-shadow(0 0 12px #fde047) drop-shadow(0 0 10px #38bdf8); }
+.fox-tile--hydra-level-4 .fox-sprite--hydra { filter: brightness(1.24) saturate(1.22) drop-shadow(0 0 15px #f97316) drop-shadow(0 0 13px #a855f7); }
+.fox-tile--hydra-level-5 .fox-sprite--hydra { filter: brightness(1.34) saturate(1.32) drop-shadow(0 0 19px #fde047) drop-shadow(0 0 16px #38bdf8); animation-duration: 0.9s; }
+.fox-tile--same-family { outline: 2px dashed #38bdf8; outline-offset: 3px; filter: brightness(1.08); }
+.fox-tile--merge-compatible { outline: 3px solid #facc15; outline-offset: 4px; filter: brightness(1.18); animation: merge-candidate-pulse 600ms steps(2, end) infinite; }
+.fox-tile--merge-hover-ok { outline-color: #4ade80; background: rgba(20, 83, 45, 0.42); box-shadow: 0 0 0 5px rgba(74, 222, 128, 0.2), 0 0 24px rgba(74, 222, 128, 0.65); }
+.fox-tile--merge-hover-blocked { outline: 3px solid #fb7185; outline-offset: 4px; background: rgba(127, 29, 29, 0.38); box-shadow: 0 0 18px rgba(251, 113, 133, 0.58); }
+.fox-tile--merge-locked { border-color: #94a3b8; }
+.fox-merge-lock-marker { position: absolute; top: -6px; right: -6px; display: grid; width: 22px; height: 22px; place-items: center; border: 1px solid #cbd5e1; border-radius: 50%; background: #0f172a; box-shadow: 2px 2px 0 #020617; font-size: 12px; }
 .hydra-board-marker { position: absolute; left: 50%; bottom: -3px; width: max-content; transform: translateX(-50%); border: 1px solid #a78bfa; padding: 2px 4px; color: #f5d0fe; background: rgba(15, 23, 42, 0.95); box-shadow: 2px 2px 0 #020617; font-family: 'Press Start 2P', monospace; font-size: 6px; }
 @keyframes hydra-board-float { 50% { transform: translateY(-4px); } }
+@keyframes merge-candidate-pulse { 50% { outline-color: #fff7d6; filter: brightness(1.32); } }
 
 .fox-evolution-ready-marker {
   position: absolute;
@@ -1794,8 +1807,9 @@ body {
 .boss-attack-btn { width: 100%; min-height: 48px; margin-top: 0.8rem; border: 2px solid #fde047; color: #fff7d6; background: linear-gradient(90deg, #c2410c, #6d28d9 50%, #0369a1); box-shadow: inset 0 0 0 2px #020617, 4px 4px 0 #020617; font-family: 'Press Start 2P', monospace; font-size: 0.68rem; }
 .boss-attack-btn:hover { filter: brightness(1.18); }
 .boss-qte-zone { position: relative; min-height: 172px; margin-top: 0.65rem; }
-.boss-qte-key { display: grid; width: min(100%, 210px); min-height: 94px; margin: 0.55rem auto 0; place-items: center; border: 3px solid #fde047; color: #fff; background: radial-gradient(circle, #7c3aed, #1e1b4b 68%); box-shadow: inset 0 0 0 3px #020617, 0 0 22px rgba(250, 204, 21, 0.38), 5px 5px 0 #020617; animation: boss-qte-pop 180ms steps(3, end) both; }
+.boss-qte-key { display: grid; width: min(100%, 230px); min-height: 112px; margin: 0.55rem auto 0; place-items: center; border: 3px solid #fde047; color: #fff; pointer-events: none; user-select: none; background: radial-gradient(circle, #7c3aed, #1e1b4b 68%); box-shadow: inset 0 0 0 3px #020617, 0 0 22px rgba(250, 204, 21, 0.38), 5px 5px 0 #020617; animation: boss-qte-pop 180ms steps(3, end) both; }
 .boss-qte-key strong { font-family: 'Press Start 2P', monospace; font-size: 2rem; line-height: 1; text-shadow: 3px 3px 0 #020617; }
+.boss-qte-key b { color: #fef08a; font-family: 'Press Start 2P', monospace; font-size: 0.58rem; font-variant-numeric: tabular-nums; }
 .boss-qte-key small { color: #fde68a; font-family: 'Press Start 2P', monospace; font-size: 0.45rem; }
 .boss-qte-timer { display: block; width: 82%; height: 8px; border: 1px solid #020617; background: #450a0a; }
 .boss-qte-timer i { display: block; height: 100%; background: linear-gradient(90deg, #ef4444, #fde047, #22c55e); transition: width 25ms linear; }
@@ -1803,6 +1817,8 @@ body {
 .boss-combo { position: absolute; top: 0; right: 0; z-index: 4; display: grid; text-align: right; }
 .boss-combo span, .boss-combo small { color: #94a3b8; font-size: 0.48rem; }
 .boss-combo strong { color: #fde047; font-family: 'Press Start 2P', monospace; font-size: 0.8rem; }
+.boss-phase { width: max-content; max-width: calc(100% - 88px); padding: 0.3rem 0.45rem; border: 1px solid #475569; color: #c4b5fd; background: #111827; font-family: 'Press Start 2P', monospace; font-size: 0.42rem; }
+.game-modal-confirm:disabled { cursor: not-allowed; filter: grayscale(0.75); opacity: 0.55; }
 .boss-victory-rewards { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
 .boss-victory-rewards .game-modal-reward { width: 100%; }
 .game-modal-reward.is-essence { border-color: #c084fc; background: rgba(88, 28, 135, 0.28); }

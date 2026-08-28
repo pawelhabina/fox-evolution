@@ -36,14 +36,17 @@ import {
 } from './constants';
 import { claimDailyQuest, claimLoginReward, claimWeeklyQuest, ensureTemporalResets, refreshQuestProgress } from './quests';
 import {
-  ELEMENTAL_BOSS_DAMAGE,
+  ELEMENTAL_BOSS_DEFEAT_COOLDOWN_MS,
   ELEMENTAL_BOSS_MAX_HP,
   ELEMENTAL_BOSS_REWARD_ESSENCE,
   ELEMENTAL_BOSS_REWARD_GEMS,
   ELEMENTAL_TEAM_MAX_HP,
+  calculateBossAttackOutcome,
+  canMergeHydras,
   canChallengeElementalBoss,
   getElementalBossTeam,
-  getElementalTeamAttackPower
+  getElementalTeamAttackPower,
+  getHydraLevel
 } from './bossBattle';
 import {
   SPIRIT_MINE_CURRENCY_KEYS,
@@ -63,6 +66,7 @@ export const ACTIONS = {
   SET_ARENA_SIZE: 'SET_ARENA_SIZE',
   BUY_FOX: 'BUY_FOX',
   MOVE_FOX: 'MOVE_FOX',
+  TOGGLE_FOX_LOCK: 'TOGGLE_FOX_LOCK',
   MERGE_FOXES: 'MERGE_FOXES',
   CLICK_FOX: 'CLICK_FOX',
   SELL_FOX: 'SELL_FOX',
@@ -325,6 +329,7 @@ export function gameReducer(state, action) {
         tier: finalTier,
         x: pos.x,
         y: pos.y,
+        locked: false,
         evolution: null
       };
 
@@ -378,17 +383,23 @@ export function gameReducer(state, action) {
       };
     }
 
+    case ACTIONS.TOGGLE_FOX_LOCK:
+      return {
+        ...next,
+        foxes: next.foxes.map((fox) => fox.id === action.id ? { ...fox, locked: !fox.locked } : fox)
+      };
+
     case ACTIONS.MERGE_FOXES: {
       const source = next.foxes.find((fox) => fox.id === action.sourceId);
       const target = next.foxes.find((fox) => fox.id === action.targetId);
       if (!source || !target || source.id === target.id) {
         return next;
       }
-      if (source.kind === 'hydra' || target.kind === 'hydra') {
-        return next;
-      }
+      if (source.locked || target.locked) return next;
+      const mergingHydras = canMergeHydras(source, target);
+      if ((source.kind === 'hydra' || target.kind === 'hydra') && !mergingHydras) return next;
       if (source.tier !== target.tier) {
-        return next;
+        if (!mergingHydras) return next;
       }
 
       const sourceEvo = source.evolution || null;
@@ -396,19 +407,20 @@ export function gameReducer(state, action) {
       const bothNonEvolved = !sourceEvo && !targetEvo;
       const bothSameElement = sourceEvo && targetEvo && sourceEvo === targetEvo;
 
-      if (!bothNonEvolved && !bothSameElement) {
+      if (!mergingHydras && !bothNonEvolved && !bothSameElement) {
         return next;
       }
 
-      if (bothNonEvolved && target.tier >= BASE_MAX_TIER) {
+      if (!mergingHydras && bothNonEvolved && target.tier >= BASE_MAX_TIER) {
         return next;
       }
 
-      if (bothSameElement && target.tier >= MAX_TIER) {
+      if (!mergingHydras && bothSameElement && target.tier >= MAX_TIER) {
         return next;
       }
 
-      const newTier = target.tier + 1;
+      const newTier = mergingHydras ? Math.max(source.tier, target.tier) : target.tier + 1;
+      const newHydraLevel = mergingHydras ? getHydraLevel(target) + 1 : null;
       const mergedFoxes = next.foxes
         .filter((fox) => fox.id !== source.id)
         .map((fox) => {
@@ -418,7 +430,15 @@ export function gameReducer(state, action) {
           return {
             ...fox,
             tier: newTier,
-            evolution: bothSameElement ? targetEvo : null
+            evolution: mergingHydras ? null : bothSameElement ? targetEvo : null,
+            ...(mergingHydras ? {
+              hydraLevel: newHydraLevel,
+              elementTiers: {
+                fire: Math.max(source.elementTiers?.fire || source.tier, target.elementTiers?.fire || target.tier),
+                electric: Math.max(source.elementTiers?.electric || source.tier, target.elementTiers?.electric || target.tier),
+                water: Math.max(source.elementTiers?.water || source.tier, target.elementTiers?.water || target.tier)
+              }
+            } : {})
           };
         });
 
@@ -442,7 +462,9 @@ export function gameReducer(state, action) {
       };
 
       const mergedFox = mergedFoxes.find((fox) => fox.id === target.id);
-      return refreshQuestProgress(withFoxProgress(updated, mergedFox, nowTs));
+      return mergingHydras
+        ? refreshQuestProgress(updated)
+        : refreshQuestProgress(withFoxProgress(updated, mergedFox, nowTs));
     }
 
     case ACTIONS.CLICK_FOX: {
@@ -532,7 +554,7 @@ export function gameReducer(state, action) {
     }
 
     case ACTIONS.START_BOSS_BATTLE: {
-      if (!canChallengeElementalBoss(next)) {
+      if (!canChallengeElementalBoss(next, nowTs)) {
         return next;
       }
       const team = getElementalBossTeam(next.foxes);
@@ -550,7 +572,8 @@ export function gameReducer(state, action) {
           bestCombo: 0,
           lastResult: null,
           teamFoxIds: team.map((fox) => fox.id),
-          teamSnapshot: team.map((fox) => ({ evolution: fox.evolution, tier: fox.tier }))
+          teamSnapshot: team.map((fox) => ({ evolution: fox.evolution, tier: fox.tier })),
+          cooldownUntil: null
         }
       };
     }
@@ -565,14 +588,16 @@ export function gameReducer(state, action) {
       }
 
       const success = Boolean(action.success);
-      const responseMs = Math.max(0, Number(action.responseMs) || 0);
-      const allowedMs = Math.max(500, Number(action.allowedMs) || 1600);
-      const accuracy = success ? clamp(1 - responseMs / allowedMs, 0, 1) : 0;
-      const combo = success ? (next.bossBattle.combo || 0) + 1 : 0;
-      const criticalChance = 0.08 + accuracy * 0.22;
-      const critical = success && (action.roll ?? Math.random()) < criticalChance;
-      const timingMultiplier = 0.8 + accuracy * 0.8 + Math.min(combo, 10) * 0.04;
-      const damage = success ? Math.max(1, Math.floor(baseDamage * timingMultiplier * (critical ? 2 : 1))) : 0;
+      const outcome = calculateBossAttackOutcome({
+        baseDamage,
+        bossHp: next.bossBattle.bossHp,
+        combo: next.bossBattle.combo,
+        success,
+        responseMs: action.responseMs,
+        allowedMs: action.allowedMs,
+        roll: action.roll ?? Math.random()
+      });
+      const { combo, critical, damage, counterDamage } = outcome;
       const bossHp = Math.max(0, next.bossBattle.bossHp - damage);
       const attacks = (next.bossBattle.attacks || 0) + 1;
 
@@ -590,6 +615,8 @@ export function gameReducer(state, action) {
           id: next.meta.nextFoxId,
           kind: 'hydra',
           tier: Math.max(...selectedTeam.map((fox) => fox.tier)),
+          hydraLevel: 1,
+          locked: false,
           x: hydraX,
           y: hydraY,
           evolution: null,
@@ -613,7 +640,8 @@ export function gameReducer(state, action) {
             critical,
             combo,
             bestCombo: Math.max(next.bossBattle.bestCombo || 0, combo),
-            lastResult: 'success'
+            lastResult: 'success',
+            cooldownUntil: null
           },
           realms: {
             ...next.realms,
@@ -635,13 +663,14 @@ export function gameReducer(state, action) {
         };
       }
 
-      const counterDamage = success ? ELEMENTAL_BOSS_DAMAGE : ELEMENTAL_BOSS_DAMAGE * 4;
       const teamHp = Math.max(0, next.bossBattle.teamHp - counterDamage);
+      const defeated = teamHp <= 0;
+      const defeatTimestamp = defeated ? new Date(nowTs).toISOString() : next.bossBattle.lastDefeatAt || null;
       return {
         ...next,
         bossBattle: {
           ...next.bossBattle,
-          status: teamHp <= 0 ? 'defeat' : 'battle',
+          status: defeated ? 'defeat' : 'battle',
           bossHp,
           teamHp,
           attacks,
@@ -649,12 +678,15 @@ export function gameReducer(state, action) {
           critical,
           combo,
           bestCombo: Math.max(next.bossBattle.bestCombo || 0, combo),
-          lastResult: success ? 'success' : 'miss'
+          lastResult: success ? 'success' : 'miss',
+          cooldownUntil: defeated ? new Date(nowTs + ELEMENTAL_BOSS_DEFEAT_COOLDOWN_MS).toISOString() : null,
+          lastDefeatAt: defeatTimestamp
         }
       };
     }
 
-    case ACTIONS.LEAVE_BOSS_BATTLE:
+    case ACTIONS.LEAVE_BOSS_BATTLE: {
+      const forfeited = next.bossBattle?.status === 'battle';
       return {
         ...next,
         bossBattle: {
@@ -669,9 +701,14 @@ export function gameReducer(state, action) {
           bestCombo: 0,
           lastResult: null,
           teamFoxIds: [],
-          teamSnapshot: []
+          teamSnapshot: [],
+          cooldownUntil: forfeited
+            ? new Date(nowTs + ELEMENTAL_BOSS_DEFEAT_COOLDOWN_MS).toISOString()
+            : next.bossBattle.cooldownUntil || null,
+          lastDefeatAt: forfeited ? new Date(nowTs).toISOString() : next.bossBattle.lastDefeatAt || null
         }
       };
+    }
 
     case ACTIONS.ACK_ELEMENTAL_FUSION_TUTORIAL:
       return {

@@ -14,6 +14,7 @@ import {
   TILE_SIZE,
   UPGRADE_DEFS
 } from './constants';
+import { getHydraLevel, getHydraPowerMultiplier } from './bossBattle';
 
 export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -49,12 +50,6 @@ export function getUpgradeCost(upgradeId, level) {
   }
   if (upgradeId === 'gemIncomeMultiplier') {
     return 50 + safeLevel * 50;
-  }
-  if (upgradeId === 'tickSpeed') {
-    if (safeLevel < 20) {
-      return 5 + safeLevel * 5;
-    }
-    return 110 + (safeLevel - 20) * 10;
   }
   return Math.max(1, Math.floor(config.baseCost * config.growth ** safeLevel));
 }
@@ -151,7 +146,8 @@ function getFoxIncomePerTickWithBuffs(fox, state, waterBuffMap, nowTs = Date.now
     ? EVOLUTION_TYPES.electric.incomeMultiplier
     : getEvolutionData(fox.evolution)?.incomeMultiplier || 1;
   const waterMultiplier = getWaterBuffMultiplier(fox.id, waterBuffMap);
-  const value = (hydraIncome || tierData.baseIncomePerTick) * getPassiveIncomeMultiplier(state, nowTs) * evolutionMultiplier * waterMultiplier;
+  const hydraMultiplier = fox.kind === 'hydra' ? getHydraPowerMultiplier(fox) : 1;
+  const value = (hydraIncome || tierData.baseIncomePerTick) * hydraMultiplier * getPassiveIncomeMultiplier(state, nowTs) * evolutionMultiplier * waterMultiplier;
   return Math.max(1, Math.floor(value));
 }
 
@@ -169,7 +165,8 @@ function getFoxClickValueWithBuffs(fox, state, waterBuffMap, nowTs = Date.now())
     ? EVOLUTION_TYPES.fire.clickMultiplier
     : getEvolutionData(fox.evolution)?.clickMultiplier || 1;
   const waterMultiplier = getWaterBuffMultiplier(fox.id, waterBuffMap);
-  const value = (hydraClick || tierData.clickValue) * getClickMultiplier(state, nowTs) * evolutionMultiplier * waterMultiplier;
+  const hydraMultiplier = fox.kind === 'hydra' ? getHydraPowerMultiplier(fox) : 1;
+  const value = (hydraClick || tierData.clickValue) * hydraMultiplier * getClickMultiplier(state, nowTs) * evolutionMultiplier * waterMultiplier;
   return Math.max(1, Math.floor(value));
 }
 
@@ -219,7 +216,7 @@ export function buildWaterBuffMap(state) {
     });
 
     if (nearestTargetId !== null) {
-      buffs.set(nearestTargetId, (buffs.get(nearestTargetId) || 0) + 1);
+      buffs.set(nearestTargetId, (buffs.get(nearestTargetId) || 0) + (waterFox.kind === 'hydra' ? getHydraLevel(waterFox) : 1));
     }
   });
 

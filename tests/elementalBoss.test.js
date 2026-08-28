@@ -18,6 +18,9 @@ test('elemental boss unlock requires all three level 20 elemental foxes', async 
   assert.deepEqual(getElementalBossTeam(state.foxes).map((fox) => fox.evolution), ['fire', 'electric', 'water']);
 
   state.bossBattle.defeated = true;
+  assert.equal(canChallengeElementalBoss(state), true, 'kolejne drużyny mogą zdobywać następne Hydry');
+
+  state.bossBattle.cooldownUntil = new Date(Date.now() + 60_000).toISOString();
   assert.equal(canChallengeElementalBoss(state), false);
 });
 
@@ -27,8 +30,8 @@ test('higher elemental levels increase team attack power', async () => {
     foxes: ['fire', 'electric', 'water'].map((evolution, index) => ({ id: index + 1, tier, evolution }))
   });
 
-  assert.equal(getElementalTeamAttackPower(makeState(20)), 160);
-  assert.equal(getElementalTeamAttackPower(makeState(25)), 310);
+  assert.equal(getElementalTeamAttackPower(makeState(20)), 150);
+  assert.equal(getElementalTeamAttackPower(makeState(25)), 210);
 });
 
 test('boss battle keeps the selected team and exposes QTE progress fields', async () => {
@@ -37,6 +40,7 @@ test('boss battle keeps the selected team and exposes QTE progress fields', asyn
   assert.deepEqual(battle.teamFoxIds, []);
   assert.equal(battle.combo, 0);
   assert.equal(battle.bestCombo, 0);
+  assert.equal(battle.cooldownUntil, null);
 
   const state = {
     foxes: [
@@ -46,5 +50,52 @@ test('boss battle keeps the selected team and exposes QTE progress fields', asyn
     ],
     bossBattle: { teamFoxIds: [1, 2, 3] }
   };
-  assert.equal(getElementalTeamAttackPower(state), 220);
+  assert.equal(getElementalTeamAttackPower(state), 174);
+});
+
+test('boss QTE gets faster in three visible phases and misses hurt enough to lose', async () => {
+  const {
+    ELEMENTAL_BOSS_MAX_HP,
+    calculateBossAttackOutcome,
+    getBossPromptTimeMs
+  } = await import('../src/game/bossBattle.js');
+
+  assert.equal(getBossPromptTimeMs(ELEMENTAL_BOSS_MAX_HP), 1900);
+  assert.equal(getBossPromptTimeMs(ELEMENTAL_BOSS_MAX_HP / 2), 1500);
+  assert.equal(getBossPromptTimeMs(1), 1150);
+
+  const hit = calculateBossAttackOutcome({
+    baseDamage: 150,
+    bossHp: ELEMENTAL_BOSS_MAX_HP,
+    combo: 4,
+    success: true,
+    responseMs: 500,
+    allowedMs: 1900,
+    roll: 1
+  });
+  const miss = calculateBossAttackOutcome({
+    baseDamage: 150,
+    bossHp: ELEMENTAL_BOSS_MAX_HP / 4,
+    combo: 4,
+    success: false,
+    allowedMs: 1150,
+    roll: 1
+  });
+
+  assert.ok(hit.damage >= 150);
+  assert.equal(hit.counterDamage, 3);
+  assert.equal(miss.damage, 0);
+  assert.equal(miss.combo, 0);
+  assert.equal(miss.counterDamage, 26);
+});
+
+test('Hydras merge only at matching levels up to level 5 and gain power', async () => {
+  const { canMergeHydras, getHydraPowerMultiplier } = await import('../src/game/bossBattle.js');
+  const hydra = (id, hydraLevel) => ({ id, kind: 'hydra', hydraLevel, tier: 20 });
+
+  assert.equal(canMergeHydras(hydra(1, 1), hydra(2, 1)), true);
+  assert.equal(canMergeHydras(hydra(1, 1), hydra(2, 2)), false);
+  assert.equal(canMergeHydras(hydra(1, 5), hydra(2, 5)), false);
+  assert.ok(getHydraPowerMultiplier(5) > getHydraPowerMultiplier(4));
+  assert.equal(getHydraPowerMultiplier(1), 1);
 });

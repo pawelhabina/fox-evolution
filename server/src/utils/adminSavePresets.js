@@ -83,8 +83,8 @@ function buildHydraReadyPatch(state) {
     bossBattle: {
       status: 'idle',
       defeated: false,
-      bossHp: 5000,
-      teamHp: 120,
+      bossHp: 3400,
+      teamHp: 140,
       attacks: 0,
       lastDamage: 0,
       critical: false,
@@ -92,7 +92,9 @@ function buildHydraReadyPatch(state) {
       bestCombo: 0,
       lastResult: null,
       teamFoxIds: [],
-      teamSnapshot: []
+      teamSnapshot: [],
+      cooldownUntil: null,
+      lastDefeatAt: null
     },
     tutorials: { elementalFusionSeen: true },
     stats: {

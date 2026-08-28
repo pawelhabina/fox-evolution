@@ -39,7 +39,13 @@ import {
 } from './game/economy';
 import { gameReducer, ACTIONS, getFoxInfoForMenu } from './game/reducer';
 import { getResetCountdowns } from './game/quests';
-import { canChallengeElementalBoss } from './game/bossBattle';
+import {
+  canChallengeElementalBoss,
+  canMergeHydras,
+  getBossCooldownRemainingMs,
+  getElementalBossTeam,
+  getHydraLevel
+} from './game/bossBattle';
 import { registerFoxClick } from './game/clickRateLimit.mjs';
 import { createInitialState } from './storage/defaultState';
 import {
@@ -254,6 +260,8 @@ export default function App() {
     [deleteTargetId, state]
   );
   const elementalBossReady = useMemo(() => canChallengeElementalBoss(state), [state]);
+  const elementalBossTeamReady = useMemo(() => getElementalBossTeam(state.foxes).every(Boolean), [state.foxes]);
+  const bossCooldownSeconds = Math.ceil(getBossCooldownRemainingMs(state) / 1000);
   const showElementalFusionTutorial = appScreen === 'game'
     && !state.tutorials?.elementalFusionSeen
     && state.foxes.some((fox) => fox.evolution && fox.tier >= 20);
@@ -990,13 +998,24 @@ export default function App() {
     if (!source || !target) {
       return;
     }
-    if (source.kind === 'hydra' || target.kind === 'hydra') {
+    if (source.locked || target.locked) {
       playSfx('error');
+      pushToast(`Lis #${source.locked ? source.id : target.id} jest zablokowany przed łączeniem`);
+      return false;
+    }
+    const mergingHydras = canMergeHydras(source, target);
+    if ((source.kind === 'hydra' || target.kind === 'hydra') && !mergingHydras) {
+      playSfx('error');
+      pushToast(source.kind === 'hydra' && target.kind === 'hydra'
+        ? 'Hydry muszą mieć ten sam poziom, a maksymalny poziom to 5'
+        : 'Hydrę można łączyć tylko z Hydrą tego samego poziomu');
       return false;
     }
     if (source.tier !== target.tier) {
-      playSfx('error');
-      return false;
+      if (!mergingHydras) {
+        playSfx('error');
+        return false;
+      }
     }
 
     const sourceEvolution = source.evolution || null;
@@ -1004,7 +1023,7 @@ export default function App() {
     const bothNonEvolved = !sourceEvolution && !targetEvolution;
     const bothSameElement = sourceEvolution && sourceEvolution === targetEvolution;
 
-    if ((!bothNonEvolved && !bothSameElement) || (bothNonEvolved && target.tier >= BASE_MAX_TIER) || (bothSameElement && target.tier >= MAX_TIER)) {
+    if (!mergingHydras && ((!bothNonEvolved && !bothSameElement) || (bothNonEvolved && target.tier >= BASE_MAX_TIER) || (bothSameElement && target.tier >= MAX_TIER))) {
       playSfx('error');
       return false;
     }
@@ -1012,8 +1031,8 @@ export default function App() {
     dispatch({ type: ACTIONS.MERGE_FOXES, sourceId, targetId, nowTs: Date.now() });
     playSfx('merge');
     return {
-      tier: target.tier + 1,
-      evolution: bothSameElement ? targetEvolution : null
+      tier: mergingHydras ? getHydraLevel(target) + 1 : target.tier + 1,
+      evolution: mergingHydras ? 'hydra' : bothSameElement ? targetEvolution : null
     };
   };
 
@@ -1370,6 +1389,8 @@ export default function App() {
           }
           onBuyFox={buyFox}
           canCombineElements={elementalBossReady}
+          hasElementalBossTeam={elementalBossTeamReady}
+          bossCooldownSeconds={bossCooldownSeconds}
           bossDefeated={Boolean(state.bossBattle?.defeated)}
           onCombineElements={() => {
             dispatch({ type: ACTIONS.START_BOSS_BATTLE, nowTs: Date.now() });
@@ -1490,6 +1511,14 @@ export default function App() {
           setEvolutionTargetId(contextMenu.foxId);
           setContextMenu(null);
         }}
+        onToggleLock={() => {
+          if (!contextMenu) return;
+          const fox = state.foxes.find((item) => item.id === contextMenu.foxId);
+          dispatch({ type: ACTIONS.TOGGLE_FOX_LOCK, id: contextMenu.foxId, nowTs: Date.now() });
+          playSfx('ui');
+          pushToast(fox?.locked ? 'Lis odblokowany do łączenia' : 'Lis zablokowany przed łączeniem');
+          setContextMenu(null);
+        }}
       />
 
       <DeleteFoxModal
@@ -1511,8 +1540,7 @@ export default function App() {
           dispatch({ type: ACTIONS.ATTACK_BOSS, ...result, nowTs: Date.now() });
         }}
         onRetry={() => {
-          dispatch({ type: ACTIONS.LEAVE_BOSS_BATTLE, nowTs: Date.now() });
-          window.setTimeout(() => dispatch({ type: ACTIONS.START_BOSS_BATTLE, nowTs: Date.now() }), 0);
+          dispatch({ type: ACTIONS.START_BOSS_BATTLE, nowTs: Date.now() });
         }}
         onClose={() => dispatch({ type: ACTIONS.LEAVE_BOSS_BATTLE, nowTs: Date.now() })}
         onEnterMine={() => {

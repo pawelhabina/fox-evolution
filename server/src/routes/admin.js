@@ -18,14 +18,17 @@ const adminNormalFoxSchema = z.object({
   tier: z.number().finite().int().min(1).max(30),
   x: adminFoxPosition,
   y: adminFoxPosition,
+  locked: z.boolean(),
   evolution: foxEvolution.nullable()
 }).strict();
 const adminHydraFoxSchema = z.object({
   id: z.number().finite().int().min(1).max(Number.MAX_SAFE_INTEGER),
   kind: z.literal('hydra'),
   tier: z.number().finite().int().min(20).max(30),
+  hydraLevel: z.number().finite().int().min(1).max(5),
   x: adminFoxPosition,
   y: adminFoxPosition,
+  locked: z.boolean(),
   evolution: z.null(),
   elementTiers: z.object({
     fire: z.number().finite().int().min(20).max(30),
@@ -112,8 +115,8 @@ const adminStatePatchSchema = z.object({
   bossBattle: z.object({
     status: z.enum(['idle', 'battle', 'victory', 'defeat']).optional(),
     defeated: z.boolean().optional(),
-    bossHp: adminLevel(5000).optional(),
-    teamHp: adminLevel(120).optional(),
+    bossHp: adminLevel(3400).optional(),
+    teamHp: adminLevel(140).optional(),
     attacks: adminStateNumber.optional(),
     lastDamage: adminStateNumber.optional(),
     critical: z.boolean().optional(),
@@ -121,7 +124,9 @@ const adminStatePatchSchema = z.object({
     bestCombo: adminStateNumber.optional(),
     lastResult: z.enum(['success', 'miss']).nullable().optional(),
     teamFoxIds: z.array(adminStateNumber).max(3).optional(),
-    teamSnapshot: z.array(adminBossTeamFoxSchema).max(3).optional()
+    teamSnapshot: z.array(adminBossTeamFoxSchema).max(3).optional(),
+    cooldownUntil: z.string().max(40).nullable().optional(),
+    lastDefeatAt: z.string().max(40).nullable().optional()
   }).strict().optional(),
   tutorials: z.object({ elementalFusionSeen: z.boolean().optional() }).strict().optional(),
   realms: z.object({

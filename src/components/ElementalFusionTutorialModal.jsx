@@ -12,9 +12,9 @@ export default function ElementalFusionTutorialModal({ onClose }) {
           <span><i className="is-fire" />Rozwiń Ognistego Lisa do Lv 20</span>
           <span><i className="is-electric" />Rozwiń Elektrycznego Lisa do Lv 20</span>
           <span><i className="is-water" />Rozwiń Wodnego Lisa do Lv 20</span>
-          <span><b>⌨</b>Naciśnij pojawiające się klawisze w walce</span>
+          <span><b>⌨</b>Wpisuj na klawiaturze wskazane litery, zanim skończy się czas</span>
         </div>
-        <p className="boss-hint">Po zwycięstwie trzy lisy połączą się na stałe w Hydrę, a nowa waluta otworzy Kopalnię Duchów.</p>
+        <p className="boss-hint">Po zwycięstwie trzy lisy połączą się na stałe w Hydrę Lv 1. Dwie Hydry tego samego poziomu możesz łączyć aż do Lv 5. Porażka blokuje kolejną próbę na godzinę.</p>
         <button type="button" className="boss-attack-btn" onClick={onClose}>Rozumiem — buduję drużynę</button>
       </section>
     </div>

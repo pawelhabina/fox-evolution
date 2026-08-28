@@ -439,8 +439,10 @@ function cloneFoxForEditor(fox) {
       id: Number(fox.id),
       kind: 'hydra',
       tier: Number(fox.tier),
+      hydraLevel: Math.max(1, Math.min(5, Number(fox.hydraLevel) || 1)),
       x: Number(fox.x),
       y: Number(fox.y),
+      locked: Boolean(fox.locked),
       evolution: null,
       elementTiers: {
         fire: Number(fox.elementTiers?.fire || fox.tier || 20),
@@ -454,6 +456,7 @@ function cloneFoxForEditor(fox) {
     tier: Number(fox?.tier || 1),
     x: Number(fox?.x || 0),
     y: Number(fox?.y || 0),
+    locked: Boolean(fox?.locked),
     evolution: ['fire', 'electric', 'water'].includes(fox?.evolution) ? fox.evolution : null
   };
 }
@@ -473,7 +476,7 @@ function renderFoxEditor() {
       : `<option value=""${fox.evolution ? '' : ' selected'}>Bazowy</option>${Object.entries(labels).map(([value, label]) => `<option value="${value}"${fox.evolution === value ? ' selected' : ''}>${label}</option>`).join('')}`;
     return `<article class="fox-editor-row" data-fox-index="${index}">
       <div class="fox-identity"><strong>#${escapeHtml(fox.id)}</strong><small>${isHydra ? 'HYDRA' : 'LIS'}</small></div>
-      <input aria-label="Poziom lisa ${escapeHtml(fox.id)}" data-fox-field="tier" inputmode="numeric" min="${isHydra ? 20 : 1}" max="30" value="${escapeHtml(fox.tier)}" />
+      <input aria-label="${isHydra ? 'Poziom Hydry' : 'Poziom lisa'} ${escapeHtml(fox.id)}" data-fox-field="${isHydra ? 'hydraLevel' : 'tier'}" inputmode="numeric" min="1" max="${isHydra ? 5 : 30}" value="${escapeHtml(isHydra ? fox.hydraLevel : fox.tier)}" />
       <select aria-label="Żywioł lisa ${escapeHtml(fox.id)}" data-fox-field="evolution"${isHydra ? ' disabled' : ''}>${evolutionOptions}</select>
       <input aria-label="Pozycja X lisa ${escapeHtml(fox.id)}" data-fox-field="x" inputmode="decimal" min="0" max="10000" value="${escapeHtml(fox.x)}" />
       <input aria-label="Pozycja Y lisa ${escapeHtml(fox.id)}" data-fox-field="y" inputmode="decimal" min="0" max="10000" value="${escapeHtml(fox.y)}" />
@@ -560,6 +563,7 @@ function validateEditorCollections() {
     ids.add(fox.id);
     const minTier = fox.kind === 'hydra' ? 20 : 1;
     if (!Number.isInteger(fox.tier) || fox.tier < minTier || fox.tier > 30) throw new Error(`Lis #${fox.id} ma niepoprawny poziom.`);
+    if (fox.kind === 'hydra' && (!Number.isInteger(fox.hydraLevel) || fox.hydraLevel < 1 || fox.hydraLevel > 5)) throw new Error(`Hydra #${fox.id} ma niepoprawny poziom.`);
     if (![fox.x, fox.y].every((value) => Number.isFinite(value) && value >= 0 && value <= 10000)) throw new Error(`Lis #${fox.id} ma niepoprawną pozycję.`);
   });
   adminState.editingMineShafts.forEach((shaft) => {
@@ -815,6 +819,7 @@ saveForm.addEventListener('click', (event) => {
       id: nextId,
       tier: 15,
       evolution: null,
+      locked: false,
       x: 180 + (foxIndex % 5) * 120,
       y: 150 + (Math.floor(foxIndex / 5) % 3) * 110
     });

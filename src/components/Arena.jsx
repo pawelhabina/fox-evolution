@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
 import { getTierData, getEvolutionData } from '../game/economy';
-import { MEGA_TIER } from '../game/constants';
+import { BASE_MAX_TIER, MAX_TIER, MEGA_TIER } from '../game/constants';
 import { formatNumber } from '../game/format';
 import { getFoxSpritePresentation } from '../assets/foxSprites';
 import GuiIcon from './GuiIcon';
 import hydraSprite from '../../assets/sprites/foxes/fox-elemental-hydra-boss.png';
+import { canMergeHydras, getHydraLevel } from '../game/bossBattle';
 
 const DEFAULT_MERGE_COLORS = ['#fbbf24', '#fb7185', '#22d3ee', '#a78bfa', '#f97316', '#f8fafc'];
 const ELEMENT_MERGE_COLORS = {
@@ -32,7 +33,7 @@ function makeMergeParticles(tier, evolution) {
 
 function foxLabel(fox) {
   if (fox.kind === 'hydra') {
-    return 'Hydra Trójżywiołu';
+    return `Hydra Trójżywiołu · poziom ${getHydraLevel(fox)}`;
   }
   const tier = getTierData(fox.tier);
   const evolution = getEvolutionData(fox.evolution);
@@ -40,6 +41,27 @@ function foxLabel(fox) {
     return evolution.name;
   }
   return tier.name;
+}
+
+function formatCooldown(seconds) {
+  const safe = Math.max(0, Math.ceil(seconds || 0));
+  const hours = Math.floor(safe / 3600);
+  const minutes = Math.floor((safe % 3600) / 60);
+  const secs = safe % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+function isSameMergeFamily(source, candidate) {
+  if (!source || !candidate || source.id === candidate.id) return false;
+  if (source.kind === 'hydra' || candidate.kind === 'hydra') return source.kind === 'hydra' && candidate.kind === 'hydra';
+  return (source.evolution || null) === (candidate.evolution || null);
+}
+
+function isExactMergeCandidate(source, candidate) {
+  if (!isSameMergeFamily(source, candidate) || source.locked || candidate.locked) return false;
+  if (source.kind === 'hydra') return canMergeHydras(source, candidate);
+  if (source.tier !== candidate.tier) return false;
+  return source.evolution ? source.tier < MAX_TIER : source.tier < BASE_MAX_TIER;
 }
 
 export default function Arena({
@@ -58,6 +80,8 @@ export default function Arena({
   buyBlockedReason,
   onBuyFox,
   canCombineElements,
+  hasElementalBossTeam,
+  bossCooldownSeconds,
   bossDefeated,
   onCombineElements
 }) {
@@ -67,6 +91,7 @@ export default function Arena({
   const mergeEffectTimersRef = useRef(new Set());
   const incomeEffectTimersRef = useRef(new Set());
   const [dragging, setDragging] = useState(null);
+  const [mergeHoverId, setMergeHoverId] = useState(null);
   const [mergeEffects, setMergeEffects] = useState([]);
   const [incomeEffects, setIncomeEffects] = useState([]);
 
@@ -152,6 +177,9 @@ export default function Arena({
 
       onFoxMove(dragging.id, x, y);
       setDragging((prev) => (prev ? { ...prev, moved: true } : prev));
+      const targetTile = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-fox-id]');
+      const targetId = Number(targetTile?.dataset.foxId);
+      setMergeHoverId(Number.isFinite(targetId) && targetId !== dragging.id ? targetId : null);
     }
 
     function onUp(event) {
@@ -178,6 +206,7 @@ export default function Arena({
           incomeEffectTimersRef.current.add(timer);
         }
         setDragging(null);
+        setMergeHoverId(null);
         return;
       }
 
@@ -210,6 +239,7 @@ export default function Arena({
       }
 
       setDragging(null);
+      setMergeHoverId(null);
     }
 
     window.addEventListener('pointermove', onMove);
@@ -240,6 +270,11 @@ export default function Arena({
         )}
 
         {foxes.map((fox) => {
+          const dragSource = dragging ? foxes.find((candidate) => candidate.id === dragging.id) : null;
+          const sameMergeFamily = Boolean(dragSource && isSameMergeFamily(dragSource, fox));
+          const exactMergeCandidate = Boolean(dragSource && isExactMergeCandidate(dragSource, fox));
+          const isMergeHover = mergeHoverId === fox.id;
+          const hydraLevel = fox.kind === 'hydra' ? getHydraLevel(fox) : 0;
           const sprite = fox.kind === 'hydra'
             ? { src: hydraSprite, style: null }
             : getFoxSpritePresentation(fox.tier, fox.evolution);
@@ -249,13 +284,13 @@ export default function Arena({
               key={fox.id}
               type="button"
               data-fox-id={fox.id}
-              className={`fox-tile ${fox.kind === 'hydra' ? 'fox-tile--hydra' : ''} ${evolutionReady ? 'evolution-ready' : ''} ${dragging?.id === fox.id ? 'dragging' : ''}`}
-              title={evolutionReady ? `${foxLabel(fox)} — gotowy do ewolucji (kliknij prawym przyciskiem)` : foxLabel(fox)}
+              className={`fox-tile ${fox.kind === 'hydra' ? `fox-tile--hydra fox-tile--hydra-level-${hydraLevel}` : ''} ${evolutionReady ? 'evolution-ready' : ''} ${fox.locked ? 'fox-tile--merge-locked' : ''} ${sameMergeFamily ? 'fox-tile--same-family' : ''} ${exactMergeCandidate ? 'fox-tile--merge-compatible' : ''} ${isMergeHover ? exactMergeCandidate ? 'fox-tile--merge-hover-ok' : 'fox-tile--merge-hover-blocked' : ''} ${dragging?.id === fox.id ? 'dragging' : ''}`}
+              title={`${evolutionReady ? `${foxLabel(fox)} — gotowy do ewolucji (kliknij prawym przyciskiem)` : foxLabel(fox)}${fox.locked ? ' · zablokowany przed łączeniem' : ''}`}
               style={{
                 left: `${fox.x}px`,
                 top: `${fox.y}px`,
                 transition: animationsEnabled && dragging?.id !== fox.id ? 'left 120ms ease, top 120ms ease' : 'none',
-                zIndex: dragging?.id === fox.id ? 20 : 2,
+                zIndex: dragging?.id === fox.id ? 20 : isMergeHover ? 12 : exactMergeCandidate ? 8 : sameMergeFamily ? 6 : 2,
                 pointerEvents: dragging?.id === fox.id ? 'none' : 'auto'
               }}
               onPointerDown={(event) => {
@@ -291,7 +326,8 @@ export default function Arena({
                     ◆ LV {fox.tier}
                   </span>
                 )}
-                {fox.kind === 'hydra' && <span className="hydra-board-marker">OGIEŃ · PRĄD · WODA</span>}
+                {fox.kind === 'hydra' && <span className="hydra-board-marker">HYDRA LV {hydraLevel} / 5</span>}
+                {fox.locked && <span className="fox-merge-lock-marker" aria-label="Zablokowany przed łączeniem">🔒</span>}
               </div>
             </button>
           );
@@ -337,13 +373,15 @@ export default function Arena({
           </span>
         ))}
 
-        {(canCombineElements || bossDefeated) && (
+        {(canCombineElements || hasElementalBossTeam || bossDefeated) && (
           <div className="elemental-fusion-dock">
             {canCombineElements ? (
               <button type="button" className="elemental-fusion-btn" onClick={onCombineElements}>
                 <span className="elemental-fusion-orbs" aria-hidden="true"><i /><i /><i /></span>
                 <span><strong>Połącz żywioły</strong><small>Hydra czeka na wyzwanie</small></span>
               </button>
+            ) : hasElementalBossTeam && bossCooldownSeconds > 0 ? (
+              <div className="elemental-fusion-complete elemental-fusion-cooldown"><strong>ODRODZENIE HYDRY</strong><small>Kolejna próba za {formatCooldown(bossCooldownSeconds)}</small></div>
             ) : (
               <div className="elemental-fusion-complete"><strong>HYDRA OSWOJONA</strong><small>Trzy efekty działają na planszy</small></div>
             )}

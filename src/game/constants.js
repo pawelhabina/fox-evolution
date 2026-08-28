@@ -1,4 +1,4 @@
-export const GAME_VERSION = '1.2.7';
+export const GAME_VERSION = '1.2.8';
 export const RELEASE_CHANNEL = 'EARLY ACCESS';
 export const BASE_TICK_SECONDS = 5;
 export const MIN_TICK_SECONDS = 1;
@@ -190,7 +190,7 @@ export const UPGRADE_DEFS = {
     currency: 'rebirthTokens',
     cap: 45,
     baseCost: 1,
-    growth: 1.35
+    growth: 2
   },
   gemIncomeMultiplier: {
     id: 'gemIncomeMultiplier',
@@ -217,7 +217,9 @@ export const UPGRADE_DEFS = {
     description: 'Każdy poziom skraca tick o 0.1s, aż do 1.0s.',
     shop: 'rebirth',
     currency: 'rebirthTokens',
-    cap: 40
+    cap: 40,
+    baseCost: 5,
+    growth: 2
   },
   purchaseTierChance: {
     id: 'purchaseTierChance',
@@ -232,7 +234,7 @@ export const UPGRADE_DEFS = {
   gemDropRate: {
     id: 'gemDropRate',
     title: 'Drop rate diamentów',
-    description: '+0.2% do szansy dropu diamentu na tick, aż do 25%.',
+    description: 'Start 0.8%. Każdy poziom dodaje +0.2% do szansy dropu diamentu na tick, aż do 25%.',
     shop: 'rebirth',
     currency: 'rebirthTokens',
     cap: 120,
@@ -258,26 +260,26 @@ export const WEEKLY_QUEST_REWARD = 20;
 export const QUESTS_PER_SECTION = 5;
 
 export const DAILY_QUEST_POOL = [
-  { id: 'daily_merge_8', label: 'Wykonaj 40 merge', target: 40, type: 'merges' },
-  { id: 'daily_merge_15', label: 'Wykonaj 80 merge', target: 80, type: 'merges' },
-  { id: 'daily_click_60', label: 'Kliknij lisy 1 500 razy', target: 1500, type: 'clicks' },
-  { id: 'daily_click_120', label: 'Kliknij lisy 3 000 razy', target: 3000, type: 'clicks' },
-  { id: 'daily_buy_20', label: 'Kup 100 lisów', target: 100, type: 'buys' },
-  { id: 'daily_buy_35', label: 'Kup 180 lisów', target: 180, type: 'buys' },
-  { id: 'daily_tier_8', label: 'Osiągnij tier 10', target: 10, type: 'maxTier' },
-  { id: 'daily_coins_20k', label: 'Zarób 500 000 monet', target: 500000, type: 'coinsEarned' }
+  { id: 'daily_merge_8', label: 'Wykonaj 12 merge', target: 12, type: 'merges' },
+  { id: 'daily_merge_15', label: 'Wykonaj 30 merge', target: 30, type: 'merges' },
+  { id: 'daily_click_60', label: 'Kliknij lisy 250 razy', target: 250, type: 'clicks' },
+  { id: 'daily_click_120', label: 'Kliknij lisy 800 razy', target: 800, type: 'clicks' },
+  { id: 'daily_buy_20', label: 'Kup 20 lisów', target: 20, type: 'buys' },
+  { id: 'daily_buy_35', label: 'Kup 50 lisów', target: 50, type: 'buys' },
+  { id: 'daily_tier_8', label: 'Osiągnij tier 9', target: 9, type: 'maxTier' },
+  { id: 'daily_coins_20k', label: 'Zarób 50 000 monet', target: 50000, type: 'coinsEarned' }
 ];
 
 export const WEEKLY_QUEST_POOL = [
-  { id: 'weekly_merge_80', label: 'Wykonaj 1 200 merge', target: 1200, type: 'merges' },
-  { id: 'weekly_merge_150', label: 'Wykonaj 2 400 merge', target: 2400, type: 'merges' },
-  { id: 'weekly_click_600', label: 'Kliknij lisy 30 000 razy', target: 30000, type: 'clicks' },
-  { id: 'weekly_click_1200', label: 'Kliknij lisy 60 000 razy', target: 60000, type: 'clicks' },
-  { id: 'weekly_buy_140', label: 'Kup 3 000 lisów', target: 3000, type: 'buys' },
-  { id: 'weekly_buy_260', label: 'Kup 5 000 lisów', target: 5000, type: 'buys' },
-  { id: 'weekly_tier_14', label: 'Osiągnij tier 18', target: 18, type: 'maxTier' },
-  { id: 'weekly_tier_18', label: 'Osiągnij tier 22', target: 22, type: 'maxTier' },
-  { id: 'weekly_coins_2m', label: 'Zarób 500 000 000 monet', target: 500000000, type: 'coinsEarned' }
+  { id: 'weekly_merge_80', label: 'Wykonaj 150 merge', target: 150, type: 'merges' },
+  { id: 'weekly_merge_150', label: 'Wykonaj 350 merge', target: 350, type: 'merges' },
+  { id: 'weekly_click_600', label: 'Kliknij lisy 4 000 razy', target: 4000, type: 'clicks' },
+  { id: 'weekly_click_1200', label: 'Kliknij lisy 10 000 razy', target: 10000, type: 'clicks' },
+  { id: 'weekly_buy_140', label: 'Kup 250 lisów', target: 250, type: 'buys' },
+  { id: 'weekly_buy_260', label: 'Kup 600 lisów', target: 600, type: 'buys' },
+  { id: 'weekly_tier_14', label: 'Osiągnij tier 16', target: 16, type: 'maxTier' },
+  { id: 'weekly_tier_18', label: 'Osiągnij tier 20', target: 20, type: 'maxTier' },
+  { id: 'weekly_coins_2m', label: 'Zarób 25 000 000 monet', target: 25000000, type: 'coinsEarned' }
 ];
 
 export const LOGIN_REWARD_VALUES = {

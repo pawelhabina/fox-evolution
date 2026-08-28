@@ -7,6 +7,7 @@ export const HELP_SECTIONS = [
     tips: [
       ['Kupowanie', 'Przycisk zakupu dodaje lisa na planszę. Cena kolejnych zakupów rośnie w bieżącym cyklu.'],
       ['Łączenie', 'Przeciągnij lisa na drugiego lisa o tym samym tierze. Dwa identyczne lisy zmienią się w jednego lisa wyższego tieru.'],
+      ['Blokada lisa', 'W menu pod prawym przyciskiem możesz zablokować lisa przed przypadkowym połączeniem. Podczas przeciągania zgodne żywioły są podświetlane, a poprawny cel merge zmienia kolor.'],
       ['Klikanie', 'Kliknięcie lisa natychmiast dodaje monety. Wartość kliknięcia rośnie wraz z tierem i ulepszeniami.'],
       ['Menu lisa', 'Kliknij lisa prawym przyciskiem, aby sprawdzić jego parametry, sprzedać go lub rozpocząć dostępną ewolucję.'],
       ['Miejsce na planszy', 'Gdy osiągniesz limit lisów, połącz lub sprzedaj część kolekcji albo kup trwałe rozszerzenie limitu za Rebirth points.']
@@ -40,8 +41,8 @@ export const HELP_SECTIONS = [
       ['Water Fox', 'Wzmacnia najbliższego lisa o 50%. Pozycja lisa na planszy ma znaczenie.'],
       ['Dalsze łączenie', 'Łączyć można dwa lisy tego samego tieru i tego samego żywiołu. Elementalne lisy rozwijają się do tieru 30.'],
       ['Różne żywioły', 'Zwykle lisów różnych żywiołów nie można połączyć. Wyjątkiem jest drużyna Ogień, Prąd i Woda na poziomie 20, która otwiera próbę Hydry.'],
-      ['Walka z Hydrą', 'Naciskaj w czasie pojawiające się klawisze. Szybkie reakcje budują combo i zwiększają obrażenia, a pomyłki mocno ranią drużynę.'],
-      ['Oswojona Hydra', 'Po zwycięstwie trzy lisy znikają, a na planszy pojawia się Hydra łącząca dochód Prądu, klik Ognia i aurę Wody.']
+      ['Walka z Hydrą', 'Wpisuj wyłącznie na klawiaturze wskazane litery, zanim skończy się widoczny czas. Szybkie reakcje budują combo, a pomyłki mocno ranią drużynę. Po porażce kolejna próba jest dostępna za godzinę.'],
+      ['Oswojona Hydra', 'Po zwycięstwie trzy lisy znikają, a na planszy pojawia się Hydra Lv 1 łącząca dochód Prądu, klik Ognia i aurę Wody. Dwie Hydry tego samego poziomu łączą się aż do Lv 5.']
     ],
     callout: 'Wodnego lisa ustaw blisko najsilniejszego źródła income, aby jego aura trafiała we właściwy cel.'
   },
@@ -72,6 +73,7 @@ export const HELP_SECTIONS = [
       ['Co zostaje', 'Zachowujesz diamenty, Esencję, trzy waluty żywiołów, Hydrę, Kopalnię Duchów, dotychczasowe Rebirth points, trwałe ulepszenia, ustawienia, statystyki, zadania i odkrycia Pokédexu.'],
       ['Co się resetuje', 'Zwykłe i żywiołowe lisy poza Hydrą, monety, licznik zakupów oraz ulepszenia kupowane za monety wracają do stanu początkowego.'],
       ['Limit lisów', 'Ulepszenie limitu kupione za Rebirth points pozostaje po resecie i pozwala budować większą planszę w przyszłości.'],
+      ['Koszty ulepszeń', 'Każdy kolejny poziom ulepszenia w sklepie Rebirth kosztuje dwa razy więcej niż poprzedni.'],
       ['Dobry moment', 'Wykonaj Rebirth, gdy nowy trwały zakup wyraźnie przyspieszy następny cykl lub obecny rozwój mocno zwolnił.']
     ],
     callout: 'Przed zatwierdzeniem gra pokazuje dokładną liczbę zdobywanych punktów i prosi o potwierdzenie.'

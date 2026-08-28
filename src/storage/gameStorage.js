@@ -5,6 +5,7 @@ import { SAVE_DATA_VERSION, sanitizePokedex } from '../game/progression.mjs';
 import {
   ELEMENTAL_BOSS_MAX_HP,
   ELEMENTAL_TEAM_MAX_HP,
+  HYDRA_MAX_LEVEL,
   createBossBattleState
 } from '../game/bossBattle';
 import {
@@ -193,9 +194,11 @@ function sanitizeState(rawState, nowTs = Date.now()) {
             tier,
             x: pos.x,
             y: pos.y,
+            locked: Boolean(fox.locked),
             evolution: fox.kind === 'hydra' ? null : fox.evolution || null,
             ...(fox.kind === 'hydra' ? {
               kind: 'hydra',
+              hydraLevel: clamp(Math.floor(Number(fox.hydraLevel) || 1), 1, HYDRA_MAX_LEVEL),
               elementTiers: {
                 fire: clamp(Number(fox.elementTiers?.fire) || tier, 20, MAX_TIER),
                 electric: clamp(Number(fox.elementTiers?.electric) || tier, 20, MAX_TIER),
@@ -214,7 +217,7 @@ function sanitizeState(rawState, nowTs = Date.now()) {
       .map(([key, fallback]) => [key, clampCurrency(rawState.stats?.[key] ?? fallback)])
   );
   const currentHighestTier = foxes.reduce((max, fox) => Math.max(max, fox.tier), 0);
-  const currentHighestBaseTier = foxes.reduce((max, fox) => fox.evolution ? max : Math.max(max, fox.tier), 0);
+  const currentHighestBaseTier = foxes.reduce((max, fox) => fox.evolution || fox.kind === 'hydra' ? max : Math.max(max, fox.tier), 0);
   const currentHighestElementalTier = foxes.reduce((max, fox) => fox.evolution ? Math.max(max, fox.tier) : max, 0);
   const stats = {
     ...lifetimeStats,
@@ -286,6 +289,8 @@ function sanitizeState(rawState, nowTs = Date.now()) {
     : defaultBossBattle.status;
   const rawBossHp = Number(rawState.bossBattle?.bossHp);
   const rawTeamHp = Number(rawState.bossBattle?.teamHp);
+  const rawCooldownUntil = Date.parse(rawState.bossBattle?.cooldownUntil || '');
+  const rawLastDefeatAt = Date.parse(rawState.bossBattle?.lastDefeatAt || '');
   const bossBattle = {
     status: bossStatus,
     defeated: Boolean(rawState.bossBattle?.defeated),
@@ -305,7 +310,9 @@ function sanitizeState(rawState, nowTs = Date.now()) {
           evolution: fox?.evolution || null,
           tier: clamp(Number(fox?.tier) || 20, 20, MAX_TIER)
         }))
-      : []
+      : [],
+    cooldownUntil: Number.isFinite(rawCooldownUntil) ? new Date(rawCooldownUntil).toISOString() : null,
+    lastDefeatAt: Number.isFinite(rawLastDefeatAt) ? new Date(rawLastDefeatAt).toISOString() : null
   };
 
   if (bossBattle.defeated && !foxes.some((fox) => fox.kind === 'hydra')) {
@@ -319,6 +326,8 @@ function sanitizeState(rawState, nowTs = Date.now()) {
         id: hydraId,
         kind: 'hydra',
         tier: Math.max(...legacyTeam.map((fox) => fox.tier)),
+        hydraLevel: 1,
+        locked: false,
         x: legacyTeam.reduce((sum, fox) => sum + fox.x, 0) / 3,
         y: legacyTeam.reduce((sum, fox) => sum + fox.y, 0) / 3,
         evolution: null,
