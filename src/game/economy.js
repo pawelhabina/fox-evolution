@@ -54,6 +54,21 @@ export function getUpgradeCost(upgradeId, level) {
   return Math.max(1, Math.floor(config.baseCost * config.growth ** safeLevel));
 }
 
+export function getLegacyRebirthShopRefund(upgrades = {}) {
+  const foxLimitLevel = clamp(Math.floor(Number(upgrades.foxLimit) || 0), 0, 45);
+  const tickSpeedLevel = clamp(Math.floor(Number(upgrades.tickSpeed) || 0), 0, 40);
+  let refund = 0;
+
+  for (let level = 0; level < foxLimitLevel; level += 1) {
+    refund += Math.max(1, Math.floor(1.35 ** level));
+  }
+  for (let level = 0; level < tickSpeedLevel; level += 1) {
+    refund += level < 20 ? 5 + level * 5 : 110 + (level - 20) * 10;
+  }
+
+  return clampCurrency(refund);
+}
+
 export function getBasePurchaseTier(state) {
   const level = state.upgrades.basePurchaseTier || 0;
   return clamp(1 + level, 1, BASE_MAX_TIER - 1);

@@ -106,6 +106,7 @@ export function createInitialState(nowTs = Date.now()) {
     meta: {
       nextFoxId: 1,
       gemDropCounter: 0,
+      rebirthPricingRefundV128Applied: true,
       createdAt: new Date(nowTs).toISOString(),
       lastPlayedAt: new Date(nowTs).toISOString(),
       lastEconomyAt: new Date(nowTs).toISOString()

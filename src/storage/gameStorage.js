@@ -1,4 +1,4 @@
-import { clamp, clampCurrency, clampFoxPosition } from '../game/economy';
+import { clamp, clampCurrency, clampFoxPosition, getLegacyRebirthShopRefund } from '../game/economy';
 import { MAX_FOXES_LIMIT, MAX_TIER } from '../game/constants';
 import { createInitialState } from './defaultState';
 import { SAVE_DATA_VERSION, sanitizePokedex } from '../game/progression.mjs';
@@ -150,10 +150,12 @@ function sanitizeState(rawState, nowTs = Date.now()) {
   const rawMusicVolume = Number(rawState.settings?.musicVolume);
   const rawSfxVolume = Number(rawState.settings?.sfxVolume);
 
+  const legacyRebirthRefundApplied = rawState.meta?.rebirthPricingRefundV128Applied === true;
+  const legacyRebirthRefund = legacyRebirthRefundApplied ? 0 : getLegacyRebirthShopRefund(rawState.upgrades);
   const currencies = {
     coins: clampCurrency(rawState.currencies?.coins ?? base.currencies.coins),
     gems: clampCurrency(rawState.currencies?.gems ?? base.currencies.gems),
-    rebirthTokens: clampCurrency(rawState.currencies?.rebirthTokens ?? base.currencies.rebirthTokens),
+    rebirthTokens: clampCurrency((rawState.currencies?.rebirthTokens ?? base.currencies.rebirthTokens) + legacyRebirthRefund),
     essence: clampCurrency(rawState.currencies?.essence ?? base.currencies.essence),
     fireCoins: clampCurrency(rawState.currencies?.fireCoins ?? base.currencies.fireCoins),
     electricCoins: clampCurrency(rawState.currencies?.electricCoins ?? base.currencies.electricCoins),
@@ -399,6 +401,7 @@ function sanitizeState(rawState, nowTs = Date.now()) {
         foxes.reduce((max, fox) => Math.max(max, fox.id + 1), 1)
       ),
       gemDropCounter: clampCurrency(rawState.meta?.gemDropCounter ?? base.meta.gemDropCounter),
+      rebirthPricingRefundV128Applied: true,
       createdAt: sanitizeIsoTimestamp(rawState.meta?.createdAt, base.meta.createdAt),
       lastPlayedAt: sanitizeIsoTimestamp(rawState.meta?.lastPlayedAt, base.meta.lastPlayedAt),
       lastEconomyAt: sanitizeIsoTimestamp(rawState.meta?.lastEconomyAt || rawState.meta?.lastPlayedAt, base.meta.lastPlayedAt)

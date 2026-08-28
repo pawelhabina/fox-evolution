@@ -84,6 +84,20 @@ test('every rebirth shop cost doubles on each level and gem drop starts at 0.8%'
   assert.match(constants, /BASE_GEM_DROP_RATE = 0\.008/);
 });
 
+test('legacy rebirth shop purchases receive a one-time refund without losing levels', () => {
+  const economy = read('src/game/economy.js');
+  const storage = read('src/storage/gameStorage.js');
+  const defaults = read('src/storage/defaultState.js');
+
+  assert.match(economy, /getLegacyRebirthShopRefund/);
+  assert.match(economy, /Math\.floor\(1\.35 \*\* level\)/);
+  assert.match(economy, /level < 20 \? 5 \+ level \* 5 : 110/);
+  assert.match(storage, /rebirthPricingRefundV128Applied === true/);
+  assert.match(storage, /rebirthTokens: clampCurrency\([\s\S]*?\+ legacyRebirthRefund\)/);
+  assert.match(storage, /rebirthPricingRefundV128Applied: true/);
+  assert.match(defaults, /rebirthPricingRefundV128Applied: true/);
+});
+
 test('fox purchase always shows its price, including when blocked', () => {
   const arena = read('src/components/Arena.jsx');
 
