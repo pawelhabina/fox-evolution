@@ -53,12 +53,13 @@ export const HELP_SECTIONS = [
     summary: 'Po pierwszej Hydrze odblokujesz Esencję i podziemne królestwo z maksymalnie 10 automatycznymi kopalniami.',
     tips: [
       ['Odblokowanie', 'Pokonaj Hydrę po połączeniu trzech żywiołowych lisów na poziomie 20. Otrzymasz pierwsze 25 Esencji Hydry.'],
-      ['Pierwsza kopalnia', 'Na początku działa tylko Kopalnia Ognia. Wytwarza Ogniste monety, którymi rozwiniesz pokój i odblokujesz Kopalnię Prądu.'],
-      ['Kolejne pokoje', 'Kopalnie odblokowują się w kolejności Ogień → Prąd → Woda. Koszt nowego pokoju płacisz monetami poprzedniego żywiołu. Możesz zbudować łącznie 10 kopalni.'],
+      ['Mapa kopalń', 'Kraina jest mapą maksymalnie 10 osobnych kopalni. Kliknij „Wejdź do kopalni”, aby otworzyć jej szyb, windę, magazyn i pracowników.'],
+      ['Pierwsza kopalnia', 'Na początku działa tylko Kopalnia Ognia. Wytwarza Ogniste monety, którymi rozwiniesz szyb i odblokujesz Kopalnię Prądu.'],
+      ['Kolejne kopalnie', 'Kopalnie odblokowują się w kolejności Ogień → Prąd → Woda. Koszt nowej kopalni płacisz monetami poprzedniego żywiołu. Możesz zbudować ich łącznie 10.'],
       ['Trzy waluty', 'Każdy żywioł ma własne monety. Ogniste, Elektryczne i Wodne monety ulepszają wyłącznie kopalnie odpowiadającego im typu.'],
-      ['Odbieranie', 'Przycisk „Odbierz urobek” przenosi zawartość wszystkich magazynów do trzech portfeli żywiołów.'],
+      ['Odbieranie', 'W konkretnej kopalni odbierzesz tylko jej urobek. Na mapie przycisk „Odbierz ze wszystkich” opróżnia wszystkie magazyny naraz.'],
       ['Górnicy i poziomy', 'Pogłębianie kopalni i zatrudnianie kolejnych lisów zwiększa jej tempo produkcji. Głębsze pokoje dostają dodatkowy bonus.'],
-      ['Winda i magazyn', 'Widoczna winda obsługuje wszystkie piętra. Jej ulepszenia przyspieszają przejazd i produkcję, a magazyn zwiększa maksymalny urobek. Oba udogodnienia kupujesz za Esencję Hydry.'],
+      ['Winda i magazyn', 'Każda kopalnia ma własną, widoczną windę oraz własny magazyn. Winda kursuje między szybem a magazynem i zwiększa produkcję, a magazyn podnosi limit urobku. Oba ulepszasz osobno za Esencję Hydry.'],
       ['Minimalizacja', 'Gra rozlicza upływ rzeczywistego czasu. Zminimalizowane okno nie zatrzymuje planszy ani kopalni.']
     ],
     callout: 'Odbieraj urobek przed zapełnieniem kopalni — pełny magazyn zatrzymuje produkcję danego pokoju.'

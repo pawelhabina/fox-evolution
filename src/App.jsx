@@ -1328,8 +1328,8 @@ export default function App() {
         {activeRealm === 'mine' ? (
           <SpiritMineRealm
             state={state}
-            onCollect={() => {
-              dispatch({ type: ACTIONS.MINE_COLLECT, nowTs: Date.now() });
+            onCollect={(roomId) => {
+              dispatch({ type: ACTIONS.MINE_COLLECT, roomId, nowTs: Date.now() });
               playSfx('mineCollect');
             }}
             onUpgradeShaft={(roomId) => {
@@ -1344,12 +1344,12 @@ export default function App() {
               dispatch({ type: ACTIONS.MINE_UNLOCK_ROOM, nowTs: Date.now() });
               playSfx('buy');
             }}
-            onUpgradeElevator={() => {
-              dispatch({ type: ACTIONS.MINE_UPGRADE_ELEVATOR, nowTs: Date.now() });
+            onUpgradeElevator={(roomId) => {
+              dispatch({ type: ACTIONS.MINE_UPGRADE_ELEVATOR, roomId, nowTs: Date.now() });
               playSfx('upgrade');
             }}
-            onUpgradeWarehouse={() => {
-              dispatch({ type: ACTIONS.MINE_UPGRADE_WAREHOUSE, nowTs: Date.now() });
+            onUpgradeWarehouse={(roomId) => {
+              dispatch({ type: ACTIONS.MINE_UPGRADE_WAREHOUSE, roomId, nowTs: Date.now() });
               playSfx('upgrade');
             }}
           />

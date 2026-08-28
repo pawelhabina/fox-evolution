@@ -42,6 +42,8 @@ const adminMineShaftSchema = z.object({
   element: foxEvolution,
   level: z.number().finite().int().min(1).max(100),
   miners: z.number().finite().int().min(1).max(25),
+  elevatorLevel: z.number().finite().int().min(1).max(100),
+  warehouseLevel: z.number().finite().int().min(1).max(100),
   stored: z.number().finite().min(0).max(Number.MAX_SAFE_INTEGER)
 }).strict();
 const adminBossTeamFoxSchema = z.object({
@@ -133,8 +135,6 @@ const adminStatePatchSchema = z.object({
     spiritMine: z.object({
       unlocked: z.boolean().optional(),
       totalCollected: adminStateNumber.optional(),
-      elevatorLevel: z.number().finite().int().min(1).max(100).optional(),
-      warehouseLevel: z.number().finite().int().min(1).max(100).optional(),
       shafts: z.array(adminMineShaftSchema).min(1).max(10).optional()
     }).strict().optional()
   }).strict().optional(),

@@ -26,6 +26,8 @@ export function createMineShaft(room = 1) {
     element: getMineRoomElement(safeRoom),
     level: 1,
     miners: 1,
+    elevatorLevel: 1,
+    warehouseLevel: 1,
     stored: 0
   };
 }
@@ -35,20 +37,20 @@ export function createSpiritMineState() {
     unlocked: false,
     totalCollected: 0,
     lastAdvancedAt: null,
-    elevatorLevel: 1,
-    warehouseLevel: 1,
     shafts: [createMineShaft(1)]
   };
 }
 
 export function getMineShaftRate(shaft, mine) {
-  const elevatorMultiplier = 1 + Math.max(0, (mine?.elevatorLevel || 1) - 1) * 0.18;
+  const elevatorLevel = shaft?.elevatorLevel || mine?.elevatorLevel || 1;
+  const elevatorMultiplier = 1 + Math.max(0, elevatorLevel - 1) * 0.18;
   const depthMultiplier = 1 + Math.max(0, (shaft?.room || 1) - 1) * 0.12;
   return (BASE_RATE[shaft.element] || 0.1) * shaft.level * shaft.miners * elevatorMultiplier * depthMultiplier;
 }
 
 export function getMineShaftCapacity(shaft, mine) {
-  const warehouseMultiplier = 1 + Math.max(0, (mine?.warehouseLevel || 1) - 1) * 0.5;
+  const warehouseLevel = shaft?.warehouseLevel || mine?.warehouseLevel || 1;
+  const warehouseMultiplier = 1 + Math.max(0, warehouseLevel - 1) * 0.5;
   return Math.floor((18 + shaft.level * 12 + shaft.miners * 5) * warehouseMultiplier);
 }
 

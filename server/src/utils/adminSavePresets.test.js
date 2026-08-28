@@ -27,9 +27,7 @@ function baseState() {
         unlocked: false,
         totalCollected: 0,
         lastAdvancedAt: null,
-        elevatorLevel: 1,
-        warehouseLevel: 1,
-        shafts: [{ id: 1, room: 1, element: 'fire', level: 1, miners: 1, stored: 0 }]
+        shafts: [{ id: 1, room: 1, element: 'fire', level: 1, miners: 1, elevatorLevel: 1, warehouseLevel: 1, stored: 0 }]
       }
     },
     meta: { nextFoxId: 4 },
@@ -90,6 +88,7 @@ test('MAX_SPIRIT_MINE unlocks ten sequential rooms with rotating elements', () =
   assert.deepEqual(mine.shafts.slice(0, 4).map((shaft) => shaft.element), ['fire', 'electric', 'water', 'fire']);
   assert.ok(mine.shafts.every((shaft, index) => shaft.id === index + 1 && shaft.room === index + 1));
   assert.ok(mine.shafts.every((shaft) => shaft.level === 25 && shaft.miners === 10));
+  assert.ok(mine.shafts.every((shaft) => shaft.elevatorLevel === 25 && shaft.warehouseLevel === 25));
 });
 
 test('preset catalog rejects unknown operations', () => {

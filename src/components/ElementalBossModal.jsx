@@ -64,12 +64,18 @@ export default function ElementalBossModal({ state, onAttack, onRetry, onClose, 
 
   useEffect(() => {
     if (!prompt || !isBattle) return undefined;
-    const interval = window.setInterval(() => {
+    let frameId = 0;
+    const updateTimer = () => {
       const next = Math.max(0, 1 - (performance.now() - prompt.startedAt) / prompt.allowedMs);
       setRemainingMs(Math.ceil(next * prompt.allowedMs));
-      if (next <= 0) resolveAttempt(false);
-    }, 16);
-    return () => window.clearInterval(interval);
+      if (next <= 0) {
+        resolveAttempt(false);
+        return;
+      }
+      frameId = window.requestAnimationFrame(updateTimer);
+    };
+    frameId = window.requestAnimationFrame(updateTimer);
+    return () => window.cancelAnimationFrame(frameId);
   }, [isBattle, prompt, resolveAttempt]);
 
   useEffect(() => {
@@ -118,7 +124,7 @@ export default function ElementalBossModal({ state, onAttack, onRetry, onClose, 
           {prompt ? <div className="boss-qte-key" role="status" aria-live="assertive" aria-label={`Naciśnij na klawiaturze ${prompt.key}`}>
             <strong>{prompt.key}</strong>
             <b>{(remainingMs / 1000).toFixed(2)} s</b>
-            <span className="boss-qte-timer"><i style={{ width: `${Math.max(0, Math.min(100, remainingMs / prompt.allowedMs * 100))}%` }} /></span>
+            <span className="boss-qte-timer" aria-hidden="true"><i key={prompt.startedAt} style={{ '--boss-qte-duration': `${prompt.allowedMs}ms` }} /></span>
             <small>TYLKO KLAWIATURA</small>
           </div> : <div className="boss-qte-wait">PRZYGOTUJ PALCE…</div>}
           <p className="boss-hint">Moc bazowa: {attackPower}. Trafiony klawisz nadal kosztuje drużynę 3–5 HP, a pomyłka lub upływ czasu zabiera 20–26 HP. Końcówka walki jest szybsza.</p>

@@ -345,9 +345,7 @@ function sanitizeState(rawState, nowTs = Date.now()) {
     ...defaultMine,
     unlocked: Boolean(rawMine?.unlocked || bossBattle.defeated),
     totalCollected: clampCurrency(rawMine?.totalCollected || 0),
-    lastAdvancedAt: sanitizeIsoTimestamp(rawMine?.lastAdvancedAt, base.meta.lastPlayedAt),
-    elevatorLevel: clamp(Number(rawMine?.elevatorLevel) || 1, 1, 100),
-    warehouseLevel: clamp(Number(rawMine?.warehouseLevel) || 1, 1, 100)
+    lastAdvancedAt: sanitizeIsoTimestamp(rawMine?.lastAdvancedAt, base.meta.lastPlayedAt)
   };
   const rawShafts = Array.isArray(rawMine?.shafts) && rawMine.shafts.length > 0
     ? rawMine.shafts.slice(0, SPIRIT_MINE_MAX_ROOMS)
@@ -363,9 +361,11 @@ function sanitizeState(rawState, nowTs = Date.now()) {
         element: getMineRoomElement(room),
         level: clamp(Number(rawShaft?.level) || fallback.level, 1, 100),
         miners: clamp(Number(rawShaft?.miners) || fallback.miners, 1, 25),
+        elevatorLevel: clamp(Number(rawShaft?.elevatorLevel ?? rawMine?.elevatorLevel) || 1, 1, 100),
+        warehouseLevel: clamp(Number(rawShaft?.warehouseLevel ?? rawMine?.warehouseLevel) || 1, 1, 100),
         stored: Math.max(0, Number(rawShaft?.stored) || 0)
       };
-      return { ...shaft, stored: Math.min(shaft.stored, getMineShaftCapacity(shaft, mineBase)) };
+      return { ...shaft, stored: Math.min(shaft.stored, getMineShaftCapacity(shaft)) };
     })
   };
 

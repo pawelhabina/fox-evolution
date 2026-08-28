@@ -28,6 +28,8 @@ function createMineShaft(room, level = 1, miners = 1) {
     element: ELEMENTS[(room - 1) % ELEMENTS.length],
     level,
     miners,
+    elevatorLevel: level,
+    warehouseLevel: level,
     stored: 0
   };
 }
@@ -126,9 +128,11 @@ function buildSpiritMinePatch(state, maxed) {
         unlocked: true,
         totalCollected: safeInteger(currentMine.totalCollected),
         lastAdvancedAt: currentMine.lastAdvancedAt || null,
-        elevatorLevel: maxed ? 25 : Math.max(1, safeInteger(currentMine.elevatorLevel, 1)),
-        warehouseLevel: maxed ? 25 : Math.max(1, safeInteger(currentMine.warehouseLevel, 1)),
-        shafts
+        shafts: shafts.map((shaft) => ({
+          ...shaft,
+          elevatorLevel: maxed ? 25 : Math.max(1, safeInteger(shaft.elevatorLevel ?? currentMine.elevatorLevel, 1)),
+          warehouseLevel: maxed ? 25 : Math.max(1, safeInteger(shaft.warehouseLevel ?? currentMine.warehouseLevel, 1))
+        }))
       }
     }
   };

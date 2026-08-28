@@ -8,6 +8,8 @@ test('spirit mine produces while time elapses and respects storage capacity', as
   const mine = { ...mineApi.createSpiritMineState(), unlocked: true };
   assert.equal(mine.shafts.length, 1);
   assert.equal(mine.shafts[0].element, 'fire');
+  assert.equal(mine.shafts[0].elevatorLevel, 1);
+  assert.equal(mine.shafts[0].warehouseLevel, 1);
   const advanced = mineApi.advanceSpiritMine(mine, 60, Date.UTC(2026, 7, 27));
   assert.ok(mineApi.getMineStoredTotal(advanced) > 0);
   advanced.shafts.forEach((shaft) => {
@@ -91,5 +93,29 @@ test('existing three-room mine saves are preserved by the save migration', () =>
   const storage = fs.readFileSync(path.join(root, 'src/storage/gameStorage.js'), 'utf8');
   assert.match(storage, /rawMine\.shafts\.slice\(0, SPIRIT_MINE_MAX_ROOMS\)/);
   assert.match(storage, /rawShafts\.map\(\(rawShaft, index\)/);
+  assert.match(storage, /rawShaft\?\.elevatorLevel \?\? rawMine\?\.elevatorLevel/);
+  assert.match(storage, /rawShaft\?\.warehouseLevel \?\? rawMine\?\.warehouseLevel/);
   assert.match(storage, /fireCoins:[\s\S]*electricCoins:[\s\S]*waterCoins:/);
+});
+
+test('mine realm is a hub with enterable mines and per-mine facilities', () => {
+  const root = path.resolve(__dirname, '..');
+  const component = fs.readFileSync(path.join(root, 'src/components/SpiritMineRealm.jsx'), 'utf8');
+  const reducer = fs.readFileSync(path.join(root, 'src/game/reducer.js'), 'utf8');
+  assert.match(component, /Wejdź do kopalni/);
+  assert.match(component, /Mapa kopalń/);
+  assert.match(component, /onUpgradeElevator\(shaft\.id\)/);
+  assert.match(component, /onUpgradeWarehouse\(shaft\.id\)/);
+  assert.match(component, /onCollect\(shaft\.id\)/);
+  assert.match(reducer, /mine\.shafts\.find\(\(item\) => item\.id === action\.roomId\)/);
+});
+
+test('boss QTE timer animates continuously for the full prompt duration', () => {
+  const root = path.resolve(__dirname, '..');
+  const modal = fs.readFileSync(path.join(root, 'src/components/ElementalBossModal.jsx'), 'utf8');
+  const styles = fs.readFileSync(path.join(root, 'src/styles.css'), 'utf8');
+  assert.match(modal, /requestAnimationFrame\(updateTimer\)/);
+  assert.match(modal, /--boss-qte-duration/);
+  assert.match(styles, /boss-qte-countdown var\(--boss-qte-duration\) linear forwards/);
+  assert.match(styles, /@keyframes boss-qte-countdown \{ to \{ transform: scaleX\(0\)/);
 });

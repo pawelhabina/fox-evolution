@@ -820,8 +820,14 @@ export function gameReducer(state, action) {
     case ACTIONS.MINE_COLLECT: {
       const mine = next.realms?.spiritMine;
       if (!mine?.unlocked) return next;
-      const storedByElement = getMineStoredByElement(mine);
-      const collectedByElement = getMineCollectableByElement(mine);
+      const selectedShafts = action.roomId
+        ? mine.shafts.filter((shaft) => shaft.id === action.roomId)
+        : mine.shafts;
+      if (selectedShafts.length === 0) return next;
+      const collectionMine = { ...mine, shafts: selectedShafts };
+      const selectedIds = new Set(selectedShafts.map((shaft) => shaft.id));
+      const storedByElement = getMineStoredByElement(collectionMine);
+      const collectedByElement = getMineCollectableByElement(collectionMine);
       const collected = Object.values(collectedByElement).reduce((sum, amount) => sum + amount, 0);
       if (collected <= 0) return next;
       const remainderElements = new Set();
@@ -839,6 +845,7 @@ export function gameReducer(state, action) {
             ...mine,
             totalCollected: clampCurrency((mine.totalCollected || 0) + collected),
             shafts: mine.shafts.map((shaft) => {
+              if (!selectedIds.has(shaft.id)) return shaft;
               if (remainderElements.has(shaft.element)) return { ...shaft, stored: 0 };
               remainderElements.add(shaft.element);
               return { ...shaft, stored: storedByElement[shaft.element] - collectedByElement[shaft.element] };
@@ -901,15 +908,20 @@ export function gameReducer(state, action) {
     case ACTIONS.MINE_UPGRADE_WAREHOUSE: {
       const mine = next.realms?.spiritMine;
       if (!mine?.unlocked) return next;
+      const shaft = mine.shafts.find((item) => item.id === action.roomId);
+      if (!shaft) return next;
       const key = action.type === ACTIONS.MINE_UPGRADE_ELEVATOR ? 'elevatorLevel' : 'warehouseLevel';
-      const cost = getMineFacilityCost(mine[key]);
+      const cost = getMineFacilityCost(shaft[key]);
       if ((next.currencies.essence || 0) < cost) return next;
       return {
         ...next,
         currencies: { ...next.currencies, essence: clampCurrency(next.currencies.essence - cost) },
         realms: {
           ...next.realms,
-          spiritMine: { ...mine, [key]: mine[key] + 1 }
+          spiritMine: {
+            ...mine,
+            shafts: mine.shafts.map((item) => item.id === action.roomId ? { ...item, [key]: item[key] + 1 } : item)
+          }
         }
       };
     }

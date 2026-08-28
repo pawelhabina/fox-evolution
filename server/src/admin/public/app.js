@@ -495,6 +495,8 @@ function cloneMineShaftForEditor(shaft, index) {
     element: elements[index % elements.length],
     level: Number(shaft?.level || 1),
     miners: Number(shaft?.miners || 1),
+    elevatorLevel: Number(shaft?.elevatorLevel || 1),
+    warehouseLevel: Number(shaft?.warehouseLevel || 1),
     stored: Number(shaft?.stored || 0)
   };
 }
@@ -505,6 +507,8 @@ function renderMineEditor() {
     <strong>#${shaft.room}</strong><span class="element-badge element-badge--${shaft.element}">${labels[shaft.element]}</span>
     <input aria-label="Poziom pokoju ${shaft.room}" data-mine-field="level" inputmode="numeric" min="1" max="100" value="${escapeHtml(shaft.level)}" />
     <input aria-label="Górnicy w pokoju ${shaft.room}" data-mine-field="miners" inputmode="numeric" min="1" max="25" value="${escapeHtml(shaft.miners)}" />
+    <input aria-label="Winda w kopalni ${shaft.room}" data-mine-field="elevatorLevel" inputmode="numeric" min="1" max="100" value="${escapeHtml(shaft.elevatorLevel)}" />
+    <input aria-label="Magazyn w kopalni ${shaft.room}" data-mine-field="warehouseLevel" inputmode="numeric" min="1" max="100" value="${escapeHtml(shaft.warehouseLevel)}" />
     <input aria-label="Magazyn pokoju ${shaft.room}" data-mine-field="stored" inputmode="decimal" min="0" value="${escapeHtml(shaft.stored)}" />
     <button class="editor-remove" type="button" data-remove-mine-room="${index}" aria-label="Usuń ostatni pokój" ${index !== adminState.editingMineShafts.length - 1 || adminState.editingMineShafts.length === 1 ? 'disabled' : ''}>×</button>
   </article>`).join('');
@@ -569,6 +573,8 @@ function validateEditorCollections() {
   adminState.editingMineShafts.forEach((shaft) => {
     if (!Number.isInteger(shaft.level) || shaft.level < 1 || shaft.level > 100) throw new Error(`Pokój #${shaft.room} ma niepoprawny poziom.`);
     if (!Number.isInteger(shaft.miners) || shaft.miners < 1 || shaft.miners > 25) throw new Error(`Pokój #${shaft.room} ma niepoprawną liczbę górników.`);
+    if (!Number.isInteger(shaft.elevatorLevel) || shaft.elevatorLevel < 1 || shaft.elevatorLevel > 100) throw new Error(`Kopalnia #${shaft.room} ma niepoprawny poziom windy.`);
+    if (!Number.isInteger(shaft.warehouseLevel) || shaft.warehouseLevel < 1 || shaft.warehouseLevel > 100) throw new Error(`Kopalnia #${shaft.room} ma niepoprawny poziom magazynu.`);
     if (!Number.isFinite(shaft.stored) || shaft.stored < 0) throw new Error(`Pokój #${shaft.room} ma niepoprawny stan magazynu.`);
   });
 }
