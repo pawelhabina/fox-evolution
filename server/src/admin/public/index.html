@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#060b16" />
     <title>Fox Evolution — Panel administracyjny</title>
     <link rel="icon" type="image/png" href="/assets/fox-evolution-icon.png" />
-    <link rel="stylesheet" href="/admin/style.css?v=4" />
+    <link rel="stylesheet" href="/admin/style.css?v=5" />
   </head>
   <body>
     <div class="ambient-grid" aria-hidden="true"></div>
@@ -143,11 +143,58 @@
       <form id="save-form" class="modal modal--large">
         <header class="modal-header"><div><p class="eyebrow">// EDYTOR ZAPISU</p><h2 id="save-modal-title">Edycja zapisu</h2><p id="save-owner"></p></div><button class="icon-button" type="button" data-close-modal="save-modal">×</button></header>
         <div class="conflict-banner hidden" id="save-conflict"><strong>Zapis zmienił się na serwerze.</strong><span>Odśwież dane, aby nie nadpisać nowszej wersji.</span><button id="reload-conflict" type="button">Wczytaj najnowszą wersję</button></div>
-        <div class="save-grid">
-          <fieldset><legend>Podstawowe</legend><label><span>Nazwa zapisu</span><input id="save-name" maxlength="64" /></label><div class="field-row"><label><span>Monety</span><input data-save-path="currencies.coins" inputmode="numeric" /></label><label><span>Diamenty</span><input data-save-path="currencies.gems" inputmode="numeric" /></label><label><span>Tokeny Rebirth</span><input data-save-path="currencies.rebirthTokens" inputmode="numeric" /></label></div><label><span>Liczba zakupów</span><input data-save-path="purchaseCount" inputmode="numeric" /></label></fieldset>
-          <fieldset><legend>Ulepszenia</legend><div class="field-row field-row--two"><label><span>Tier zakupu</span><input data-save-path="upgrades.basePurchaseTier" inputmode="numeric" /></label><label><span>Pasywny dochód</span><input data-save-path="upgrades.passiveIncome" inputmode="numeric" /></label><label><span>Rabat zakupu</span><input data-save-path="upgrades.buyDiscount" inputmode="numeric" /></label><label><span>Wartość klików</span><input data-save-path="upgrades.clickBonus" inputmode="numeric" /></label><label><span>Limit lisów</span><input data-save-path="upgrades.foxLimit" inputmode="numeric" /></label><label><span>Szybkość ticka</span><input data-save-path="upgrades.tickSpeed" inputmode="numeric" /></label><label><span>Mnożnik premium</span><input data-save-path="upgrades.gemIncomeMultiplier" inputmode="numeric" /></label><label><span>Sloty premium</span><input data-save-path="upgrades.gemFoxLimit" inputmode="numeric" /></label></div></fieldset>
-          <fieldset><legend>Statystyki</legend><div class="field-row field-row--two"><label><span>Zarobione monety</span><input data-save-path="stats.lifetimeCoinsEarned" inputmode="numeric" /></label><label><span>Wykonane merge</span><input data-save-path="stats.lifetimeMerges" inputmode="numeric" /></label><label><span>Kliknięcia</span><input data-save-path="stats.lifetimeClicks" inputmode="numeric" /></label><label><span>Zakupy lisów</span><input data-save-path="stats.lifetimeBuys" inputmode="numeric" /></label><label><span>Liczba Rebirth</span><input data-save-path="stats.lifetimeRebirths" inputmode="numeric" /></label><label><span>Dropy diamentów</span><input data-save-path="stats.lifetimeGemDrops" inputmode="numeric" /></label></div></fieldset>
-          <fieldset><legend>Kolekcja lisów</legend><div id="fox-summary" class="fox-summary"></div></fieldset>
+        <nav class="save-tabs" aria-label="Sekcje edytora zapisu">
+          <button class="is-active" type="button" data-save-tab="general">Waluty</button>
+          <button type="button" data-save-tab="foxes">Lisy</button>
+          <button type="button" data-save-tab="upgrades">Ulepszenia</button>
+          <button type="button" data-save-tab="progress">Postęp</button>
+          <button type="button" data-save-tab="presets">Szybkie presety</button>
+        </nav>
+        <div class="save-panels">
+          <section class="save-panel is-active" data-save-panel="general">
+            <div class="save-grid">
+              <fieldset><legend>Zapis</legend><label><span>Nazwa zapisu</span><input id="save-name" maxlength="64" /></label><label><span>Liczba zakupów lisów</span><input data-save-path="purchaseCount" inputmode="numeric" min="0" /></label></fieldset>
+              <fieldset><legend>Główne waluty</legend><div class="field-row"><label><span>Monety</span><input data-save-path="currencies.coins" inputmode="numeric" min="0" /></label><label><span>Diamenty</span><input data-save-path="currencies.gems" inputmode="numeric" min="0" /></label><label><span>Tokeny Rebirth</span><input data-save-path="currencies.rebirthTokens" inputmode="numeric" min="0" /></label></div></fieldset>
+              <fieldset class="fieldset--wide"><legend>Kraina Hydry i kopalnia</legend><div class="field-row field-row--four"><label><span>Esencja</span><input data-save-path="currencies.essence" inputmode="numeric" min="0" /></label><label><span>Ogniste coiny</span><input data-save-path="currencies.fireCoins" inputmode="numeric" min="0" /></label><label><span>Elektryczne coiny</span><input data-save-path="currencies.electricCoins" inputmode="numeric" min="0" /></label><label><span>Wodne coiny</span><input data-save-path="currencies.waterCoins" inputmode="numeric" min="0" /></label></div></fieldset>
+              <fieldset class="fieldset--wide"><legend>Boosty czasowe — sekundy</legend><div class="field-row field-row--four"><label><span>Turbo tick</span><input data-save-path="temporaryBoosts.turboTick" inputmode="numeric" min="0" /></label><label><span>Pasywny burst</span><input data-save-path="temporaryBoosts.passiveBurst" inputmode="numeric" min="0" /></label><label><span>Click frenzy</span><input data-save-path="temporaryBoosts.clickFrenzy" inputmode="numeric" min="0" /></label><label><span>Kupon zakupowy</span><input data-save-path="temporaryBoosts.buyCoupon" inputmode="numeric" min="0" /></label></div></fieldset>
+            </div>
+          </section>
+
+          <section class="save-panel" data-save-panel="foxes">
+            <div class="fox-editor-header"><div id="fox-summary" class="fox-summary"></div><button id="add-fox" class="button button--secondary" type="button">+ Dodaj lisa</button></div>
+            <p class="save-help">Każdego lisa możesz ustawić na poziom 1–30 i przypisać mu żywioł. Do walki z Hydrą potrzebujesz ognia, elektryczności i wody na poziomie co najmniej 20.</p>
+            <div class="editor-table-wrap"><div class="fox-editor-labels"><span>Lis</span><span>Poziom</span><span>Żywioł / typ</span><span>Pozycja X</span><span>Pozycja Y</span><span></span></div><div id="fox-editor-list" class="fox-editor-list"></div></div>
+          </section>
+
+          <section class="save-panel" data-save-panel="upgrades">
+            <div class="save-grid">
+              <fieldset><legend>Sklep za monety</legend><div class="field-row field-row--two"><label><span>Tier zakupu (0–13)</span><input data-save-path="upgrades.basePurchaseTier" inputmode="numeric" min="0" max="13" /></label><label><span>Pasywny dochód (0–60)</span><input data-save-path="upgrades.passiveIncome" inputmode="numeric" min="0" max="60" /></label><label><span>Rabat zakupu (0–35)</span><input data-save-path="upgrades.buyDiscount" inputmode="numeric" min="0" max="35" /></label><label><span>Wartość klików (0–40)</span><input data-save-path="upgrades.clickBonus" inputmode="numeric" min="0" max="40" /></label></div></fieldset>
+              <fieldset><legend>Sklep za diamenty</legend><div class="field-row field-row--two"><label><span>Mnożnik zarobków</span><input data-save-path="upgrades.gemIncomeMultiplier" inputmode="numeric" min="0" /></label><label><span>Premium sloty (0–50)</span><input data-save-path="upgrades.gemFoxLimit" inputmode="numeric" min="0" max="50" /></label></div></fieldset>
+              <fieldset class="fieldset--wide"><legend>Sklep za Rebirth</legend><div class="field-row field-row--four"><label><span>Limit lisów (0–45)</span><input data-save-path="upgrades.foxLimit" inputmode="numeric" min="0" max="45" /></label><label><span>Szybkość ticka (0–40)</span><input data-save-path="upgrades.tickSpeed" inputmode="numeric" min="0" max="40" /></label><label><span>Wyższy tier (0–95)</span><input data-save-path="upgrades.purchaseTierChance" inputmode="numeric" min="0" max="95" /></label><label><span>Drop diamentów (0–120)</span><input data-save-path="upgrades.gemDropRate" inputmode="numeric" min="0" max="120" /></label></div></fieldset>
+            </div>
+          </section>
+
+          <section class="save-panel" data-save-panel="progress">
+            <div class="save-grid">
+              <fieldset><legend>Walka z Hydrą</legend><div class="field-row field-row--two"><label><span>Status</span><select data-save-path="bossBattle.status" data-save-kind="string"><option value="idle">Gotowa / idle</option><option value="battle">Walka</option><option value="victory">Zwycięstwo</option><option value="defeat">Porażka</option></select></label><label><span>Pokonana</span><select data-save-path="bossBattle.defeated" data-save-kind="boolean"><option value="false">Nie</option><option value="true">Tak</option></select></label><label><span>HP Hydry (0–5000)</span><input data-save-path="bossBattle.bossHp" inputmode="numeric" min="0" max="5000" /></label><label><span>HP drużyny (0–120)</span><input data-save-path="bossBattle.teamHp" inputmode="numeric" min="0" max="120" /></label><label><span>Ataki</span><input data-save-path="bossBattle.attacks" inputmode="numeric" min="0" /></label><label><span>Najlepsze combo</span><input data-save-path="bossBattle.bestCombo" inputmode="numeric" min="0" /></label><label><span>Tutorial połączenia</span><select data-save-path="tutorials.elementalFusionSeen" data-save-kind="boolean"><option value="false">Pokaż ponownie</option><option value="true">Już pokazany</option></select></label></div></fieldset>
+              <fieldset><legend>Kopalnia Duchów</legend><div class="field-row field-row--two"><label><span>Odblokowana</span><select data-save-path="realms.spiritMine.unlocked" data-save-kind="boolean"><option value="false">Nie</option><option value="true">Tak</option></select></label><label><span>Zebrane łącznie</span><input data-save-path="realms.spiritMine.totalCollected" inputmode="numeric" min="0" /></label><label><span>Poziom windy (1–100)</span><input data-save-path="realms.spiritMine.elevatorLevel" inputmode="numeric" min="1" max="100" /></label><label><span>Poziom magazynu (1–100)</span><input data-save-path="realms.spiritMine.warehouseLevel" inputmode="numeric" min="1" max="100" /></label></div></fieldset>
+              <fieldset class="fieldset--wide"><legend>Pokoje kopalni</legend><div class="mine-editor-head"><p>Edytuj poziom, górników i zmagazynowaną walutę w każdym pokoju.</p><button id="add-mine-room" class="row-button" type="button">+ Dodaj pokój</button></div><div class="mine-editor-labels"><span>Pokój</span><span>Żywioł</span><span>Poziom</span><span>Górnicy</span><span>Magazyn</span><span></span></div><div id="mine-editor-list" class="mine-editor-list"></div></fieldset>
+              <fieldset class="fieldset--wide"><legend>Statystyki testowe</legend><div class="field-row field-row--four"><label><span>Najwyższy tier</span><input data-save-path="stats.highestTier" inputmode="numeric" min="0" max="30" /></label><label><span>Najwyższy bazowy</span><input data-save-path="stats.highestBaseTier" inputmode="numeric" min="0" max="15" /></label><label><span>Najwyższy żywiołowy</span><input data-save-path="stats.highestElementalTier" inputmode="numeric" min="0" max="30" /></label><label><span>Zwycięstwa z bossem</span><input data-save-path="stats.lifetimeBossVictories" inputmode="numeric" min="0" /></label><label><span>Wykonane merge</span><input data-save-path="stats.lifetimeMerges" inputmode="numeric" min="0" /></label><label><span>Kliknięcia</span><input data-save-path="stats.lifetimeClicks" inputmode="numeric" min="0" /></label><label><span>Zakupy lisów</span><input data-save-path="stats.lifetimeBuys" inputmode="numeric" min="0" /></label><label><span>Sprzedane lisy</span><input data-save-path="stats.lifetimeSells" inputmode="numeric" min="0" /></label><label><span>Liczba Rebirth</span><input data-save-path="stats.lifetimeRebirths" inputmode="numeric" min="0" /></label><label><span>Ewolucje</span><input data-save-path="stats.lifetimeEvolutions" inputmode="numeric" min="0" /></label><label><span>Dropy diamentów</span><input data-save-path="stats.lifetimeGemDrops" inputmode="numeric" min="0" /></label><label><span>Zarobione diamenty</span><input data-save-path="stats.lifetimeGemsEarned" inputmode="numeric" min="0" /></label></div></fieldset>
+            </div>
+          </section>
+
+          <section class="save-panel" data-save-panel="presets">
+            <p class="save-help">Preset działa natychmiast i zapisuje osobny wpis w audycie. Zawsze bazuje na najnowszej wersji otwartego zapisu.</p>
+            <div class="preset-grid">
+              <button type="button" data-save-preset="HYDRA_READY" data-preset-label="Drużyna gotowa na Hydrę"><i>⚔</i><strong>Drużyna gotowa na Hydrę</strong><span>Ustawia lub tworzy trzy żywiołowe lisy Lv20 i resetuje walkę.</span></button>
+              <button type="button" data-save-preset="RICH_TEST" data-preset-label="Pełny portfel testowy"><i>◆</i><strong>Pełny portfel testowy</strong><span>Dodaje ogromny zapas wszystkich siedmiu walut.</span></button>
+              <button type="button" data-save-preset="MAX_GEM_SHOP" data-preset-label="Maksymalny sklep diamentów"><i>◇</i><strong>Maksymalny sklep diamentów</strong><span>100 poziomów mnożnika i pełne premium sloty.</span></button>
+              <button type="button" data-save-preset="MAX_REBIRTH_SHOP" data-preset-label="Maksymalny sklep Rebirth"><i>↻</i><strong>Maksymalny sklep Rebirth</strong><span>Maksuje limit, tick, wyższy tier i drop diamentów.</span></button>
+              <button type="button" data-save-preset="BOOSTS_30_MIN" data-preset-label="Boosty na 30 minut"><i>ϟ</i><strong>Boosty na 30 minut</strong><span>Aktywuje wszystkie cztery boosty czasowe na 1800 sekund.</span></button>
+              <button type="button" data-save-preset="UNLOCK_SPIRIT_MINE" data-preset-label="Odblokuj Kopalnię Duchów"><i>▣</i><strong>Odblokuj Kopalnię Duchów</strong><span>Otwiera krainę oraz dodaje waluty potrzebne do testów.</span></button>
+              <button type="button" data-save-preset="MAX_SPIRIT_MINE" data-preset-label="Kopalnia 10 pokoi"><i>▤</i><strong>Kopalnia 10 pokoi</strong><span>Otwiera 10 pokoi, poziom 25 i po 10 górników.</span></button>
+            </div>
+          </section>
         </div>
         <details class="technical-preview"><summary>Podgląd techniczny zapisu <span>tylko do odczytu</span></summary><pre id="save-json-preview"></pre></details>
         <p id="save-editor-msg" class="form-message" role="status"></p>
@@ -170,6 +217,6 @@
     </div>
 
     <div id="toast-region" class="toast-region" aria-live="polite"></div>
-    <script src="/admin/app.js?v=4"></script>
+    <script src="/admin/app.js?v=5"></script>
   </body>
 </html>

@@ -3,6 +3,7 @@ import { prisma } from '../db.js';
 import { detectCheatSignals } from '../utils/cheatDetection.js';
 import { summarizeState } from '../utils/gameState.js';
 import { listStatePatchPaths, mergeStatePatch } from '../utils/statePatch.js';
+import { buildAdminSavePresetPatch } from '../utils/adminSavePresets.js';
 
 const MAX_SAVES_PER_OWNER = 5;
 
@@ -172,7 +173,16 @@ export async function deleteSaveForPrincipal(principal, slotId) {
   return true;
 }
 
-export async function adminUpdateSave({ adminUserId, saveId, statePatch, name, expectedUpdatedAt }) {
+async function updateSaveAsAdmin({
+  adminUserId,
+  saveId,
+  statePatch,
+  createStatePatch,
+  name,
+  expectedUpdatedAt,
+  auditAction,
+  auditDetails = {}
+}) {
   const updated = await prisma.$transaction(async (tx) => {
     const existing = await tx.gameSave.findUnique({ where: { id: saveId } });
     if (!existing) {
@@ -186,7 +196,8 @@ export async function adminUpdateSave({ adminUserId, saveId, statePatch, name, e
       throw conflict;
     }
 
-    const nextState = statePatch ? mergeStatePatch(existing.state, statePatch) : existing.state;
+    const resolvedStatePatch = createStatePatch ? createStatePatch(existing.state) : statePatch;
+    const nextState = resolvedStatePatch ? mergeStatePatch(existing.state, resolvedStatePatch) : existing.state;
     const summary = summarizeState(nextState);
     const updateResult = await tx.gameSave.updateMany({
       where: {
@@ -195,7 +206,7 @@ export async function adminUpdateSave({ adminUserId, saveId, statePatch, name, e
       },
       data: {
         ...(name !== undefined ? { name: name.trim() } : {}),
-        ...(statePatch ? { state: nextState } : {}),
+        ...(resolvedStatePatch ? { state: nextState } : {}),
         summaryCoins: summary.coins,
         summaryGems: summary.gems,
         summaryTopTier: summary.topTier,
@@ -212,12 +223,13 @@ export async function adminUpdateSave({ adminUserId, saveId, statePatch, name, e
     await tx.auditLog.create({
       data: {
         adminUserId,
-        action: 'ADMIN_EDIT_SAVE',
+        action: auditAction,
         targetType: 'GameSave',
         targetId: saveId,
         details: {
+          ...auditDetails,
           changedName: name !== undefined,
-          changedStatePaths: statePatch ? listStatePatchPaths(statePatch) : []
+          changedStatePaths: resolvedStatePatch ? listStatePatchPaths(resolvedStatePatch) : []
         }
       }
     });
@@ -226,4 +238,26 @@ export async function adminUpdateSave({ adminUserId, saveId, statePatch, name, e
   });
 
   return updated;
+}
+
+export async function adminUpdateSave({ adminUserId, saveId, statePatch, name, expectedUpdatedAt }) {
+  return updateSaveAsAdmin({
+    adminUserId,
+    saveId,
+    statePatch,
+    name,
+    expectedUpdatedAt,
+    auditAction: 'ADMIN_EDIT_SAVE'
+  });
+}
+
+export async function adminApplySavePreset({ adminUserId, saveId, preset, expectedUpdatedAt }) {
+  return updateSaveAsAdmin({
+    adminUserId,
+    saveId,
+    expectedUpdatedAt,
+    createStatePatch: (state) => buildAdminSavePresetPatch(state, preset),
+    auditAction: 'ADMIN_APPLY_SAVE_PRESET',
+    auditDetails: { preset }
+  });
 }

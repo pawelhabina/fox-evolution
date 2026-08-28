@@ -4,6 +4,8 @@ const adminState = {
   users: { page: 1, pageSize: 20, total: 0, items: [] },
   selectedUserId: null,
   selectedSave: null,
+  editingFoxes: [],
+  editingMineShafts: [],
   conflictSave: null,
   flagTarget: null,
   passwordResetTarget: null,
@@ -38,6 +40,7 @@ const VIEW_COPY = {
 
 const ACTION_LABELS = {
   ADMIN_EDIT_SAVE: 'Edycja zapisu',
+  ADMIN_APPLY_SAVE_PRESET: 'Preset zapisu',
   ADMIN_FLAG_USER: 'Oznaczenie gracza',
   ADMIN_UNFLAG_USER: 'Usunięcie flagi',
   ADMIN_RESET_USER_PASSWORD: 'Reset hasła gracza',
@@ -426,7 +429,88 @@ function renderFoxSummary(foxes = []) {
   foxes.forEach((fox) => counts.set(Number(fox.tier) || 1, (counts.get(Number(fox.tier) || 1) || 0) + 1));
   const tiers = [...counts.keys()].sort((a, b) => a - b);
   const max = Math.max(1, ...counts.values());
-  byId('fox-summary').innerHTML = `<div class="fox-summary-head"><span>${foxes.length} lisów na planszy</span><strong>Top tier: ${tiers.at(-1) || 1}</strong></div>${tiers.length ? `<div class="tier-distribution">${tiers.map((tier) => `<i class="tier-column" title="Tier ${tier}: ${counts.get(tier)}" style="height:${Math.max(8, counts.get(tier) / max * 100)}%"><span>${tier}</span></i>`).join('')}</div>` : '<div class="empty-state"><p>Plansza jest pusta.</p></div>'}`;
+  const hydras = foxes.filter((fox) => fox.kind === 'hydra').length;
+  byId('fox-summary').innerHTML = `<div class="fox-summary-head"><span>${foxes.length} lisów na planszy${hydras ? ` · ${hydras} Hydra` : ''}</span><strong>Top tier: ${tiers.at(-1) || 1}</strong></div>${tiers.length ? `<div class="tier-distribution">${tiers.map((tier) => `<i class="tier-column" title="Tier ${tier}: ${counts.get(tier)}" style="height:${Math.max(8, counts.get(tier) / max * 100)}%"><span>${tier}</span></i>`).join('')}</div>` : '<div class="empty-state"><p>Plansza jest pusta.</p></div>'}`;
+}
+
+function cloneFoxForEditor(fox) {
+  if (fox?.kind === 'hydra') {
+    return {
+      id: Number(fox.id),
+      kind: 'hydra',
+      tier: Number(fox.tier),
+      x: Number(fox.x),
+      y: Number(fox.y),
+      evolution: null,
+      elementTiers: {
+        fire: Number(fox.elementTiers?.fire || fox.tier || 20),
+        electric: Number(fox.elementTiers?.electric || fox.tier || 20),
+        water: Number(fox.elementTiers?.water || fox.tier || 20)
+      }
+    };
+  }
+  return {
+    id: Number(fox?.id),
+    tier: Number(fox?.tier || 1),
+    x: Number(fox?.x || 0),
+    y: Number(fox?.y || 0),
+    evolution: ['fire', 'electric', 'water'].includes(fox?.evolution) ? fox.evolution : null
+  };
+}
+
+function renderFoxEditor() {
+  const node = byId('fox-editor-list');
+  const labels = { fire: 'Ogień', electric: 'Elektryczność', water: 'Woda' };
+  if (adminState.editingFoxes.length === 0) {
+    node.innerHTML = '<div class="editor-empty">Brak lisów. Dodaj lisa lub użyj presetu do walki z Hydrą.</div>';
+    renderFoxSummary([]);
+    return;
+  }
+  node.innerHTML = adminState.editingFoxes.map((fox, index) => {
+    const isHydra = fox.kind === 'hydra';
+    const evolutionOptions = isHydra
+      ? '<option value="hydra">Hydra (3 żywioły)</option>'
+      : `<option value=""${fox.evolution ? '' : ' selected'}>Bazowy</option>${Object.entries(labels).map(([value, label]) => `<option value="${value}"${fox.evolution === value ? ' selected' : ''}>${label}</option>`).join('')}`;
+    return `<article class="fox-editor-row" data-fox-index="${index}">
+      <div class="fox-identity"><strong>#${escapeHtml(fox.id)}</strong><small>${isHydra ? 'HYDRA' : 'LIS'}</small></div>
+      <input aria-label="Poziom lisa ${escapeHtml(fox.id)}" data-fox-field="tier" inputmode="numeric" min="${isHydra ? 20 : 1}" max="30" value="${escapeHtml(fox.tier)}" />
+      <select aria-label="Żywioł lisa ${escapeHtml(fox.id)}" data-fox-field="evolution"${isHydra ? ' disabled' : ''}>${evolutionOptions}</select>
+      <input aria-label="Pozycja X lisa ${escapeHtml(fox.id)}" data-fox-field="x" inputmode="decimal" min="0" max="10000" value="${escapeHtml(fox.x)}" />
+      <input aria-label="Pozycja Y lisa ${escapeHtml(fox.id)}" data-fox-field="y" inputmode="decimal" min="0" max="10000" value="${escapeHtml(fox.y)}" />
+      <button class="editor-remove" type="button" data-remove-fox="${index}" aria-label="Usuń lisa ${escapeHtml(fox.id)}">×</button>
+    </article>`;
+  }).join('');
+  renderFoxSummary(adminState.editingFoxes);
+}
+
+function cloneMineShaftForEditor(shaft, index) {
+  const elements = ['fire', 'electric', 'water'];
+  const room = index + 1;
+  return {
+    id: room,
+    room,
+    element: elements[index % elements.length],
+    level: Number(shaft?.level || 1),
+    miners: Number(shaft?.miners || 1),
+    stored: Number(shaft?.stored || 0)
+  };
+}
+
+function renderMineEditor() {
+  const labels = { fire: 'Ogień', electric: 'Elektryczność', water: 'Woda' };
+  byId('mine-editor-list').innerHTML = adminState.editingMineShafts.map((shaft, index) => `<article class="mine-editor-row" data-mine-index="${index}">
+    <strong>#${shaft.room}</strong><span class="element-badge element-badge--${shaft.element}">${labels[shaft.element]}</span>
+    <input aria-label="Poziom pokoju ${shaft.room}" data-mine-field="level" inputmode="numeric" min="1" max="100" value="${escapeHtml(shaft.level)}" />
+    <input aria-label="Górnicy w pokoju ${shaft.room}" data-mine-field="miners" inputmode="numeric" min="1" max="25" value="${escapeHtml(shaft.miners)}" />
+    <input aria-label="Magazyn pokoju ${shaft.room}" data-mine-field="stored" inputmode="decimal" min="0" value="${escapeHtml(shaft.stored)}" />
+    <button class="editor-remove" type="button" data-remove-mine-room="${index}" aria-label="Usuń ostatni pokój" ${index !== adminState.editingMineShafts.length - 1 || adminState.editingMineShafts.length === 1 ? 'disabled' : ''}>×</button>
+  </article>`).join('');
+  byId('add-mine-room').disabled = adminState.editingMineShafts.length >= 10;
+}
+
+function activateSaveTab(tab) {
+  saveForm.querySelectorAll('[data-save-tab]').forEach((button) => button.classList.toggle('is-active', button.dataset.saveTab === tab));
+  saveForm.querySelectorAll('[data-save-panel]').forEach((panel) => panel.classList.toggle('is-active', panel.dataset.savePanel === tab));
 }
 
 async function openSave(saveId, suppliedSave = null) {
@@ -438,11 +522,16 @@ async function openSave(saveId, suppliedSave = null) {
   byId('save-name').value = save.name || '';
   saveForm.querySelectorAll('[data-save-path]').forEach((input) => {
     const value = getPath(save.state, input.dataset.savePath);
-    input.value = value ?? '';
+    input.value = input.dataset.saveKind === 'boolean' ? String(Boolean(value)) : value ?? '';
   });
+  adminState.editingFoxes = (save.state?.foxes || []).map(cloneFoxForEditor);
+  const savedShafts = save.state?.realms?.spiritMine?.shafts;
+  adminState.editingMineShafts = (Array.isArray(savedShafts) && savedShafts.length ? savedShafts : [{}]).map(cloneMineShaftForEditor);
   byId('save-json-preview').textContent = JSON.stringify(save.state || {}, null, 2);
   byId('save-version').textContent = `Wersja z ${formatDate(save.updatedAt)}`;
-  renderFoxSummary(save.state?.foxes || []);
+  renderFoxEditor();
+  renderMineEditor();
+  activateSaveTab('general');
   conflictBanner.classList.add('hidden');
   saveMessage.textContent = '';
   saveMessage.classList.remove('is-error');
@@ -452,9 +541,32 @@ async function openSave(saveId, suppliedSave = null) {
 function parseFieldValue(input, original) {
   const raw = input.value.trim();
   if (raw === '') return original;
+  if (input.dataset.saveKind === 'string') return raw;
+  if (input.dataset.saveKind === 'boolean') return raw === 'true';
   const number = Number(raw.replace(',', '.'));
   if (!Number.isFinite(number)) throw new Error(`Niepoprawna liczba w polu „${input.closest('label')?.querySelector('span')?.textContent || input.dataset.savePath}”`);
+  if (!Number.isInteger(number)) throw new Error(`Pole „${input.closest('label')?.querySelector('span')?.textContent || input.dataset.savePath}” wymaga liczby całkowitej.`);
+  const min = input.getAttribute('min');
+  const max = input.getAttribute('max');
+  if (min !== null && number < Number(min)) throw new Error(`Wartość pola „${input.closest('label')?.querySelector('span')?.textContent || input.dataset.savePath}” nie może być mniejsza niż ${min}.`);
+  if (max !== null && number > Number(max)) throw new Error(`Wartość pola „${input.closest('label')?.querySelector('span')?.textContent || input.dataset.savePath}” nie może być większa niż ${max}.`);
   return number;
+}
+
+function validateEditorCollections() {
+  const ids = new Set();
+  adminState.editingFoxes.forEach((fox) => {
+    if (!Number.isSafeInteger(fox.id) || fox.id < 1 || ids.has(fox.id)) throw new Error('Każdy lis musi mieć unikalne, dodatnie ID.');
+    ids.add(fox.id);
+    const minTier = fox.kind === 'hydra' ? 20 : 1;
+    if (!Number.isInteger(fox.tier) || fox.tier < minTier || fox.tier > 30) throw new Error(`Lis #${fox.id} ma niepoprawny poziom.`);
+    if (![fox.x, fox.y].every((value) => Number.isFinite(value) && value >= 0 && value <= 10000)) throw new Error(`Lis #${fox.id} ma niepoprawną pozycję.`);
+  });
+  adminState.editingMineShafts.forEach((shaft) => {
+    if (!Number.isInteger(shaft.level) || shaft.level < 1 || shaft.level > 100) throw new Error(`Pokój #${shaft.room} ma niepoprawny poziom.`);
+    if (!Number.isInteger(shaft.miners) || shaft.miners < 1 || shaft.miners > 25) throw new Error(`Pokój #${shaft.room} ma niepoprawną liczbę górników.`);
+    if (!Number.isFinite(shaft.stored) || shaft.stored < 0) throw new Error(`Pokój #${shaft.room} ma niepoprawny stan magazynu.`);
+  });
 }
 
 function buildSaveChanges() {
@@ -464,17 +576,40 @@ function buildSaveChanges() {
     const path = input.dataset.savePath;
     const previous = getPath(original.state, path);
     const next = parseFieldValue(input, previous);
-    if (!Object.is(Number(previous), Number(next))) setPath(statePatch, path, next);
+    const unchanged = input.dataset.saveKind === 'boolean'
+      ? Boolean(previous) === next
+      : input.dataset.saveKind === 'string'
+        ? String(previous ?? '') === next
+        : Object.is(Number(previous), Number(next));
+    if (!unchanged) setPath(statePatch, path, next);
   });
+  validateEditorCollections();
+  if (JSON.stringify(original.state?.foxes || []) !== JSON.stringify(adminState.editingFoxes)) {
+    statePatch.foxes = adminState.editingFoxes;
+    const nextFoxId = adminState.editingFoxes.reduce((highest, fox) => Math.max(highest, fox.id + 1), Number(original.state?.meta?.nextFoxId) || 1);
+    setPath(statePatch, 'meta.nextFoxId', nextFoxId);
+  }
+  if (JSON.stringify(original.state?.realms?.spiritMine?.shafts || []) !== JSON.stringify(adminState.editingMineShafts)) {
+    setPath(statePatch, 'realms.spiritMine.shafts', adminState.editingMineShafts);
+  }
   const payload = { expectedUpdatedAt: original.updatedAt };
   const name = byId('save-name').value.trim();
+  if (!name) throw new Error('Nazwa zapisu nie może być pusta.');
   if (name !== original.name) payload.name = name;
   if (Object.keys(statePatch).length > 0) payload.statePatch = statePatch;
   return payload;
 }
 
 async function submitSave() {
-  const payload = buildSaveChanges();
+  let payload;
+  saveMessage.classList.remove('is-error');
+  try {
+    payload = buildSaveChanges();
+  } catch (error) {
+    saveMessage.textContent = error.message;
+    saveMessage.classList.add('is-error');
+    return;
+  }
   if (payload.name === undefined && payload.statePatch === undefined) {
     saveMessage.textContent = 'Nie ma żadnych zmian do zapisania.';
     return;
@@ -499,6 +634,37 @@ async function submitSave() {
       saveMessage.textContent = error.message || 'Nie udało się zapisać zmian.';
       saveMessage.classList.add('is-error');
     }
+  } finally {
+    setBusy(button, false);
+  }
+}
+
+async function applySavePreset(button) {
+  const preset = button.dataset.savePreset;
+  const label = button.dataset.presetLabel || preset;
+  if (!adminState.selectedSave || !window.confirm(`Zastosować preset „${label}”? Niezapisane ręczne zmiany w formularzu zostaną pominięte.`)) return;
+  setBusy(button, true, 'Stosowanie…');
+  saveMessage.textContent = '';
+  saveMessage.classList.remove('is-error');
+  try {
+    const result = await api(`/api/admin/saves/${adminState.selectedSave.id}/preset`, {
+      method: 'POST',
+      body: JSON.stringify({ preset, expectedUpdatedAt: adminState.selectedSave.updatedAt })
+    });
+    await openSave(result.save.id, result.save);
+    activateSaveTab(preset === 'HYDRA_READY' ? 'foxes' : preset.includes('SPIRIT_MINE') ? 'progress' : 'general');
+    toast('Preset zastosowany', label);
+    if (adminState.selectedUserId) await openUser(adminState.selectedUserId);
+    await loadOverview();
+  } catch (error) {
+    if (error.status === 409 && error.data?.current) {
+      adminState.conflictSave = error.data.current;
+      conflictBanner.classList.remove('hidden');
+      saveMessage.textContent = 'Zapis zmienił się na serwerze. Wczytaj najnowszą wersję przed użyciem presetu.';
+    } else {
+      saveMessage.textContent = error.message || 'Nie udało się zastosować presetu.';
+    }
+    saveMessage.classList.add('is-error');
   } finally {
     setBusy(button, false);
   }
@@ -631,6 +797,60 @@ userDetails.addEventListener('click', async (event) => {
   if (messageButton) composeMessageForUser(messageButton.dataset.messageUser, messageButton.dataset.name);
 });
 document.querySelectorAll('[data-close-modal]').forEach((button) => button.addEventListener('click', () => closeModal(button.dataset.closeModal)));
+saveForm.addEventListener('click', (event) => {
+  const tabButton = event.target.closest('[data-save-tab]');
+  const presetButton = event.target.closest('[data-save-preset]');
+  const removeFoxButton = event.target.closest('[data-remove-fox]');
+  const removeMineButton = event.target.closest('[data-remove-mine-room]');
+  if (tabButton) activateSaveTab(tabButton.dataset.saveTab);
+  if (presetButton) applySavePreset(presetButton);
+  if (event.target.closest('#add-fox')) {
+    if (adminState.editingFoxes.length >= 100) {
+      toast('Osiągnięto limit', 'Zapis może zawierać maksymalnie 100 lisów.', 'error');
+      return;
+    }
+    const nextId = adminState.editingFoxes.reduce((highest, fox) => Math.max(highest, fox.id + 1), Number(adminState.selectedSave?.state?.meta?.nextFoxId) || 1);
+    const foxIndex = adminState.editingFoxes.length;
+    adminState.editingFoxes.push({
+      id: nextId,
+      tier: 15,
+      evolution: null,
+      x: 180 + (foxIndex % 5) * 120,
+      y: 150 + (Math.floor(foxIndex / 5) % 3) * 110
+    });
+    renderFoxEditor();
+  }
+  if (removeFoxButton) {
+    adminState.editingFoxes.splice(Number(removeFoxButton.dataset.removeFox), 1);
+    renderFoxEditor();
+  }
+  if (event.target.closest('#add-mine-room')) {
+    if (adminState.editingMineShafts.length >= 10) return;
+    adminState.editingMineShafts.push(cloneMineShaftForEditor({}, adminState.editingMineShafts.length));
+    renderMineEditor();
+  }
+  if (removeMineButton && !removeMineButton.disabled) {
+    adminState.editingMineShafts.splice(Number(removeMineButton.dataset.removeMineRoom), 1);
+    adminState.editingMineShafts = adminState.editingMineShafts.map(cloneMineShaftForEditor);
+    renderMineEditor();
+  }
+});
+function updateCollectionEditor(event) {
+  const foxField = event.target.dataset.foxField;
+  const foxRow = event.target.closest('[data-fox-index]');
+  if (foxField && foxRow) {
+    const fox = adminState.editingFoxes[Number(foxRow.dataset.foxIndex)];
+    fox[foxField] = foxField === 'evolution' ? event.target.value || null : Number(event.target.value.replace(',', '.'));
+    renderFoxSummary(adminState.editingFoxes);
+  }
+  const mineField = event.target.dataset.mineField;
+  const mineRow = event.target.closest('[data-mine-index]');
+  if (mineField && mineRow) {
+    adminState.editingMineShafts[Number(mineRow.dataset.mineIndex)][mineField] = Number(event.target.value.replace(',', '.'));
+  }
+}
+saveForm.addEventListener('input', updateCollectionEditor);
+saveForm.addEventListener('change', updateCollectionEditor);
 saveForm.addEventListener('submit', (event) => { event.preventDefault(); submitSave(); });
 byId('reload-conflict').addEventListener('click', () => { if (adminState.conflictSave) openSave(adminState.conflictSave.id, adminState.conflictSave); });
 byId('flag-form').addEventListener('submit', async (event) => {

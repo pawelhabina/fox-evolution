@@ -39,10 +39,31 @@ test('admin save edits use partial patches and optimistic concurrency', () => {
   assert.match(route, /expectedUpdatedAt: z\.string\(\)\.datetime\(\)/);
   assert.match(route, /status\(409\)/);
   assert.doesNotMatch(route, /state: z\.record/);
-  assert.match(service, /mergeStatePatch\(existing\.state, statePatch\)/);
+  assert.match(service, /mergeStatePatch\(existing\.state, resolvedStatePatch\)/);
   assert.match(service, /updatedAt: existing\.updatedAt/);
   assert.match(script, /payload\.statePatch = statePatch/);
   assert.match(script, /expectedUpdatedAt: original\.updatedAt/);
+});
+
+test('admin save editor supports foxes, every shop and reusable test presets', () => {
+  const html = read('admin/public/index.html');
+  const route = read('routes/admin.js');
+  const service = read('services/saveService.js');
+  const script = read('admin/public/app.js');
+
+  assert.match(html, /id="fox-editor-list"/);
+  assert.match(html, /data-save-path="upgrades\.purchaseTierChance"/);
+  assert.match(html, /data-save-path="upgrades\.gemDropRate"/);
+  assert.match(html, /data-save-path="currencies\.essence"/);
+  assert.match(html, /id="mine-editor-list"/);
+  assert.match(html, /data-save-preset="HYDRA_READY"/);
+  assert.match(html, /data-save-preset="MAX_REBIRTH_SHOP"/);
+  assert.match(route, /foxes: z\.array/);
+  assert.match(route, /saves\/:saveId\/preset/);
+  assert.match(route, /z\.enum\(ADMIN_SAVE_PRESETS\)/);
+  assert.match(service, /ADMIN_APPLY_SAVE_PRESET/);
+  assert.match(script, /statePatch\.foxes = adminState\.editingFoxes/);
+  assert.match(script, /applySavePreset/);
 });
 
 test('admin player profile exposes full identifiers with copy controls', () => {
