@@ -1047,7 +1047,7 @@ export function gameReducer(state, action) {
           electricCoins: next.currencies.electricCoins || 0,
           waterCoins: next.currencies.waterCoins || 0
         },
-        foxes: next.foxes.filter((fox) => fox.kind === 'hydra'),
+        foxes: fresh.foxes,
         upgrades: {
           ...fresh.upgrades,
           ...preservedUpgrades
