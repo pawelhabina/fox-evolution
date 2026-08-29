@@ -222,6 +222,15 @@ const ICONS = {
       <PixelRect x="11" y="7" width="2" height="5" fill={COLORS.light} />
     </>
   ),
+  essence: (
+    <>
+      <path fill={COLORS.ink} d="M10 1h4v3h3v3h2v3h3v7h-3v3h-3v2H8v-2H5v-3H2v-7h3V7h3V4h2V1Z" />
+      <path fill={COLORS.violet} d="M11 3h2v3h3v3h2v3h2v4h-3v3H8v-2H5v-5h2V9h3V6h1V3Z" />
+      <path fill={COLORS.blue} d="M11 9h4v2h2v5h-2v2H9v-2H7v-3h3v2h4v-2h-3V9Z" />
+      <PixelRect x="11" y="4" width="2" height="4" fill={COLORS.light} />
+      <PixelRect x="15" y="11" width="2" height="3" fill={COLORS.cyan} />
+    </>
+  ),
   google: (
     <>
       <path fill={COLORS.ink} d="M7 2h10v3h3v4h-5V7H9v2H7v6h2v2h6v-2h-4v-5h11v8h-3v3H7v-2H4v-3H2V8h2V5h3V2Z" />

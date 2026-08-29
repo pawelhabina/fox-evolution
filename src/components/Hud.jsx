@@ -53,9 +53,9 @@ export default function Hud({ coins, gems, rebirthTokens, essence, essenceUnlock
     },
     ...(essenceUnlocked ? [{
       id: 'essence',
-      icon: 'diamond',
+      icon: 'essence',
       label: 'Esencja',
-      value: `◈ ${formatNumber(essence)}`,
+      value: formatNumber(essence),
       tone: 'text-violet-300',
       description: 'Waluta zdobywana za pokonanie Hydry i rozwój późniejszych systemów.'
     }] : [])
@@ -79,7 +79,7 @@ export default function Hud({ coins, gems, rebirthTokens, essence, essenceUnlock
 
       <div className="hud-side-gap hud-side-gap-left" aria-hidden="true" />
 
-      <div className="hud-stat-grid">
+      <div className={`hud-stat-grid ${essenceUnlocked ? 'hud-stat-grid--with-essence' : ''}`}>
         {stats.map((stat) => (
           <div key={stat.id} className="hud-stat" tabIndex={0} aria-label={`${stat.label}: ${stat.value}`}>
             <div className="hud-stat-main">

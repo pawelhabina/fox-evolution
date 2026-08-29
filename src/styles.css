@@ -672,9 +672,14 @@ body {
   position: relative;
   z-index: 2;
   grid-column: 2;
-  @apply grid flex-1 grid-cols-6;
+  @apply grid flex-1;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   min-width: 0;
   gap: clamp(0.25rem, 0.55vw, 0.7rem);
+}
+
+.hud-stat-grid--with-essence {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
 .hud-stat {
