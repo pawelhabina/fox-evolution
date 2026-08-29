@@ -9,11 +9,14 @@ import {
   createBossBattleState
 } from '../game/bossBattle';
 import {
-  SPIRIT_MINE_MAX_ROOMS,
-  createMineShaft,
+  SPIRIT_MINE_ELEMENTS,
+  SPIRIT_MINE_MAX_FLOORS,
+  createElementMine,
+  createMineFloor,
   createSpiritMineState,
+  getMineFloorChestCapacity,
   getMineRoomElement,
-  getMineShaftCapacity
+  getMineWarehouseCapacity
 } from '../game/spiritMine';
 import {
   apiRequest,
@@ -347,26 +350,50 @@ function sanitizeState(rawState, nowTs = Date.now()) {
     totalCollected: clampCurrency(rawMine?.totalCollected || 0),
     lastAdvancedAt: sanitizeIsoTimestamp(rawMine?.lastAdvancedAt, base.meta.lastPlayedAt)
   };
-  const rawShafts = Array.isArray(rawMine?.shafts) && rawMine.shafts.length > 0
-    ? rawMine.shafts.slice(0, SPIRIT_MINE_MAX_ROOMS)
-    : defaultMine.shafts;
+  const legacyShafts = Array.isArray(rawMine?.shafts) ? rawMine.shafts : [];
+  const rawElementMines = Array.isArray(rawMine?.mines) ? rawMine.mines : [];
+  const mines = SPIRIT_MINE_ELEMENTS.map((element, elementIndex) => {
+    const fallback = createElementMine(element, element === 'fire');
+    const rawElementMine = rawElementMines.find((mine) => mine?.element === element || mine?.id === element);
+    const legacyElementShafts = legacyShafts.filter((shaft, index) => (
+      (shaft?.element || getMineRoomElement(index + 1)) === element
+    ));
+    const rawFloors = Array.isArray(rawElementMine?.floors) && rawElementMine.floors.length > 0
+      ? rawElementMine.floors.slice(0, SPIRIT_MINE_MAX_FLOORS)
+      : legacyElementShafts.length > 0
+        ? legacyElementShafts.slice(0, SPIRIT_MINE_MAX_FLOORS)
+        : fallback.floors;
+    const floors = rawFloors.map((rawFloor, index) => {
+      const floor = createMineFloor(index + 1);
+      const sanitized = {
+        ...floor,
+        level: clamp(Number(rawFloor?.level) || floor.level, 1, 100),
+        chestStored: Math.max(0, Number(rawFloor?.chestStored) || 0)
+      };
+      return {
+        ...sanitized,
+        chestStored: Math.min(sanitized.chestStored, getMineFloorChestCapacity(sanitized))
+      };
+    });
+    const elevatorLevel = clamp(Number(rawElementMine?.elevatorLevel ?? legacyElementShafts[0]?.elevatorLevel) || 1, 1, 100);
+    const warehouseLevel = clamp(Number(rawElementMine?.warehouseLevel ?? legacyElementShafts[0]?.warehouseLevel) || 1, 1, 100);
+    const legacyStored = legacyElementShafts.reduce((sum, shaft) => sum + Math.max(0, Number(shaft?.stored) || 0), 0);
+    const warehouseStored = Math.min(
+      getMineWarehouseCapacity(warehouseLevel),
+      Math.max(0, Number(rawElementMine?.warehouseStored) || legacyStored)
+    );
+    const previousUnlocked = elementIndex === 0 || Boolean(
+      rawElementMines.find((mine) => mine?.element === SPIRIT_MINE_ELEMENTS[elementIndex - 1])?.unlocked
+      ?? legacyShafts.some((shaft, index) => (shaft?.element || getMineRoomElement(index + 1)) === SPIRIT_MINE_ELEMENTS[elementIndex - 1])
+    );
+    const unlocked = element === 'fire' || Boolean(
+      (rawElementMine?.unlocked ?? legacyElementShafts.length > 0) && previousUnlocked
+    );
+    return { ...fallback, unlocked, elevatorLevel, warehouseLevel, warehouseStored, floors };
+  });
   const spiritMine = {
     ...mineBase,
-    shafts: rawShafts.map((rawShaft, index) => {
-      const room = index + 1;
-      const fallback = createMineShaft(room);
-      const shaft = {
-        id: room,
-        room,
-        element: getMineRoomElement(room),
-        level: clamp(Number(rawShaft?.level) || fallback.level, 1, 100),
-        miners: clamp(Number(rawShaft?.miners) || fallback.miners, 1, 25),
-        elevatorLevel: clamp(Number(rawShaft?.elevatorLevel ?? rawMine?.elevatorLevel) || 1, 1, 100),
-        warehouseLevel: clamp(Number(rawShaft?.warehouseLevel ?? rawMine?.warehouseLevel) || 1, 1, 100),
-        stored: Math.max(0, Number(rawShaft?.stored) || 0)
-      };
-      return { ...shaft, stored: Math.min(shaft.stored, getMineShaftCapacity(shaft)) };
-    })
+    mines
   };
 
   return {

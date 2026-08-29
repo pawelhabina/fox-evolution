@@ -36,15 +36,20 @@ const adminHydraFoxSchema = z.object({
     water: z.number().finite().int().min(20).max(30)
   }).strict()
 }).strict();
-const adminMineShaftSchema = z.object({
+const adminMineFloorSchema = z.object({
   id: z.number().finite().int().min(1).max(10),
-  room: z.number().finite().int().min(1).max(10),
-  element: foxEvolution,
+  floor: z.number().finite().int().min(1).max(10),
   level: z.number().finite().int().min(1).max(100),
-  miners: z.number().finite().int().min(1).max(25),
+  chestStored: z.number().finite().min(0).max(Number.MAX_SAFE_INTEGER)
+}).strict();
+const adminElementMineSchema = z.object({
+  id: foxEvolution,
+  element: foxEvolution,
+  unlocked: z.boolean(),
   elevatorLevel: z.number().finite().int().min(1).max(100),
   warehouseLevel: z.number().finite().int().min(1).max(100),
-  stored: z.number().finite().min(0).max(Number.MAX_SAFE_INTEGER)
+  warehouseStored: z.number().finite().min(0).max(Number.MAX_SAFE_INTEGER),
+  floors: z.array(adminMineFloorSchema).min(1).max(10)
 }).strict();
 const adminBossTeamFoxSchema = z.object({
   evolution: foxEvolution,
@@ -135,7 +140,7 @@ const adminStatePatchSchema = z.object({
     spiritMine: z.object({
       unlocked: z.boolean().optional(),
       totalCollected: adminStateNumber.optional(),
-      shafts: z.array(adminMineShaftSchema).min(1).max(10).optional()
+      mines: z.array(adminElementMineSchema).length(3).optional()
     }).strict().optional()
   }).strict().optional(),
   meta: z.object({
@@ -152,11 +157,16 @@ const adminStatePatchSchema = z.object({
       ids.add(fox.id);
     });
   }
-  if (patch.realms?.spiritMine?.shafts) {
-    patch.realms.spiritMine.shafts.forEach((shaft, index) => {
-      if (shaft.id !== index + 1 || shaft.room !== index + 1) {
-        context.addIssue({ code: z.ZodIssueCode.custom, path: ['realms', 'spiritMine', 'shafts', index], message: 'Mine rooms must be sequential' });
+  if (patch.realms?.spiritMine?.mines) {
+    const elements = ['fire', 'electric', 'water'];
+    patch.realms.spiritMine.mines.forEach((mine, mineIndex) => {
+      if (mine.id !== elements[mineIndex] || mine.element !== elements[mineIndex]) {
+        context.addIssue({ code: z.ZodIssueCode.custom, path: ['realms', 'spiritMine', 'mines', mineIndex], message: 'Elemental mines must keep fire, electric, water order' });
       }
+      if (mineIndex > 0 && mine.unlocked && !patch.realms.spiritMine.mines[mineIndex - 1].unlocked) context.addIssue({ code: z.ZodIssueCode.custom, path: ['realms', 'spiritMine', 'mines', mineIndex, 'unlocked'], message: 'Mines must be unlocked in order' });
+      mine.floors.forEach((floor, floorIndex) => {
+        if (floor.id !== floorIndex + 1 || floor.floor !== floorIndex + 1) context.addIssue({ code: z.ZodIssueCode.custom, path: ['realms', 'spiritMine', 'mines', mineIndex, 'floors', floorIndex], message: 'Mine floors must be sequential' });
+      });
     });
   }
 });

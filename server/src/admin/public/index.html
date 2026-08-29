@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#060b16" />
     <title>Fox Evolution — Panel administracyjny</title>
     <link rel="icon" type="image/png" href="/assets/fox-evolution-icon.png" />
-    <link rel="stylesheet" href="/admin/style.css?v=7" />
+    <link rel="stylesheet" href="/admin/style.css?v=8" />
   </head>
   <body>
     <div class="ambient-grid" aria-hidden="true"></div>
@@ -178,7 +178,7 @@
             <div class="save-grid">
               <fieldset><legend>Walka z Hydrą</legend><div class="field-row field-row--two"><label><span>Status</span><select data-save-path="bossBattle.status" data-save-kind="string"><option value="idle">Gotowa / idle</option><option value="battle">Walka</option><option value="victory">Zwycięstwo</option><option value="defeat">Porażka</option></select></label><label><span>Pokonana</span><select data-save-path="bossBattle.defeated" data-save-kind="boolean"><option value="false">Nie</option><option value="true">Tak</option></select></label><label><span>HP Hydry (0–3400)</span><input data-save-path="bossBattle.bossHp" inputmode="numeric" min="0" max="3400" /></label><label><span>HP drużyny (0–140)</span><input data-save-path="bossBattle.teamHp" inputmode="numeric" min="0" max="140" /></label><label><span>Ataki</span><input data-save-path="bossBattle.attacks" inputmode="numeric" min="0" /></label><label><span>Najlepsze combo</span><input data-save-path="bossBattle.bestCombo" inputmode="numeric" min="0" /></label><label><span>Tutorial połączenia</span><select data-save-path="tutorials.elementalFusionSeen" data-save-kind="boolean"><option value="false">Pokaż ponownie</option><option value="true">Już pokazany</option></select></label></div></fieldset>
               <fieldset><legend>Kraina kopalń</legend><div class="field-row field-row--two"><label><span>Odblokowana</span><select data-save-path="realms.spiritMine.unlocked" data-save-kind="boolean"><option value="false">Nie</option><option value="true">Tak</option></select></label><label><span>Zebrane łącznie</span><input data-save-path="realms.spiritMine.totalCollected" inputmode="numeric" min="0" /></label></div></fieldset>
-              <fieldset class="fieldset--wide"><legend>Kopalnie żywiołów</legend><div class="mine-editor-head"><p>Każda kopalnia ma własny szyb, górników, windę, magazyn i urobek.</p><button id="add-mine-room" class="row-button" type="button">+ Dodaj kopalnię</button></div><div class="mine-editor-labels"><span>Kopalnia</span><span>Żywioł</span><span>Szyb</span><span>Górnicy</span><span>Winda</span><span>Magazyn</span><span>Urobek</span><span></span></div><div id="mine-editor-list" class="mine-editor-list"></div></fieldset>
+              <fieldset class="fieldset--wide"><legend>Kopalnie żywiołów</legend><div class="mine-editor-head"><p>Trzy kopalnie mają własne piętra, automatycznych pracowników, windy, magazyny i urobek oczekujący w skrzynkach.</p></div><div id="mine-editor-list" class="mine-editor-list"></div></fieldset>
               <fieldset class="fieldset--wide"><legend>Statystyki testowe</legend><div class="field-row field-row--four"><label><span>Najwyższy tier</span><input data-save-path="stats.highestTier" inputmode="numeric" min="0" max="30" /></label><label><span>Najwyższy bazowy</span><input data-save-path="stats.highestBaseTier" inputmode="numeric" min="0" max="15" /></label><label><span>Najwyższy żywiołowy</span><input data-save-path="stats.highestElementalTier" inputmode="numeric" min="0" max="30" /></label><label><span>Zwycięstwa z bossem</span><input data-save-path="stats.lifetimeBossVictories" inputmode="numeric" min="0" /></label><label><span>Wykonane merge</span><input data-save-path="stats.lifetimeMerges" inputmode="numeric" min="0" /></label><label><span>Kliknięcia</span><input data-save-path="stats.lifetimeClicks" inputmode="numeric" min="0" /></label><label><span>Zakupy lisów</span><input data-save-path="stats.lifetimeBuys" inputmode="numeric" min="0" /></label><label><span>Sprzedane lisy</span><input data-save-path="stats.lifetimeSells" inputmode="numeric" min="0" /></label><label><span>Liczba Rebirth</span><input data-save-path="stats.lifetimeRebirths" inputmode="numeric" min="0" /></label><label><span>Ewolucje</span><input data-save-path="stats.lifetimeEvolutions" inputmode="numeric" min="0" /></label><label><span>Dropy diamentów</span><input data-save-path="stats.lifetimeGemDrops" inputmode="numeric" min="0" /></label><label><span>Zarobione diamenty</span><input data-save-path="stats.lifetimeGemsEarned" inputmode="numeric" min="0" /></label></div></fieldset>
             </div>
           </section>
@@ -192,7 +192,7 @@
               <button type="button" data-save-preset="MAX_REBIRTH_SHOP" data-preset-label="Maksymalny sklep Rebirth"><i>↻</i><strong>Maksymalny sklep Rebirth</strong><span>Maksuje limit, tick, wyższy tier i drop diamentów.</span></button>
               <button type="button" data-save-preset="BOOSTS_30_MIN" data-preset-label="Boosty na 30 minut"><i>ϟ</i><strong>Boosty na 30 minut</strong><span>Aktywuje wszystkie cztery boosty czasowe na 1800 sekund.</span></button>
               <button type="button" data-save-preset="UNLOCK_SPIRIT_MINE" data-preset-label="Odblokuj Kopalnię Duchów"><i>▣</i><strong>Odblokuj Kopalnię Duchów</strong><span>Otwiera krainę oraz dodaje waluty potrzebne do testów.</span></button>
-              <button type="button" data-save-preset="MAX_SPIRIT_MINE" data-preset-label="10 kopalni żywiołów"><i>▤</i><strong>10 kopalni żywiołów</strong><span>Otwiera 10 kopalni oraz ustawia szyby, windy i magazyny na poziom 25.</span></button>
+              <button type="button" data-save-preset="MAX_SPIRIT_MINE" data-preset-label="Maksymalne kopalnie żywiołów"><i>▤</i><strong>Maksymalne kopalnie</strong><span>Otwiera trzy kopalnie, po 10 pięter, oraz ustawia szyby, windy i magazyny na poziom 100.</span></button>
             </div>
           </section>
         </div>
@@ -217,6 +217,6 @@
     </div>
 
     <div id="toast-region" class="toast-region" aria-live="polite"></div>
-    <script src="/admin/app.js?v=7"></script>
+    <script src="/admin/app.js?v=8"></script>
   </body>
 </html>

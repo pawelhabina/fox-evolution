@@ -51,13 +51,13 @@ import {
 import {
   SPIRIT_MINE_CURRENCY_KEYS,
   advanceSpiritMine,
-  createMineShaft,
+  canUnlockElementMine,
+  createMineFloor,
+  getElementMine,
   getMineFacilityCost,
-  getMineCollectableByElement,
-  getMineMinerCost,
-  getMineNextRoom,
-  getMineShaftUpgradeCost,
-  getMineStoredByElement
+  getMineFloorUpgradeCost,
+  getMineNextFloor,
+  getMineUnlock
 } from './spiritMine';
 
 export const ACTIONS = {
@@ -77,8 +77,8 @@ export const ACTIONS = {
   ACK_ELEMENTAL_FUSION_TUTORIAL: 'ACK_ELEMENTAL_FUSION_TUTORIAL',
   MINE_COLLECT: 'MINE_COLLECT',
   MINE_UPGRADE_SHAFT: 'MINE_UPGRADE_SHAFT',
-  MINE_HIRE_MINER: 'MINE_HIRE_MINER',
-  MINE_UNLOCK_ROOM: 'MINE_UNLOCK_ROOM',
+  MINE_UNLOCK_MINE: 'MINE_UNLOCK_MINE',
+  MINE_UNLOCK_FLOOR: 'MINE_UNLOCK_FLOOR',
   MINE_UPGRADE_ELEVATOR: 'MINE_UPGRADE_ELEVATOR',
   MINE_UPGRADE_WAREHOUSE: 'MINE_UPGRADE_WAREHOUSE',
   BUY_UPGRADE: 'BUY_UPGRADE',
@@ -818,52 +818,38 @@ export function gameReducer(state, action) {
     }
 
     case ACTIONS.MINE_COLLECT: {
-      const mine = next.realms?.spiritMine;
-      if (!mine?.unlocked) return next;
-      const selectedShafts = action.roomId
-        ? mine.shafts.filter((shaft) => shaft.id === action.roomId)
-        : mine.shafts;
-      if (selectedShafts.length === 0) return next;
-      const collectionMine = { ...mine, shafts: selectedShafts };
-      const selectedIds = new Set(selectedShafts.map((shaft) => shaft.id));
-      const storedByElement = getMineStoredByElement(collectionMine);
-      const collectedByElement = getMineCollectableByElement(collectionMine);
-      const collected = Object.values(collectedByElement).reduce((sum, amount) => sum + amount, 0);
+      const spiritMine = next.realms?.spiritMine;
+      const elementMine = getElementMine(spiritMine, action.element);
+      if (!spiritMine?.unlocked || !elementMine?.unlocked) return next;
+      const collected = Math.floor(Math.max(0, Number(elementMine.warehouseStored) || 0));
       if (collected <= 0) return next;
-      const remainderElements = new Set();
-      const currencies = { ...next.currencies };
-      Object.entries(collectedByElement).forEach(([element, amount]) => {
-        const currencyKey = SPIRIT_MINE_CURRENCY_KEYS[element];
-        currencies[currencyKey] = clampCurrency((currencies[currencyKey] || 0) + amount);
-      });
+      const currencyKey = SPIRIT_MINE_CURRENCY_KEYS[elementMine.element];
       return {
         ...next,
-        currencies,
+        currencies: {
+          ...next.currencies,
+          [currencyKey]: clampCurrency((next.currencies[currencyKey] || 0) + collected)
+        },
         realms: {
           ...next.realms,
           spiritMine: {
-            ...mine,
-            totalCollected: clampCurrency((mine.totalCollected || 0) + collected),
-            shafts: mine.shafts.map((shaft) => {
-              if (!selectedIds.has(shaft.id)) return shaft;
-              if (remainderElements.has(shaft.element)) return { ...shaft, stored: 0 };
-              remainderElements.add(shaft.element);
-              return { ...shaft, stored: storedByElement[shaft.element] - collectedByElement[shaft.element] };
-            })
+            ...spiritMine,
+            totalCollected: clampCurrency((spiritMine.totalCollected || 0) + collected),
+            mines: spiritMine.mines.map((mine) => mine.element === action.element
+              ? { ...mine, warehouseStored: mine.warehouseStored - collected }
+              : mine)
           }
         }
       };
     }
 
-    case ACTIONS.MINE_UPGRADE_SHAFT:
-    case ACTIONS.MINE_HIRE_MINER: {
-      const mine = next.realms?.spiritMine;
-      const shaft = mine?.shafts?.find((item) => item.id === action.roomId);
-      if (!mine?.unlocked || !shaft) return next;
-      const cost = action.type === ACTIONS.MINE_UPGRADE_SHAFT
-        ? getMineShaftUpgradeCost(shaft)
-        : getMineMinerCost(shaft);
-      const currencyKey = SPIRIT_MINE_CURRENCY_KEYS[shaft.element];
+    case ACTIONS.MINE_UPGRADE_SHAFT: {
+      const spiritMine = next.realms?.spiritMine;
+      const elementMine = getElementMine(spiritMine, action.element);
+      const floor = elementMine?.floors?.find((item) => item.id === action.floorId);
+      if (!spiritMine?.unlocked || !elementMine?.unlocked || !floor || floor.level >= 100) return next;
+      const cost = getMineFloorUpgradeCost(floor);
+      const currencyKey = SPIRIT_MINE_CURRENCY_KEYS[elementMine.element];
       if ((next.currencies[currencyKey] || 0) < cost) return next;
       return {
         ...next,
@@ -871,34 +857,58 @@ export function gameReducer(state, action) {
         realms: {
           ...next.realms,
           spiritMine: {
-            ...mine,
-            shafts: mine.shafts.map((item) => item.id !== action.roomId ? item : {
-              ...item,
-              ...(action.type === ACTIONS.MINE_UPGRADE_SHAFT
-                ? { level: item.level + 1 }
-                : { miners: item.miners + 1 })
+            ...spiritMine,
+            mines: spiritMine.mines.map((mine) => mine.element !== action.element ? mine : {
+              ...mine,
+              floors: mine.floors.map((item) => item.id === action.floorId
+                ? { ...item, level: item.level + 1 }
+                : item)
             })
           }
         }
       };
     }
 
-    case ACTIONS.MINE_UNLOCK_ROOM: {
-      const mine = next.realms?.spiritMine;
-      const room = getMineNextRoom(mine);
-      if (!mine?.unlocked || !room) return next;
-      if ((next.currencies[room.currencyKey] || 0) < room.cost) return next;
+    case ACTIONS.MINE_UNLOCK_MINE: {
+      const spiritMine = next.realms?.spiritMine;
+      const unlock = getMineUnlock(action.element);
+      if (!spiritMine?.unlocked || !unlock || !canUnlockElementMine(spiritMine, action.element)) return next;
+      if ((next.currencies[unlock.currencyKey] || 0) < unlock.cost) return next;
       return {
         ...next,
         currencies: {
           ...next.currencies,
-          [room.currencyKey]: clampCurrency(next.currencies[room.currencyKey] - room.cost)
+          [unlock.currencyKey]: clampCurrency(next.currencies[unlock.currencyKey] - unlock.cost)
         },
         realms: {
           ...next.realms,
           spiritMine: {
-            ...mine,
-            shafts: [...mine.shafts, createMineShaft(room.room)]
+            ...spiritMine,
+            mines: spiritMine.mines.map((mine) => mine.element === action.element
+              ? { ...mine, unlocked: true }
+              : mine)
+          }
+        }
+      };
+    }
+
+    case ACTIONS.MINE_UNLOCK_FLOOR: {
+      const spiritMine = next.realms?.spiritMine;
+      const elementMine = getElementMine(spiritMine, action.element);
+      const floor = getMineNextFloor(elementMine);
+      if (!spiritMine?.unlocked || !elementMine?.unlocked || !floor) return next;
+      const currencyKey = SPIRIT_MINE_CURRENCY_KEYS[elementMine.element];
+      if ((next.currencies[currencyKey] || 0) < floor.cost) return next;
+      return {
+        ...next,
+        currencies: { ...next.currencies, [currencyKey]: clampCurrency(next.currencies[currencyKey] - floor.cost) },
+        realms: {
+          ...next.realms,
+          spiritMine: {
+            ...spiritMine,
+            mines: spiritMine.mines.map((mine) => mine.element === action.element
+              ? { ...mine, floors: [...mine.floors, createMineFloor(floor.floor)] }
+              : mine)
           }
         }
       };
@@ -906,21 +916,24 @@ export function gameReducer(state, action) {
 
     case ACTIONS.MINE_UPGRADE_ELEVATOR:
     case ACTIONS.MINE_UPGRADE_WAREHOUSE: {
-      const mine = next.realms?.spiritMine;
-      if (!mine?.unlocked) return next;
-      const shaft = mine.shafts.find((item) => item.id === action.roomId);
-      if (!shaft) return next;
+      const spiritMine = next.realms?.spiritMine;
+      const elementMine = getElementMine(spiritMine, action.element);
+      if (!spiritMine?.unlocked || !elementMine?.unlocked) return next;
       const key = action.type === ACTIONS.MINE_UPGRADE_ELEVATOR ? 'elevatorLevel' : 'warehouseLevel';
-      const cost = getMineFacilityCost(shaft[key]);
-      if ((next.currencies.essence || 0) < cost) return next;
+      if (elementMine[key] >= 100) return next;
+      const cost = getMineFacilityCost(elementMine[key], action.type === ACTIONS.MINE_UPGRADE_ELEVATOR ? 'elevator' : 'warehouse');
+      const currencyKey = SPIRIT_MINE_CURRENCY_KEYS[elementMine.element];
+      if ((next.currencies[currencyKey] || 0) < cost) return next;
       return {
         ...next,
-        currencies: { ...next.currencies, essence: clampCurrency(next.currencies.essence - cost) },
+        currencies: { ...next.currencies, [currencyKey]: clampCurrency(next.currencies[currencyKey] - cost) },
         realms: {
           ...next.realms,
           spiritMine: {
-            ...mine,
-            shafts: mine.shafts.map((item) => item.id === action.roomId ? { ...item, [key]: item[key] + 1 } : item)
+            ...spiritMine,
+            mines: spiritMine.mines.map((mine) => mine.element === action.element
+              ? { ...mine, [key]: mine[key] + 1 }
+              : mine)
           }
         }
       };

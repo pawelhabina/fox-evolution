@@ -5,7 +5,7 @@ const adminState = {
   selectedUserId: null,
   selectedSave: null,
   editingFoxes: [],
-  editingMineShafts: [],
+  editingMines: [],
   conflictSave: null,
   flagTarget: null,
   passwordResetTarget: null,
@@ -486,33 +486,34 @@ function renderFoxEditor() {
   renderFoxSummary(adminState.editingFoxes);
 }
 
-function cloneMineShaftForEditor(shaft, index) {
+function cloneMineForEditor(mine, mineIndex) {
   const elements = ['fire', 'electric', 'water'];
-  const room = index + 1;
+  const element = elements[mineIndex];
+  const floors = Array.isArray(mine?.floors) && mine.floors.length ? mine.floors : [{}];
   return {
-    id: room,
-    room,
-    element: elements[index % elements.length],
-    level: Number(shaft?.level || 1),
-    miners: Number(shaft?.miners || 1),
-    elevatorLevel: Number(shaft?.elevatorLevel || 1),
-    warehouseLevel: Number(shaft?.warehouseLevel || 1),
-    stored: Number(shaft?.stored || 0)
+    id: element,
+    element,
+    unlocked: mineIndex === 0 ? true : Boolean(mine?.unlocked),
+    elevatorLevel: Number(mine?.elevatorLevel || 1),
+    warehouseLevel: Number(mine?.warehouseLevel || 1),
+    warehouseStored: Number(mine?.warehouseStored || 0),
+    floors: floors.slice(0, 10).map((floor, floorIndex) => ({
+      id: floorIndex + 1,
+      floor: floorIndex + 1,
+      level: Number(floor?.level || 1),
+      chestStored: Number(floor?.chestStored || 0)
+    }))
   };
 }
 
 function renderMineEditor() {
-  const labels = { fire: 'Ogień', electric: 'Elektryczność', water: 'Woda' };
-  byId('mine-editor-list').innerHTML = adminState.editingMineShafts.map((shaft, index) => `<article class="mine-editor-row" data-mine-index="${index}">
-    <strong>#${shaft.room}</strong><span class="element-badge element-badge--${shaft.element}">${labels[shaft.element]}</span>
-    <input aria-label="Poziom pokoju ${shaft.room}" data-mine-field="level" inputmode="numeric" min="1" max="100" value="${escapeHtml(shaft.level)}" />
-    <input aria-label="Górnicy w pokoju ${shaft.room}" data-mine-field="miners" inputmode="numeric" min="1" max="25" value="${escapeHtml(shaft.miners)}" />
-    <input aria-label="Winda w kopalni ${shaft.room}" data-mine-field="elevatorLevel" inputmode="numeric" min="1" max="100" value="${escapeHtml(shaft.elevatorLevel)}" />
-    <input aria-label="Magazyn w kopalni ${shaft.room}" data-mine-field="warehouseLevel" inputmode="numeric" min="1" max="100" value="${escapeHtml(shaft.warehouseLevel)}" />
-    <input aria-label="Magazyn pokoju ${shaft.room}" data-mine-field="stored" inputmode="decimal" min="0" value="${escapeHtml(shaft.stored)}" />
-    <button class="editor-remove" type="button" data-remove-mine-room="${index}" aria-label="Usuń ostatni pokój" ${index !== adminState.editingMineShafts.length - 1 || adminState.editingMineShafts.length === 1 ? 'disabled' : ''}>×</button>
+  const labels = { fire: 'Ogień', electric: 'Energia', water: 'Woda' };
+  byId('mine-editor-list').innerHTML = adminState.editingMines.map((mine, mineIndex) => `<article class="element-mine-editor" data-mine-index="${mineIndex}">
+    <header><strong class="element-badge element-badge--${mine.element}">${labels[mine.element]}</strong><label><span>Odblokowana</span><input type="checkbox" data-mine-field="unlocked"${mine.unlocked ? ' checked' : ''}${mineIndex === 0 ? ' disabled' : ''}></label><label><span>Winda Lv</span><input data-mine-field="elevatorLevel" inputmode="numeric" min="1" max="100" value="${escapeHtml(mine.elevatorLevel)}"></label><label><span>Magazyn Lv</span><input data-mine-field="warehouseLevel" inputmode="numeric" min="1" max="100" value="${escapeHtml(mine.warehouseLevel)}"></label><label><span>W magazynie</span><input data-mine-field="warehouseStored" inputmode="decimal" min="0" value="${escapeHtml(mine.warehouseStored)}"></label></header>
+    <div class="mine-floor-editor-labels"><span>Piętro</span><span>Poziom szybu</span><span>Pracownicy automatycznie</span><span>W skrzynce</span><span></span></div>
+    <div class="mine-floor-editor-list">${mine.floors.map((floor, floorIndex) => `<div class="mine-floor-editor-row" data-floor-index="${floorIndex}"><strong>#${floor.floor}</strong><input data-floor-field="level" inputmode="numeric" min="1" max="100" value="${escapeHtml(floor.level)}"><span>${floor.level >= 100 ? 5 : floor.level >= 50 ? 4 : floor.level >= 25 ? 3 : floor.level >= 10 ? 2 : 1} lisów</span><input data-floor-field="chestStored" inputmode="decimal" min="0" value="${escapeHtml(floor.chestStored)}"><button class="editor-remove" type="button" data-remove-mine-floor="${mineIndex}:${floorIndex}"${floorIndex !== mine.floors.length - 1 || mine.floors.length === 1 ? ' disabled' : ''}>×</button></div>`).join('')}</div>
+    <button class="row-button" type="button" data-add-mine-floor="${mineIndex}"${mine.floors.length >= 10 ? ' disabled' : ''}>+ Dodaj piętro</button>
   </article>`).join('');
-  byId('add-mine-room').disabled = adminState.editingMineShafts.length >= 10;
 }
 
 function activateSaveTab(tab) {
@@ -532,8 +533,11 @@ async function openSave(saveId, suppliedSave = null) {
     input.value = input.dataset.saveKind === 'boolean' ? String(Boolean(value)) : value ?? '';
   });
   adminState.editingFoxes = (save.state?.foxes || []).map(cloneFoxForEditor);
-  const savedShafts = save.state?.realms?.spiritMine?.shafts;
-  adminState.editingMineShafts = (Array.isArray(savedShafts) && savedShafts.length ? savedShafts : [{}]).map(cloneMineShaftForEditor);
+  const savedMines = save.state?.realms?.spiritMine?.mines;
+  adminState.editingMines = ['fire', 'electric', 'water'].map((element, index) => cloneMineForEditor(
+    Array.isArray(savedMines) ? savedMines.find((mine) => mine?.element === element) : { unlocked: index === 0 },
+    index
+  ));
   byId('save-json-preview').textContent = JSON.stringify(save.state || {}, null, 2);
   byId('save-version').textContent = `Wersja z ${formatDate(save.updatedAt)}`;
   renderFoxEditor();
@@ -570,12 +574,15 @@ function validateEditorCollections() {
     if (fox.kind === 'hydra' && (!Number.isInteger(fox.hydraLevel) || fox.hydraLevel < 1 || fox.hydraLevel > 5)) throw new Error(`Hydra #${fox.id} ma niepoprawny poziom.`);
     if (![fox.x, fox.y].every((value) => Number.isFinite(value) && value >= 0 && value <= 10000)) throw new Error(`Lis #${fox.id} ma niepoprawną pozycję.`);
   });
-  adminState.editingMineShafts.forEach((shaft) => {
-    if (!Number.isInteger(shaft.level) || shaft.level < 1 || shaft.level > 100) throw new Error(`Pokój #${shaft.room} ma niepoprawny poziom.`);
-    if (!Number.isInteger(shaft.miners) || shaft.miners < 1 || shaft.miners > 25) throw new Error(`Pokój #${shaft.room} ma niepoprawną liczbę górników.`);
-    if (!Number.isInteger(shaft.elevatorLevel) || shaft.elevatorLevel < 1 || shaft.elevatorLevel > 100) throw new Error(`Kopalnia #${shaft.room} ma niepoprawny poziom windy.`);
-    if (!Number.isInteger(shaft.warehouseLevel) || shaft.warehouseLevel < 1 || shaft.warehouseLevel > 100) throw new Error(`Kopalnia #${shaft.room} ma niepoprawny poziom magazynu.`);
-    if (!Number.isFinite(shaft.stored) || shaft.stored < 0) throw new Error(`Pokój #${shaft.room} ma niepoprawny stan magazynu.`);
+  adminState.editingMines.forEach((mine, mineIndex) => {
+    if (mineIndex > 0 && mine.unlocked && !adminState.editingMines[mineIndex - 1].unlocked) throw new Error('Kopalnie muszą być odblokowane w kolejności Ogień → Energia → Woda.');
+    if (!Number.isInteger(mine.elevatorLevel) || mine.elevatorLevel < 1 || mine.elevatorLevel > 100) throw new Error(`${mine.element}: niepoprawny poziom windy.`);
+    if (!Number.isInteger(mine.warehouseLevel) || mine.warehouseLevel < 1 || mine.warehouseLevel > 100) throw new Error(`${mine.element}: niepoprawny poziom magazynu.`);
+    if (!Number.isFinite(mine.warehouseStored) || mine.warehouseStored < 0) throw new Error(`${mine.element}: niepoprawny stan magazynu.`);
+    mine.floors.forEach((floor) => {
+      if (!Number.isInteger(floor.level) || floor.level < 1 || floor.level > 100) throw new Error(`${mine.element}, piętro #${floor.floor}: niepoprawny poziom.`);
+      if (!Number.isFinite(floor.chestStored) || floor.chestStored < 0) throw new Error(`${mine.element}, piętro #${floor.floor}: niepoprawny stan skrzynki.`);
+    });
   });
 }
 
@@ -599,8 +606,8 @@ function buildSaveChanges() {
     const nextFoxId = adminState.editingFoxes.reduce((highest, fox) => Math.max(highest, fox.id + 1), Number(original.state?.meta?.nextFoxId) || 1);
     setPath(statePatch, 'meta.nextFoxId', nextFoxId);
   }
-  if (JSON.stringify(original.state?.realms?.spiritMine?.shafts || []) !== JSON.stringify(adminState.editingMineShafts)) {
-    setPath(statePatch, 'realms.spiritMine.shafts', adminState.editingMineShafts);
+  if (JSON.stringify(original.state?.realms?.spiritMine?.mines || []) !== JSON.stringify(adminState.editingMines)) {
+    setPath(statePatch, 'realms.spiritMine.mines', adminState.editingMines);
   }
   const payload = { expectedUpdatedAt: original.updatedAt };
   const name = byId('save-name').value.trim();
@@ -811,7 +818,8 @@ saveForm.addEventListener('click', (event) => {
   const tabButton = event.target.closest('[data-save-tab]');
   const presetButton = event.target.closest('[data-save-preset]');
   const removeFoxButton = event.target.closest('[data-remove-fox]');
-  const removeMineButton = event.target.closest('[data-remove-mine-room]');
+  const addFloorButton = event.target.closest('[data-add-mine-floor]');
+  const removeFloorButton = event.target.closest('[data-remove-mine-floor]');
   if (tabButton) activateSaveTab(tabButton.dataset.saveTab);
   if (presetButton) applySavePreset(presetButton);
   if (event.target.closest('#add-fox')) {
@@ -835,14 +843,16 @@ saveForm.addEventListener('click', (event) => {
     adminState.editingFoxes.splice(Number(removeFoxButton.dataset.removeFox), 1);
     renderFoxEditor();
   }
-  if (event.target.closest('#add-mine-room')) {
-    if (adminState.editingMineShafts.length >= 10) return;
-    adminState.editingMineShafts.push(cloneMineShaftForEditor({}, adminState.editingMineShafts.length));
+  if (addFloorButton) {
+    const mine = adminState.editingMines[Number(addFloorButton.dataset.addMineFloor)];
+    if (mine.floors.length >= 10) return;
+    const floor = mine.floors.length + 1;
+    mine.floors.push({ id: floor, floor, level: 1, chestStored: 0 });
     renderMineEditor();
   }
-  if (removeMineButton && !removeMineButton.disabled) {
-    adminState.editingMineShafts.splice(Number(removeMineButton.dataset.removeMineRoom), 1);
-    adminState.editingMineShafts = adminState.editingMineShafts.map(cloneMineShaftForEditor);
+  if (removeFloorButton && !removeFloorButton.disabled) {
+    const [mineIndex, floorIndex] = removeFloorButton.dataset.removeMineFloor.split(':').map(Number);
+    adminState.editingMines[mineIndex].floors.splice(floorIndex, 1);
     renderMineEditor();
   }
 });
@@ -857,7 +867,12 @@ function updateCollectionEditor(event) {
   const mineField = event.target.dataset.mineField;
   const mineRow = event.target.closest('[data-mine-index]');
   if (mineField && mineRow) {
-    adminState.editingMineShafts[Number(mineRow.dataset.mineIndex)][mineField] = Number(event.target.value.replace(',', '.'));
+    adminState.editingMines[Number(mineRow.dataset.mineIndex)][mineField] = mineField === 'unlocked' ? event.target.checked : Number(event.target.value.replace(',', '.'));
+  }
+  const floorField = event.target.dataset.floorField;
+  const floorRow = event.target.closest('[data-floor-index]');
+  if (floorField && mineRow && floorRow) {
+    adminState.editingMines[Number(mineRow.dataset.mineIndex)].floors[Number(floorRow.dataset.floorIndex)][floorField] = Number(event.target.value.replace(',', '.'));
   }
 }
 saveForm.addEventListener('input', updateCollectionEditor);

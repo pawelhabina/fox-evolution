@@ -27,7 +27,15 @@ function baseState() {
         unlocked: false,
         totalCollected: 0,
         lastAdvancedAt: null,
-        shafts: [{ id: 1, room: 1, element: 'fire', level: 1, miners: 1, elevatorLevel: 1, warehouseLevel: 1, stored: 0 }]
+        mines: ['fire', 'electric', 'water'].map((element, index) => ({
+          id: element,
+          element,
+          unlocked: index === 0,
+          elevatorLevel: 1,
+          warehouseLevel: 1,
+          warehouseStored: 0,
+          floors: [{ id: 1, floor: 1, level: 1, chestStored: 0 }]
+        }))
       }
     },
     meta: { nextFoxId: 4 },
@@ -79,16 +87,16 @@ test('shop and wallet presets set all test values', () => {
   assert.deepEqual(gems.upgrades, { gemIncomeMultiplier: 100, gemFoxLimit: 50 });
 });
 
-test('MAX_SPIRIT_MINE unlocks ten sequential rooms with rotating elements', () => {
+test('MAX_SPIRIT_MINE unlocks three mines with ten maxed floors each', () => {
   const patch = buildAdminSavePresetPatch(baseState(), 'MAX_SPIRIT_MINE');
   const mine = patch.realms.spiritMine;
 
   assert.equal(mine.unlocked, true);
-  assert.equal(mine.shafts.length, 10);
-  assert.deepEqual(mine.shafts.slice(0, 4).map((shaft) => shaft.element), ['fire', 'electric', 'water', 'fire']);
-  assert.ok(mine.shafts.every((shaft, index) => shaft.id === index + 1 && shaft.room === index + 1));
-  assert.ok(mine.shafts.every((shaft) => shaft.level === 25 && shaft.miners === 10));
-  assert.ok(mine.shafts.every((shaft) => shaft.elevatorLevel === 25 && shaft.warehouseLevel === 25));
+  assert.deepEqual(mine.mines.map((elementMine) => elementMine.element), ['fire', 'electric', 'water']);
+  assert.ok(mine.mines.every((elementMine) => elementMine.unlocked));
+  assert.ok(mine.mines.every((elementMine) => elementMine.floors.length === 10));
+  assert.ok(mine.mines.every((elementMine) => elementMine.floors.every((floor, index) => floor.id === index + 1 && floor.floor === index + 1 && floor.level === 100)));
+  assert.ok(mine.mines.every((elementMine) => elementMine.elevatorLevel === 100 && elementMine.warehouseLevel === 100));
 });
 
 test('preset catalog rejects unknown operations', () => {

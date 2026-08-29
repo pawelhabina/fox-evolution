@@ -57,7 +57,7 @@ export default function Hud({ coins, gems, rebirthTokens, essence, essenceUnlock
       label: 'Esencja',
       value: `◈ ${formatNumber(essence)}`,
       tone: 'text-violet-300',
-      description: 'Esencja Hydry napędza rozwój Kopalni Duchów.'
+      description: 'Waluta zdobywana za pokonanie Hydry i rozwój późniejszych systemów.'
     }] : [])
   ];
 

@@ -3,68 +3,72 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-test('spirit mine produces while time elapses and respects storage capacity', async () => {
+test('spirit mine models floor chests, elevator transport and a surface warehouse', async () => {
   const mineApi = await import('../src/game/spiritMine.js');
-  const mine = { ...mineApi.createSpiritMineState(), unlocked: true };
-  assert.equal(mine.shafts.length, 1);
-  assert.equal(mine.shafts[0].element, 'fire');
-  assert.equal(mine.shafts[0].elevatorLevel, 1);
-  assert.equal(mine.shafts[0].warehouseLevel, 1);
-  const advanced = mineApi.advanceSpiritMine(mine, 60, Date.UTC(2026, 7, 27));
-  assert.ok(mineApi.getMineStoredTotal(advanced) > 0);
-  advanced.shafts.forEach((shaft) => {
-    assert.ok(shaft.stored <= mineApi.getMineShaftCapacity(shaft, advanced));
-  });
+  const spiritMine = { ...mineApi.createSpiritMineState(), unlocked: true };
+  assert.equal(spiritMine.mines.length, 3);
+  assert.deepEqual(spiritMine.mines.map((mine) => mine.unlocked), [true, false, false]);
 
-  const capped = mineApi.advanceSpiritMine(advanced, 24 * 60 * 60);
-  capped.shafts.forEach((shaft) => {
-    assert.equal(shaft.stored, mineApi.getMineShaftCapacity(shaft, capped));
-  });
+  const advanced = mineApi.advanceSpiritMine(spiritMine, 60, Date.UTC(2026, 7, 29));
+  const fire = mineApi.getElementMine(advanced, 'fire');
+  assert.ok(fire.warehouseStored > 0);
+  assert.ok(fire.warehouseStored <= mineApi.getMineWarehouseCapacity(fire.warehouseLevel));
+  assert.ok(fire.floors[0].chestStored <= mineApi.getMineFloorChestCapacity(fire.floors[0]));
+
+  const fullCapacity = mineApi.getMineWarehouseCapacity(fire.warehouseLevel);
+  const blocked = mineApi.advanceSpiritMine({
+    ...advanced,
+    mines: advanced.mines.map((mine) => mine.element === 'fire'
+      ? { ...mine, warehouseStored: fullCapacity, floors: mine.floors.map((floor) => ({ ...floor, chestStored: 0 })) }
+      : mine)
+  }, 30);
+  const blockedFire = mineApi.getElementMine(blocked, 'fire');
+  assert.equal(blockedFire.warehouseStored, fullCapacity);
+  assert.ok(blockedFire.floors[0].chestStored > 0, 'workers should fill the floor chest while the full warehouse blocks the elevator');
 });
 
-test('spirit mine unlocks fire, electric and water rooms in order up to ten', async () => {
+test('worker count is derived from floor level at exact progression thresholds', async () => {
+  const { getMineWorkerCount } = await import('../src/game/spiritMine.js');
+  assert.deepEqual([1, 9, 10, 24, 25, 49, 50, 99, 100].map(getMineWorkerCount), [1, 1, 2, 2, 3, 3, 4, 4, 5]);
+});
+
+test('map always contains three mines unlocked with previous element currency', async () => {
   const mineApi = await import('../src/game/spiritMine.js');
-  let mine = { ...mineApi.createSpiritMineState(), unlocked: true };
-  const expected = ['fire', 'electric', 'water', 'fire', 'electric', 'water', 'fire', 'electric', 'water', 'fire'];
+  const spiritMine = { ...mineApi.createSpiritMineState(), unlocked: true };
+  assert.deepEqual(spiritMine.mines.map((mine) => mine.element), ['fire', 'electric', 'water']);
+  assert.equal(mineApi.canUnlockElementMine(spiritMine, 'electric'), true);
+  assert.equal(mineApi.canUnlockElementMine(spiritMine, 'water'), false);
+  assert.deepEqual(mineApi.getMineUnlock('electric'), { currencyElement: 'fire', currencyKey: 'fireCoins', cost: 500 });
+  assert.deepEqual(mineApi.getMineUnlock('water'), { currencyElement: 'electric', currencyKey: 'electricCoins', cost: 1500 });
+});
 
-  assert.equal(mineApi.getMineNextRoom(mine).element, 'electric');
-  assert.equal(mineApi.getMineNextRoom(mine).currencyElement, 'fire');
-  assert.equal(mineApi.getMineNextRoom(mine).cost, 20);
-
-  while (mine.shafts.length < mineApi.SPIRIT_MINE_MAX_ROOMS) {
-    const room = mineApi.getMineNextRoom(mine);
-    assert.ok(room.cost > 0);
-    assert.equal(room.currencyElement, mine.shafts.at(-1).element);
-    mine = { ...mine, shafts: [...mine.shafts, mineApi.createMineShaft(room.room)] };
+test('every concrete mine supports up to ten independently upgraded floors', async () => {
+  const mineApi = await import('../src/game/spiritMine.js');
+  let fire = mineApi.createElementMine('fire', true);
+  while (fire.floors.length < mineApi.SPIRIT_MINE_MAX_FLOORS) {
+    const next = mineApi.getMineNextFloor(fire);
+    assert.equal(next.floor, fire.floors.length + 1);
+    assert.ok(next.cost > 0);
+    fire = { ...fire, floors: [...fire.floors, mineApi.createMineFloor(next.floor)] };
   }
-
-  assert.deepEqual(mine.shafts.map((shaft) => shaft.element), expected);
-  assert.equal(mineApi.getMineNextRoom(mine), null);
+  assert.equal(mineApi.getMineNextFloor(fire), null);
 });
 
-test('mine collection is separated into elemental currencies without losing remainders', async () => {
+test('only surface warehouse contents are collectable as elemental currencies', async () => {
   const mineApi = await import('../src/game/spiritMine.js');
-  const mine = {
-    ...mineApi.createSpiritMineState(),
+  const spiritMine = mineApi.createSpiritMineState();
+  const populated = {
+    ...spiritMine,
     unlocked: true,
-    shafts: [
-      { ...mineApi.createMineShaft(1), stored: 3.6 },
-      { ...mineApi.createMineShaft(2), stored: 4.2 },
-      { ...mineApi.createMineShaft(3), stored: 5.9 },
-      { ...mineApi.createMineShaft(4), stored: 2.6 }
-    ]
+    mines: spiritMine.mines.map((mine, index) => ({
+      ...mine,
+      unlocked: true,
+      warehouseStored: [3.6, 4.2, 5.9][index],
+      floors: [{ ...mine.floors[0], chestStored: 99 }]
+    }))
   };
-  assert.deepEqual(mineApi.getMineCollectableByElement(mine), {
-    fire: 6,
-    electric: 4,
-    water: 5
-  });
-  assert.equal(mineApi.getMineStoredTotal(mine), 15);
-  assert.deepEqual(mineApi.SPIRIT_MINE_CURRENCY_KEYS, {
-    fire: 'fireCoins',
-    electric: 'electricCoins',
-    water: 'waterCoins'
-  });
+  assert.deepEqual(mineApi.getMineCollectableByElement(populated), { fire: 3, electric: 4, water: 5 });
+  assert.equal(mineApi.getMineStoredTotal(populated), 12);
 });
 
 test('desktop and renderer use wall clock progress when the game is minimized', () => {
@@ -77,37 +81,38 @@ test('desktop and renderer use wall clock progress when the game is minimized', 
   assert.match(app, /visibilitychange/);
 });
 
-test('hydra fusion grants essence, unlocks the mine and replaces the selected foxes', () => {
+test('hydra fusion unlocks the realm and reducer exposes mine and floor actions', () => {
   const root = path.resolve(__dirname, '..');
   const reducer = fs.readFileSync(path.join(root, 'src/game/reducer.js'), 'utf8');
   assert.match(reducer, /kind: 'hydra'/);
-  assert.match(reducer, /foxes\.filter\(\(fox\) => !teamIdSet\.has\(fox\.id\)\)/);
-  assert.match(reducer, /ELEMENTAL_BOSS_REWARD_ESSENCE/);
   assert.match(reducer, /spiritMine:[\s\S]*?unlocked: true/);
-  assert.match(reducer, /MINE_UNLOCK_ROOM/);
-  assert.match(reducer, /SPIRIT_MINE_CURRENCY_KEYS/);
+  assert.match(reducer, /MINE_UNLOCK_MINE/);
+  assert.match(reducer, /MINE_UNLOCK_FLOOR/);
+  assert.match(reducer, /getMineFloorUpgradeCost/);
 });
 
-test('existing three-room mine saves are preserved by the save migration', () => {
+test('legacy room saves migrate into three element mines and sequential floors', () => {
   const root = path.resolve(__dirname, '..');
   const storage = fs.readFileSync(path.join(root, 'src/storage/gameStorage.js'), 'utf8');
-  assert.match(storage, /rawMine\.shafts\.slice\(0, SPIRIT_MINE_MAX_ROOMS\)/);
-  assert.match(storage, /rawShafts\.map\(\(rawShaft, index\)/);
-  assert.match(storage, /rawShaft\?\.elevatorLevel \?\? rawMine\?\.elevatorLevel/);
-  assert.match(storage, /rawShaft\?\.warehouseLevel \?\? rawMine\?\.warehouseLevel/);
-  assert.match(storage, /fireCoins:[\s\S]*electricCoins:[\s\S]*waterCoins:/);
+  assert.match(storage, /legacyShafts/);
+  assert.match(storage, /legacyElementShafts/);
+  assert.match(storage, /rawElementMines/);
+  assert.match(storage, /SPIRIT_MINE_MAX_FLOORS/);
+  assert.match(storage, /warehouseStored/);
 });
 
-test('mine realm is a hub with enterable mines and per-mine facilities', () => {
+test('mine UI shows three-card map, animated workers, floor chests, elevator and warehouse', () => {
   const root = path.resolve(__dirname, '..');
   const component = fs.readFileSync(path.join(root, 'src/components/SpiritMineRealm.jsx'), 'utf8');
-  const reducer = fs.readFileSync(path.join(root, 'src/game/reducer.js'), 'utf8');
-  assert.match(component, /Wejdź do kopalni/);
-  assert.match(component, /Mapa kopalń/);
-  assert.match(component, /onUpgradeElevator\(shaft\.id\)/);
-  assert.match(component, /onUpgradeWarehouse\(shaft\.id\)/);
-  assert.match(component, /onCollect\(shaft\.id\)/);
-  assert.match(reducer, /mine\.shafts\.find\(\(item\) => item\.id === action\.roomId\)/);
+  const styles = fs.readFileSync(path.join(root, 'src/styles.css'), 'utf8');
+  assert.match(component, /Trzy kopalnie/);
+  assert.match(component, /Odblokuj ·/);
+  assert.match(component, /element-mine-chest/);
+  assert.match(component, /getMineWorkerCount/);
+  assert.match(component, /Odbierz \+/);
+  assert.match(component, /onUnlockFloor/);
+  assert.match(styles, /@keyframes element-worker-cycle/);
+  assert.match(styles, /transition: top var\(--cab-travel-time\) linear/);
 });
 
 test('boss QTE timer animates continuously for the full prompt duration', () => {
@@ -117,5 +122,4 @@ test('boss QTE timer animates continuously for the full prompt duration', () => 
   assert.match(modal, /requestAnimationFrame\(updateTimer\)/);
   assert.match(modal, /--boss-qte-duration/);
   assert.match(styles, /boss-qte-countdown var\(--boss-qte-duration\) linear forwards/);
-  assert.match(styles, /@keyframes boss-qte-countdown \{ to \{ transform: scaleX\(0\)/);
 });

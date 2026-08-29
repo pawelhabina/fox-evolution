@@ -2,141 +2,165 @@ import { useEffect, useMemo, useState } from 'react';
 import { formatCompact, formatNumber } from '../game/format';
 import {
   SPIRIT_MINE_CURRENCY_KEYS,
-  SPIRIT_MINE_MAX_ROOMS,
+  SPIRIT_MINE_ELEMENTS,
+  canUnlockElementMine,
+  getMineElevatorCycleSeconds,
+  getMineElevatorLoad,
+  getMineElevatorThroughput,
   getMineFacilityCost,
-  getMineCollectableByElement,
-  getMineMinerCost,
-  getMineNextRoom,
-  getMineShaftCapacity,
-  getMineShaftRate,
-  getMineShaftUpgradeCost,
-  getMineStoredTotal
+  getMineFloorChestCapacity,
+  getMineFloorRate,
+  getMineFloorUpgradeCost,
+  getMineNextFloor,
+  getMinePendingTotal,
+  getMineUnlock,
+  getMineWarehouseCapacity,
+  getMineWorkerCount
 } from '../game/spiritMine';
 
 const META = {
-  fire: { name: 'Kopalnia Ognia', coinName: 'Ogniste monety', icon: '🔥' },
-  electric: { name: 'Kopalnia Prądu', coinName: 'Monety Prądu', icon: '⚡' },
-  water: { name: 'Kopalnia Wody', coinName: 'Wodne monety', icon: '💧' }
+  fire: { name: 'Kopalnia Ognia', shortName: 'Ogień', coinName: 'Ogniste monety', icon: '🔥' },
+  electric: { name: 'Kopalnia Energii', shortName: 'Energia', coinName: 'Monety Energii', icon: '⚡' },
+  water: { name: 'Kopalnia Wody', shortName: 'Woda', coinName: 'Wodne monety', icon: '💧' }
 };
 
-function MineWallets({ state, compact = false }) {
-  return <div className={`spirit-mine-wallets ${compact ? 'is-compact' : ''}`}>
-    <div className="spirit-mine-wallet spirit-mine-wallet--essence"><span>Esencja Hydry</span><strong>◈ {formatNumber(state.currencies.essence || 0)}</strong></div>
-    {Object.entries(META).map(([element, meta]) => <div key={element} className={`spirit-mine-wallet spirit-mine-wallet--${element}`}><span>{meta.coinName}</span><strong>{meta.icon} {formatNumber(state.currencies[SPIRIT_MINE_CURRENCY_KEYS[element]] || 0)}</strong></div>)}
+function MineWallets({ state }) {
+  return <div className="spirit-mine-wallets is-compact">
+    {SPIRIT_MINE_ELEMENTS.map((element) => {
+      const meta = META[element];
+      return <div key={element} className={`spirit-mine-wallet spirit-mine-wallet--${element}`}><span>{meta.coinName}</span><strong>{meta.icon} {formatNumber(state.currencies[SPIRIT_MINE_CURRENCY_KEYS[element]] || 0)}</strong></div>;
+    })}
   </div>;
 }
 
-function MineHub({ state, mine, onEnterMine, onCollect, onUnlockRoom }) {
-  const collected = getMineCollectableByElement(mine);
-  const storedTotal = getMineStoredTotal(mine);
-  const nextMine = getMineNextRoom(mine);
-  const slots = useMemo(() => Array.from({ length: SPIRIT_MINE_MAX_ROOMS }, (_, index) => {
-    const room = index + 1;
-    return mine.shafts.find((shaft) => shaft.room === room) || null;
-  }), [mine.shafts]);
-
+function MineMap({ state, spiritMine, onEnterMine, onUnlockMine }) {
   return <>
-    <header className="spirit-mine-header">
-      <div><small>MAPA KOPALŃ ŻYWIOŁÓW</small><h2>Podziemne imperium</h2><p>Wybierz kopalnię i wejdź do środka. Każda ma własny szyb, windę, magazyn i załogę.</p></div>
+    <header className="spirit-mine-header mine-map-header">
+      <div><small>MAPA KOPALŃ ŻYWIOŁÓW</small><h2>Trzy kopalnie</h2><p>Zacznij od ognia. Dochód z jednej kopalni odblokowuje następny żywioł.</p></div>
       <MineWallets state={state} />
     </header>
-
-    <div className="mine-hub-toolbar">
-      <div><strong>{mine.shafts.length}/{SPIRIT_MINE_MAX_ROOMS} kopalni</strong><small>Odblokowujesz je kolejno: Ogień → Prąd → Woda.</small></div>
-      <button type="button" className="mine-collect-all" disabled={storedTotal <= 0} onClick={() => onCollect()}><span>Odbierz ze wszystkich</span><strong>+{formatNumber(storedTotal)}</strong><small>🔥 {formatNumber(collected.fire)} · ⚡ {formatNumber(collected.electric)} · 💧 {formatNumber(collected.water)}</small></button>
-    </div>
-
-    <div className="mine-hub-grid">
-      {slots.map((shaft, index) => {
-        const room = index + 1;
-        if (shaft) {
-          const meta = META[shaft.element];
-          const capacity = getMineShaftCapacity(shaft);
-          const fill = Math.min(100, capacity > 0 ? shaft.stored / capacity * 100 : 0);
-          return <article key={room} className={`mine-hub-card mine-hub-card--${shaft.element}`}>
-            <div className="mine-hub-card-number">KOPALNIA {String(room).padStart(2, '0')}</div>
-            <div className="mine-hub-card-icon" aria-hidden="true">{meta.icon}</div>
-            <h3>{meta.name}</h3>
-            <p>Szyb Lv {shaft.level} · Winda Lv {shaft.elevatorLevel} · Magazyn Lv {shaft.warehouseLevel}</p>
-            <div className="mine-storage"><span style={{ width: `${fill}%` }} /><small>{formatCompact(shaft.stored, 1)} / {formatNumber(capacity)} {meta.icon}</small></div>
-            <button type="button" onClick={() => onEnterMine(shaft.id)}>Wejdź do kopalni →</button>
-          </article>;
-        }
-        if (nextMine?.room === room) {
-          const meta = META[nextMine.element];
-          const currencyMeta = META[nextMine.currencyElement];
-          const canBuy = (state.currencies[nextMine.currencyKey] || 0) >= nextMine.cost;
-          return <article key={room} className={`mine-hub-card mine-hub-card--next mine-hub-card--${nextMine.element}`}>
-            <div className="mine-hub-card-number">NOWA KOPALNIA {String(room).padStart(2, '0')}</div>
-            <div className="mine-hub-card-icon" aria-hidden="true">{meta.icon}</div>
-            <h3>{meta.name}</h3><p>Otwórz nowy zakład z osobną windą, magazynem i walutą żywiołu.</p>
-            <button type="button" disabled={!canBuy} onClick={onUnlockRoom}>Kup · {formatNumber(nextMine.cost)} {currencyMeta.icon}</button>
-          </article>;
-        }
-        return <article key={room} className="mine-hub-card mine-hub-card--locked"><div className="mine-hub-card-number">KOPALNIA {String(room).padStart(2, '0')}</div><div className="mine-hub-card-icon" aria-hidden="true">🔒</div><h3>Zablokowana</h3><p>Najpierw otwórz poprzednią kopalnię.</p></article>;
+    <div className="element-mine-map">
+      {spiritMine.mines.map((mine, index) => {
+        const meta = META[mine.element];
+        const unlock = getMineUnlock(mine.element);
+        const previousMeta = unlock ? META[unlock.currencyElement] : null;
+        const canUnlock = canUnlockElementMine(spiritMine, mine.element);
+        const canAfford = unlock && (state.currencies[unlock.currencyKey] || 0) >= unlock.cost;
+        const warehouseCapacity = getMineWarehouseCapacity(mine.warehouseLevel);
+        const warehouseFill = Math.min(100, warehouseCapacity > 0 ? mine.warehouseStored / warehouseCapacity * 100 : 0);
+        return <article key={mine.element} className={`element-mine-card element-mine-card--${mine.element} ${mine.unlocked ? 'is-unlocked' : 'is-locked'}`}>
+          <div className="element-mine-card-order">KOPALNIA 0{index + 1}</div>
+          <div className="element-mine-card-icon" aria-hidden="true">{mine.unlocked ? meta.icon : '🔒'}</div>
+          <h3>{meta.name}</h3>
+          {mine.unlocked ? <>
+            <p>{mine.floors.length} {mine.floors.length === 1 ? 'piętro' : 'pięter'} · Winda Lv {mine.elevatorLevel} · Magazyn Lv {mine.warehouseLevel}</p>
+            <div className="mine-storage"><span style={{ width: `${warehouseFill}%` }} /><small>Magazyn: {formatCompact(mine.warehouseStored, 1)} / {formatNumber(warehouseCapacity)} {meta.icon}</small></div>
+            <button type="button" onClick={() => onEnterMine(mine.element)}>Wejdź do kopalni →</button>
+          </> : canUnlock ? <>
+            <p>Odblokuj nową kopalnię monetami zarobionymi w Kopalni {previousMeta.shortName}.</p>
+            <button type="button" disabled={!canAfford} onClick={() => onUnlockMine(mine.element)}>Odblokuj · {formatNumber(unlock.cost)} {previousMeta.icon}</button>
+          </> : <p>Najpierw odblokuj poprzednią kopalnię.</p>}
+        </article>;
       })}
     </div>
   </>;
 }
 
-function MineInterior({ state, shaft, onBack, onCollect, onUpgradeShaft, onHireMiner, onUpgradeElevator, onUpgradeWarehouse }) {
-  const meta = META[shaft.element];
-  const currencyKey = SPIRIT_MINE_CURRENCY_KEYS[shaft.element];
-  const balance = state.currencies[currencyKey] || 0;
-  const essence = state.currencies.essence || 0;
-  const capacity = getMineShaftCapacity(shaft);
-  const fill = Math.min(100, capacity > 0 ? shaft.stored / capacity * 100 : 0);
-  const upgradeCost = getMineShaftUpgradeCost(shaft);
-  const minerCost = getMineMinerCost(shaft);
-  const elevatorCost = getMineFacilityCost(shaft.elevatorLevel);
-  const warehouseCost = getMineFacilityCost(shaft.warehouseLevel);
-  const elevatorDuration = Math.max(2.2, 7.5 - (shaft.elevatorLevel - 1) * 0.32);
-  const collectable = Math.floor(Math.max(0, shaft.stored || 0));
+function ElevatorVisual({ mine, animations }) {
+  const [routeIndex, setRouteIndex] = useState(0);
+  const route = useMemo(() => [0, ...mine.floors.map((floor) => floor.id), 0], [mine.floors]);
+  const cycleSeconds = getMineElevatorCycleSeconds(mine.elevatorLevel);
 
+  useEffect(() => {
+    setRouteIndex(0);
+  }, [mine.element, mine.floors.length]);
+
+  useEffect(() => {
+    if (!animations || route.length <= 1) return undefined;
+    const timer = window.setInterval(() => setRouteIndex((current) => (current + 1) % route.length), Math.max(900, cycleSeconds * 1000));
+    return () => window.clearInterval(timer);
+  }, [animations, cycleSeconds, route.length]);
+
+  const stop = route[routeIndex] || 0;
+  const top = stop === 0 ? 3 : 12 + (stop - 1) * (80 / Math.max(1, mine.floors.length));
+  return <aside className={`element-elevator ${animations ? '' : 'is-paused'}`} aria-label={`Winda kopalni ${META[mine.element].shortName}`}>
+    <div className="element-elevator-head"><strong>WINDA</strong><span>Lv {mine.elevatorLevel}</span></div>
+    <div className="element-elevator-rail">
+      <i className="element-elevator-stop is-warehouse" style={{ top: '3%' }}>MAG.</i>
+      {mine.floors.map((floor, index) => <i key={floor.id} className="element-elevator-stop" style={{ top: `${12 + index * (80 / Math.max(1, mine.floors.length))}%` }}>P{floor.floor}</i>)}
+      <span className="element-elevator-cable" />
+      <div className="element-elevator-cab" style={{ top: `${top}%`, '--cab-travel-time': `${Math.max(0.45, cycleSeconds * 0.55)}s` }}><b>{META[mine.element].icon}</b><small>{stop === 0 ? 'ROZŁADUNEK' : `PIĘTRO ${stop}`}</small></div>
+    </div>
+  </aside>;
+}
+
+function MineFloor({ mine, floor, balance, animations, onUpgradeFloor }) {
+  const meta = META[mine.element];
+  const workers = getMineWorkerCount(floor.level);
+  const rate = getMineFloorRate(floor, mine);
+  const capacity = getMineFloorChestCapacity(floor);
+  const fill = Math.min(100, capacity > 0 ? floor.chestStored / capacity * 100 : 0);
+  const cost = getMineFloorUpgradeCost(floor);
+  return <article className={`element-mine-floor element-mine-floor--${mine.element}`}>
+    <div className="element-mine-floor-number"><small>PIĘTRO</small><strong>{String(floor.floor).padStart(2, '0')}</strong></div>
+    <div className={`element-mine-worksite ${animations ? '' : 'is-paused'}`} aria-label={`${workers} pracowników na piętrze ${floor.floor}`}>
+      <div className="element-mine-chest"><span>📦</span><small>SKRZYNKA</small><b>{formatCompact(floor.chestStored, 1)}</b></div>
+      <div className="element-mine-track" />
+      {Array.from({ length: workers }, (_, worker) => <span key={worker} className="element-mine-worker" style={{ '--worker-delay': `${worker * -1.35}s`, '--worker-row': worker }}>🦊</span>)}
+      <div className="element-mine-face"><span>{meta.icon}</span><small>KOPANIE</small></div>
+    </div>
+    <div className="element-mine-floor-info"><span><strong>Szyb Lv {floor.level}/100</strong><small>{workers} {workers === 1 ? 'pracownik' : 'pracowników'} · {formatCompact(rate, 2)} {meta.icon}/s</small></span><b>Skrzynka {formatCompact(floor.chestStored, 1)} / {formatNumber(capacity)}</b></div>
+    <div className="mine-storage"><span style={{ width: `${fill}%` }} /><small>{fill >= 99.9 ? 'SKRZYNKA PEŁNA — pracownicy czekają' : 'Urobek czeka na windę'}</small></div>
+    <button type="button" disabled={floor.level >= 100 || balance < cost} onClick={() => onUpgradeFloor(mine.element, floor.id)}>{floor.level >= 100 ? 'Szyb na maksymalnym poziomie' : `Ulepsz szyb · ${formatNumber(cost)} ${meta.icon}`}</button>
+  </article>;
+}
+
+function MineInterior({ state, mine, onBack, onCollect, onUpgradeFloor, onUnlockFloor, onUpgradeElevator, onUpgradeWarehouse }) {
+  const meta = META[mine.element];
+  const currencyKey = SPIRIT_MINE_CURRENCY_KEYS[mine.element];
+  const balance = state.currencies[currencyKey] || 0;
+  const warehouseCapacity = getMineWarehouseCapacity(mine.warehouseLevel);
+  const warehouseFill = Math.min(100, warehouseCapacity > 0 ? mine.warehouseStored / warehouseCapacity * 100 : 0);
+  const collectable = Math.floor(Math.max(0, mine.warehouseStored || 0));
+  const elevatorCost = getMineFacilityCost(mine.elevatorLevel, 'elevator');
+  const warehouseCost = getMineFacilityCost(mine.warehouseLevel, 'warehouse');
+  const nextFloor = getMineNextFloor(mine);
+  const pending = getMinePendingTotal(mine);
+  const warehouseFull = warehouseFill >= 99.999;
   return <>
-    <header className={`mine-interior-header mine-interior-header--${shaft.element}`}>
+    <header className={`mine-interior-header mine-interior-header--${mine.element}`}>
       <button type="button" className="mine-back-button" onClick={onBack}>← Mapa kopalń</button>
-      <div><small>KOPALNIA {String(shaft.room).padStart(2, '0')}</small><h2>{meta.icon} {meta.name}</h2><p>Osobny zakład: szyb wydobywa, winda przewozi, a magazyn przechowuje urobek.</p></div>
-      <MineWallets state={state} compact />
+      <div><small>KOPALNIA ŻYWIOŁOWA</small><h2>{meta.icon} {meta.name}</h2><p>Pracownicy kopią i zanoszą urobek do skrzynek. Winda zbiera go z pięter i wozi do magazynu.</p></div>
+      <MineWallets state={state} />
     </header>
 
-    <div className="mine-interior-facilities">
-      <div className="mine-facility-card"><span>WINDA · LV {shaft.elevatorLevel}</span><small>Przewozi urobek i daje +18% produkcji na poziom.</small><button type="button" disabled={essence < elevatorCost} onClick={() => onUpgradeElevator(shaft.id)}>Ulepsz windę · {formatNumber(elevatorCost)} ◈</button></div>
-      <button type="button" className="mine-collect-all" disabled={collectable <= 0} onClick={() => onCollect(shaft.id)}><span>Odbierz z tej kopalni</span><strong>+{formatNumber(collectable)} {meta.icon}</strong><small>{meta.coinName}</small></button>
-      <div className="mine-facility-card"><span>MAGAZYN · LV {shaft.warehouseLevel}</span><small>Zwiększa pojemność kopalni o 50% na poziom.</small><button type="button" disabled={essence < warehouseCost} onClick={() => onUpgradeWarehouse(shaft.id)}>Ulepsz magazyn · {formatNumber(warehouseCost)} ◈</button></div>
+    <div className={`element-mine-management element-mine-management--${mine.element}`}>
+      <section className={`element-warehouse ${warehouseFull ? 'is-full' : ''}`}><div><small>MAGAZYN NA POWIERZCHNI · LV {mine.warehouseLevel}</small><strong>{formatCompact(mine.warehouseStored, 1)} / {formatNumber(warehouseCapacity)} {meta.icon}</strong><span>{warehouseFull ? 'PEŁNY — winda czeka na odbiór' : `Wolne miejsce: ${formatCompact(warehouseCapacity - mine.warehouseStored, 1)}`}</span></div><div className="mine-storage"><span style={{ width: `${warehouseFill}%` }} /></div><div className="element-facility-actions"><button type="button" disabled={collectable <= 0} onClick={() => onCollect(mine.element)}>Odbierz +{formatNumber(collectable)} {meta.icon}</button><button type="button" disabled={mine.warehouseLevel >= 100 || balance < warehouseCost} onClick={() => onUpgradeWarehouse(mine.element)}>Ulepsz magazyn · {formatNumber(warehouseCost)} {meta.icon}</button></div></section>
+      <section className="element-elevator-stats"><small>TRANSPORT WINDY · LV {mine.elevatorLevel}</small><div><span>Ładunek na kurs<strong>{formatNumber(getMineElevatorLoad(mine.elevatorLevel))} {meta.icon}</strong></span><span>Czas przejazdu<strong>{getMineElevatorCycleSeconds(mine.elevatorLevel).toFixed(1)} s</strong></span><span>Przepustowość<strong>{formatCompact(getMineElevatorThroughput(mine.elevatorLevel), 2)} {meta.icon}/s</strong></span><span>Czeka w skrzynkach<strong>{formatCompact(pending, 1)} {meta.icon}</strong></span></div><button type="button" disabled={mine.elevatorLevel >= 100 || balance < elevatorCost} onClick={() => onUpgradeElevator(mine.element)}>Ulepsz windę · {formatNumber(elevatorCost)} {meta.icon}</button></section>
     </div>
 
-    <div className={`mine-interior mine-interior--${shaft.element}`}>
-      <aside className={`mine-elevator mine-elevator--interior ${state.settings.animations ? '' : 'is-paused'}`} style={{ '--elevator-duration': `${elevatorDuration}s` }} aria-label={`Winda kopalni ${shaft.room}, poziom ${shaft.elevatorLevel}`}>
-        <div className="mine-elevator-title"><strong>WINDA</strong><span>Lv {shaft.elevatorLevel}</span></div>
-        <div className="mine-elevator-rail">
-          <i style={{ '--floor-position': '7%' }}>MAG.</i><i style={{ '--floor-position': '88%' }}>SZYB</i>
-          <div className="mine-elevator-cable" />
-          <div className="mine-elevator-cab"><span>{meta.icon}</span><small>UROBEK</small></div>
-        </div>
-      </aside>
-
-      <article className={`mine-shaft mine-shaft--interior mine-shaft--${shaft.element}`}>
-        <div className="mine-room-number"><small>SZYB</small><strong>{String(shaft.room).padStart(2, '0')}</strong></div>
-        <div className="mine-shaft-scene" aria-hidden="true"><span className="mine-element-orb">{meta.icon}</span>{Array.from({ length: Math.min(shaft.miners, 5) }, (_, miner) => <i key={miner} style={{ '--miner-delay': `${miner * -0.45}s` }}>🦊</i>)}</div>
-        <div className="mine-shaft-info"><span><strong>{meta.name}</strong><small>Szyb Lv {shaft.level} · {shaft.miners} {shaft.miners === 1 ? 'górnik' : 'górników'} · bonus głębokości +{(shaft.room - 1) * 12}%</small></span><b>{formatCompact(getMineShaftRate(shaft), 2)} {meta.icon}/s</b></div>
-        <div className="mine-storage"><span style={{ width: `${fill}%` }} /><small>{formatCompact(shaft.stored, 1)} / {formatNumber(capacity)} {meta.icon}</small></div>
-        <div className="mine-shaft-actions"><button type="button" disabled={balance < upgradeCost} onClick={() => onUpgradeShaft(shaft.id)}>Pogłęb szyb · {formatNumber(upgradeCost)} {meta.icon}</button><button type="button" disabled={balance < minerCost} onClick={() => onHireMiner(shaft.id)}>Zatrudnij lisa · {formatNumber(minerCost)} {meta.icon}</button></div>
-      </article>
+    <div className={`element-mine-interior element-mine-interior--${mine.element}`}>
+      <ElevatorVisual mine={mine} animations={state.settings.animations} />
+      <div className="element-mine-floors">
+        {mine.floors.map((floor) => <MineFloor key={floor.id} mine={mine} floor={floor} balance={balance} animations={state.settings.animations} onUpgradeFloor={onUpgradeFloor} />)}
+        {nextFloor && <button type="button" className="element-mine-new-floor" disabled={balance < nextFloor.cost} onClick={() => onUnlockFloor(mine.element)}>Otwórz piętro {nextFloor.floor} · {formatNumber(nextFloor.cost)} {meta.icon}</button>}
+      </div>
     </div>
   </>;
 }
 
-export default function SpiritMineRealm({ state, onCollect, onUpgradeShaft, onHireMiner, onUnlockRoom, onUpgradeElevator, onUpgradeWarehouse }) {
-  const mine = state.realms.spiritMine;
-  const [selectedMineId, setSelectedMineId] = useState(null);
-  const selectedMine = mine.shafts.find((shaft) => shaft.id === selectedMineId) || null;
+export default function SpiritMineRealm({ state, onCollect, onUpgradeFloor, onUnlockMine, onUnlockFloor, onUpgradeElevator, onUpgradeWarehouse }) {
+  const spiritMine = state.realms.spiritMine;
+  const [selectedElement, setSelectedElement] = useState(null);
+  const selectedMine = spiritMine.mines.find((mine) => mine.element === selectedElement && mine.unlocked) || null;
 
   useEffect(() => {
-    if (selectedMineId && !mine.shafts.some((shaft) => shaft.id === selectedMineId)) setSelectedMineId(null);
-  }, [mine.shafts, selectedMineId]);
+    if (selectedElement && !selectedMine) setSelectedElement(null);
+  }, [selectedElement, selectedMine]);
 
   return <section className="spirit-mine" aria-label="Kopalnie żywiołów">
-    {selectedMine ? <MineInterior state={state} shaft={selectedMine} onBack={() => setSelectedMineId(null)} onCollect={onCollect} onUpgradeShaft={onUpgradeShaft} onHireMiner={onHireMiner} onUpgradeElevator={onUpgradeElevator} onUpgradeWarehouse={onUpgradeWarehouse} /> : <MineHub state={state} mine={mine} onEnterMine={setSelectedMineId} onCollect={onCollect} onUnlockRoom={onUnlockRoom} />}
+    {selectedMine
+      ? <MineInterior state={state} mine={selectedMine} onBack={() => setSelectedElement(null)} onCollect={onCollect} onUpgradeFloor={onUpgradeFloor} onUnlockFloor={onUnlockFloor} onUpgradeElevator={onUpgradeElevator} onUpgradeWarehouse={onUpgradeWarehouse} />
+      : <MineMap state={state} spiritMine={spiritMine} onEnterMine={setSelectedElement} onUnlockMine={onUnlockMine} />}
   </section>;
 }

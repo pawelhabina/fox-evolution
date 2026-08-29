@@ -1,4 +1,4 @@
-export const SAVE_DATA_VERSION = 2;
+export const SAVE_DATA_VERSION = 3;
 
 const BASE_MAX_TIER = 15;
 const MAX_TIER = 30;

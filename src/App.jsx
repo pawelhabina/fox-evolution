@@ -1328,28 +1328,28 @@ export default function App() {
         {activeRealm === 'mine' ? (
           <SpiritMineRealm
             state={state}
-            onCollect={(roomId) => {
-              dispatch({ type: ACTIONS.MINE_COLLECT, roomId, nowTs: Date.now() });
+            onCollect={(element) => {
+              dispatch({ type: ACTIONS.MINE_COLLECT, element, nowTs: Date.now() });
               playSfx('mineCollect');
             }}
-            onUpgradeShaft={(roomId) => {
-              dispatch({ type: ACTIONS.MINE_UPGRADE_SHAFT, roomId, nowTs: Date.now() });
+            onUpgradeFloor={(element, floorId) => {
+              dispatch({ type: ACTIONS.MINE_UPGRADE_SHAFT, element, floorId, nowTs: Date.now() });
               playSfx('upgrade');
             }}
-            onHireMiner={(roomId) => {
-              dispatch({ type: ACTIONS.MINE_HIRE_MINER, roomId, nowTs: Date.now() });
+            onUnlockMine={(element) => {
+              dispatch({ type: ACTIONS.MINE_UNLOCK_MINE, element, nowTs: Date.now() });
               playSfx('buy');
             }}
-            onUnlockRoom={() => {
-              dispatch({ type: ACTIONS.MINE_UNLOCK_ROOM, nowTs: Date.now() });
+            onUnlockFloor={(element) => {
+              dispatch({ type: ACTIONS.MINE_UNLOCK_FLOOR, element, nowTs: Date.now() });
               playSfx('buy');
             }}
-            onUpgradeElevator={(roomId) => {
-              dispatch({ type: ACTIONS.MINE_UPGRADE_ELEVATOR, roomId, nowTs: Date.now() });
+            onUpgradeElevator={(element) => {
+              dispatch({ type: ACTIONS.MINE_UPGRADE_ELEVATOR, element, nowTs: Date.now() });
               playSfx('upgrade');
             }}
-            onUpgradeWarehouse={(roomId) => {
-              dispatch({ type: ACTIONS.MINE_UPGRADE_WAREHOUSE, roomId, nowTs: Date.now() });
+            onUpgradeWarehouse={(element) => {
+              dispatch({ type: ACTIONS.MINE_UPGRADE_WAREHOUSE, element, nowTs: Date.now() });
               playSfx('upgrade');
             }}
           />

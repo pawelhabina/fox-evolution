@@ -50,19 +50,21 @@ export const HELP_SECTIONS = [
     id: 'mine',
     title: 'Kopalnia Duchów',
     icon: 'diamond',
-    summary: 'Po pierwszej Hydrze odblokujesz Esencję i podziemne królestwo z maksymalnie 10 automatycznymi kopalniami.',
+    summary: 'Po pierwszej Hydrze odblokujesz trzy kopalnie żywiołów działające jak osobne automatyczne zakłady.',
     tips: [
       ['Odblokowanie', 'Pokonaj Hydrę po połączeniu trzech żywiołowych lisów na poziomie 20. Otrzymasz pierwsze 25 Esencji Hydry.'],
-      ['Mapa kopalń', 'Kraina jest mapą maksymalnie 10 osobnych kopalni. Kliknij „Wejdź do kopalni”, aby otworzyć jej szyb, windę, magazyn i pracowników.'],
+      ['Mapa kopalń', 'Na mapie zawsze widzisz trzy kopalnie: Ognia, Energii i Wody. Kliknij „Wejdź do kopalni”, aby zobaczyć jej piętra, windę i magazyn.'],
       ['Pierwsza kopalnia', 'Na początku działa tylko Kopalnia Ognia. Wytwarza Ogniste monety, którymi rozwiniesz szyb i odblokujesz Kopalnię Prądu.'],
-      ['Kolejne kopalnie', 'Kopalnie odblokowują się w kolejności Ogień → Prąd → Woda. Koszt nowej kopalni płacisz monetami poprzedniego żywiołu. Możesz zbudować ich łącznie 10.'],
+      ['Kolejne kopalnie', 'Kopalnie odblokowują się w kolejności Ogień → Energia → Woda. Energię kupujesz za Ogniste monety, a Wodę za Monety Energii.'],
       ['Trzy waluty', 'Każdy żywioł ma własne monety. Ogniste, Elektryczne i Wodne monety ulepszają wyłącznie kopalnie odpowiadającego im typu.'],
-      ['Odbieranie', 'W konkretnej kopalni odbierzesz tylko jej urobek. Na mapie przycisk „Odbierz ze wszystkich” opróżnia wszystkie magazyny naraz.'],
-      ['Górnicy i poziomy', 'Pogłębianie kopalni i zatrudnianie kolejnych lisów zwiększa jej tempo produkcji. Głębsze pokoje dostają dodatkowy bonus.'],
-      ['Winda i magazyn', 'Każda kopalnia ma własną, widoczną windę oraz własny magazyn. Winda kursuje między szybem a magazynem i zwiększa produkcję, a magazyn podnosi limit urobku. Oba ulepszasz osobno za Esencję Hydry.'],
+      ['Droga urobku', 'Lisy kopią na swoim piętrze, wracają do skrzynki przy windzie i zostawiają w niej urobek. Winda odbiera zawartość skrzynek i dopiero wtedy przewozi ją do magazynu na powierzchni.'],
+      ['Pracownicy', 'Każde piętro zaczyna z jednym lisem. Drugi pojawia się na Lv 10, trzeci na Lv 25, czwarty na Lv 50, a piąty na maksymalnym Lv 100.'],
+      ['Winda', 'Poziom windy zwiększa ilość urobku zabieraną w jednym kursie i skraca czas przejazdu między piętrami. Winda nie może rozładować się do pełnego magazynu.'],
+      ['Magazyn', 'Do portfela odbierasz tylko surowiec znajdujący się w magazynie na powierzchni. Gdy magazyn jest pełny, winda czeka, a skrzynki na piętrach stopniowo się zapełniają.'],
+      ['Nowe piętra', 'W każdej kopalni możesz otwierać kolejne szyby. Każde piętro ma własny poziom, pracowników, produkcję i skrzynkę.'],
       ['Minimalizacja', 'Gra rozlicza upływ rzeczywistego czasu. Zminimalizowane okno nie zatrzymuje planszy ani kopalni.']
     ],
-    callout: 'Odbieraj urobek przed zapełnieniem kopalni — pełny magazyn zatrzymuje produkcję danego pokoju.'
+    callout: 'Odbieraj magazyn regularnie — po jego zapełnieniu winda nie ma gdzie zostawić urobku.'
   },
   {
     id: 'rebirth',

@@ -1,5 +1,5 @@
 const ELEMENTS = ['fire', 'electric', 'water'];
-const MAX_MINE_ROOMS = 10;
+const MAX_MINE_FLOORS = 10;
 
 export const ADMIN_SAVE_PRESETS = [
   'HYDRA_READY',
@@ -21,16 +21,19 @@ function nextAvailableFoxId(state, foxes) {
   return Math.max(1, safeInteger(state?.meta?.nextFoxId, 1), highestFoxId + 1);
 }
 
-function createMineShaft(room, level = 1, miners = 1) {
+function createMineFloor(floor, level = 1) {
+  return { id: floor, floor, level, chestStored: 0 };
+}
+
+function createElementMine(element, unlocked = element === 'fire', maxed = false) {
   return {
-    id: room,
-    room,
-    element: ELEMENTS[(room - 1) % ELEMENTS.length],
-    level,
-    miners,
-    elevatorLevel: level,
-    warehouseLevel: level,
-    stored: 0
+    id: element,
+    element,
+    unlocked,
+    elevatorLevel: maxed ? 100 : 1,
+    warehouseLevel: maxed ? 100 : 1,
+    warehouseStored: 0,
+    floors: Array.from({ length: maxed ? MAX_MINE_FLOORS : 1 }, (_, index) => createMineFloor(index + 1, maxed ? 100 : 1))
   };
 }
 
@@ -109,11 +112,28 @@ function buildHydraReadyPatch(state) {
 
 function buildSpiritMinePatch(state, maxed) {
   const currentMine = state?.realms?.spiritMine || {};
-  const shafts = maxed
-    ? Array.from({ length: MAX_MINE_ROOMS }, (_, index) => createMineShaft(index + 1, 25, 10))
-    : (Array.isArray(currentMine.shafts) && currentMine.shafts.length > 0
-        ? currentMine.shafts
-        : [createMineShaft(1)]);
+  const currentMines = Array.isArray(currentMine.mines) && currentMine.mines.length === 3
+    ? currentMine.mines
+    : ELEMENTS.map((element) => createElementMine(element, element === 'fire'));
+  const mines = ELEMENTS.map((element, index) => {
+    if (maxed) return createElementMine(element, true, true);
+    const current = currentMines.find((mine) => mine?.element === element) || createElementMine(element, index === 0);
+    const floors = Array.isArray(current.floors) && current.floors.length > 0 ? current.floors : [createMineFloor(1)];
+    return {
+      id: element,
+      element,
+      unlocked: index === 0 ? true : Boolean(current.unlocked && currentMines[index - 1]?.unlocked),
+      elevatorLevel: Math.max(1, safeInteger(current.elevatorLevel, 1)),
+      warehouseLevel: Math.max(1, safeInteger(current.warehouseLevel, 1)),
+      warehouseStored: Math.max(0, Number(current.warehouseStored) || 0),
+      floors: floors.slice(0, MAX_MINE_FLOORS).map((floor, floorIndex) => ({
+        id: floorIndex + 1,
+        floor: floorIndex + 1,
+        level: Math.max(1, safeInteger(floor.level, 1)),
+        chestStored: Math.max(0, Number(floor.chestStored) || 0)
+      }))
+    };
+  });
 
   return {
     currencies: {
@@ -128,11 +148,7 @@ function buildSpiritMinePatch(state, maxed) {
         unlocked: true,
         totalCollected: safeInteger(currentMine.totalCollected),
         lastAdvancedAt: currentMine.lastAdvancedAt || null,
-        shafts: shafts.map((shaft) => ({
-          ...shaft,
-          elevatorLevel: maxed ? 25 : Math.max(1, safeInteger(shaft.elevatorLevel ?? currentMine.elevatorLevel, 1)),
-          warehouseLevel: maxed ? 25 : Math.max(1, safeInteger(shaft.warehouseLevel ?? currentMine.warehouseLevel, 1))
-        }))
+        mines
       }
     }
   };
