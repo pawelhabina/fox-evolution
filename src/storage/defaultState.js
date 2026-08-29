@@ -82,14 +82,24 @@ export function createInitialState(nowTs = Date.now()) {
         clicks: 0,
         buys: 0,
         coinsEarned: 0,
-        maxTier: 1
+        maxTier: 1,
+        upgrades: 0,
+        sells: 0,
+        rebirths: 0,
+        evolutions: 0,
+        mineCollects: 0
       },
       weekly: {
         merges: 0,
         clicks: 0,
         buys: 0,
         coinsEarned: 0,
-        maxTier: 1
+        maxTier: 1,
+        upgrades: 0,
+        sells: 0,
+        rebirths: 0,
+        evolutions: 0,
+        mineCollects: 0
       }
     },
     quests: createQuestState(nowTs),

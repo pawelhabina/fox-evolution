@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { formatCompact, formatNumber } from '../game/format';
 import {
   SPIRIT_MINE_CURRENCY_KEYS,
@@ -6,6 +6,7 @@ import {
   canUnlockElementMine,
   getMineElevatorCycleSeconds,
   getMineElevatorLoad,
+  getMineElevatorProgress,
   getMineElevatorThroughput,
   getMineFacilityCost,
   getMineFloorChestCapacity,
@@ -81,29 +82,38 @@ function MineMap({ state, spiritMine, onEnterMine, onUnlockMine }) {
 }
 
 function ElevatorVisual({ mine, animations }) {
-  const [routeIndex, setRouteIndex] = useState(0);
-  const route = useMemo(() => [0, ...mine.floors.map((floor) => floor.id), 0], [mine.floors]);
-  const cycleSeconds = getMineElevatorCycleSeconds(mine.elevatorLevel);
-
-  useEffect(() => {
-    setRouteIndex(0);
-  }, [mine.element, mine.floors.length]);
-
-  useEffect(() => {
-    if (!animations || route.length <= 1) return undefined;
-    const timer = window.setInterval(() => setRouteIndex((current) => (current + 1) % route.length), Math.max(900, cycleSeconds * 1000));
-    return () => window.clearInterval(timer);
-  }, [animations, cycleSeconds, route.length]);
-
-  const stop = route[routeIndex] || 0;
-  const top = stop === 0 ? 3 : 12 + (stop - 1) * (80 / Math.max(1, mine.floors.length));
+  const elevator = mine.elevator || { phase: 'idle', floorId: 0, cargo: 0, elapsed: 0, duration: 1 };
+  const progress = getMineElevatorProgress(mine);
+  const floor = mine.floors.find((item) => item.id === elevator.floorId);
+  const floorTop = floor ? 12 + (floor.floor - 1) * (80 / Math.max(1, mine.floors.length)) : 3;
+  const top = elevator.phase === 'travel-down'
+    ? 3 + (floorTop - 3) * progress
+    : elevator.phase === 'travel-up'
+      ? floorTop + (3 - floorTop) * progress
+      : elevator.phase === 'loading'
+        ? floorTop
+        : 3;
+  const capacity = getMineElevatorLoad(mine.elevatorLevel);
+  const phaseMeta = {
+    idle: ['SPRAWDZA', true],
+    'travel-down': [`JEDZIE P${floor?.floor || ''}`, false],
+    loading: ['ZAŁADUNEK', true],
+    'travel-up': ['JEDZIE NA GÓRĘ', false],
+    unloading: ['ROZŁADUNEK', true],
+    'warehouse-full': ['MAGAZYN PEŁNY', true]
+  }[elevator.phase] || ['CZEKA', true];
   return <aside className={`element-elevator ${animations ? '' : 'is-paused'}`} aria-label={`Winda kopalni ${META[mine.element].shortName}`}>
-    <div className="element-elevator-head"><strong>WINDA</strong><span>Lv {mine.elevatorLevel}</span></div>
+    <div className="element-elevator-head"><strong>WINDA</strong><span>Lv {mine.elevatorLevel}</span><small>{formatCompact(elevator.cargo, 1)} / {formatNumber(capacity)}</small></div>
     <div className="element-elevator-rail">
       <i className="element-elevator-stop is-warehouse" style={{ top: '3%' }}>MAG.</i>
       {mine.floors.map((floor, index) => <i key={floor.id} className="element-elevator-stop" style={{ top: `${12 + index * (80 / Math.max(1, mine.floors.length))}%` }}>P{floor.floor}</i>)}
       <span className="element-elevator-cable" />
-      <div className="element-elevator-cab" style={{ top: `${top}%`, '--cab-travel-time': `${Math.max(0.45, cycleSeconds * 0.55)}s` }}><b>{META[mine.element].icon}</b><small>{stop === 0 ? 'ROZŁADUNEK' : `PIĘTRO ${stop}`}</small></div>
+      <div className="element-elevator-cab" style={{ top: `${top}%`, '--cab-travel-time': animations ? '.2s' : '0s' }}>
+        <b>{META[mine.element].icon}</b>
+        <small>{phaseMeta[0]}</small>
+        <em>{formatCompact(elevator.cargo, 1)}/{formatCompact(capacity, 1)}</em>
+        {phaseMeta[1] && <span className="mine-action-progress" aria-label={`Postęp: ${Math.round(progress * 100)}%`}><i style={{ width: `${progress * 100}%` }} /></span>}
+      </div>
     </div>
   </aside>;
 }
@@ -120,7 +130,7 @@ function MineFloor({ mine, floor, balance, animations, onUpgradeFloor }) {
     <div className={`element-mine-worksite ${animations ? '' : 'is-paused'}`} aria-label={`${workers} pracowników na piętrze ${floor.floor}`}>
       <div className="element-mine-chest"><span>📦</span><small>SKRZYNKA</small><b>{formatCompact(floor.chestStored, 1)}</b></div>
       <div className="element-mine-track" />
-      {Array.from({ length: workers }, (_, worker) => <span key={worker} className="element-mine-worker" style={{ '--worker-delay': `${worker * -1.35}s`, '--worker-row': worker }}>🦊</span>)}
+      {Array.from({ length: workers }, (_, worker) => <span key={worker} className="element-mine-worker" style={{ '--worker-delay': `${worker * -1.35}s`, '--worker-row': worker }}><b>🦊</b><i className="element-worker-progress" /></span>)}
       <div className="element-mine-face"><span>{meta.icon}</span><small>KOPANIE</small></div>
     </div>
     <div className="element-mine-floor-info"><span><strong>Szyb Lv {floor.level}/100</strong><small>{workers} {workers === 1 ? 'pracownik' : 'pracowników'} · {formatCompact(rate, 2)} {meta.icon}/s</small></span><b>Skrzynka {formatCompact(floor.chestStored, 1)} / {formatNumber(capacity)}</b></div>
@@ -150,7 +160,7 @@ function MineInterior({ state, mine, onBack, onCollect, onUpgradeFloor, onUnlock
 
     <div className={`element-mine-management element-mine-management--${mine.element}`}>
       <section className={`element-warehouse ${warehouseFull ? 'is-full' : ''}`}><div><small>MAGAZYN NA POWIERZCHNI · LV {mine.warehouseLevel}</small><strong>{formatCompact(mine.warehouseStored, 1)} / {formatNumber(warehouseCapacity)} {meta.icon}</strong><span>{warehouseFull ? 'PEŁNY — winda czeka na odbiór' : `Wolne miejsce: ${formatCompact(warehouseCapacity - mine.warehouseStored, 1)}`}</span></div><div className="mine-storage"><span style={{ width: `${warehouseFill}%` }} /></div><div className="element-facility-actions"><button type="button" disabled={collectable <= 0} onClick={() => onCollect(mine.element)}>Odbierz +{formatNumber(collectable)} {meta.icon}</button><MinePurchaseButton balance={balance} cost={warehouseCost} icon={meta.icon} label={mine.warehouseLevel >= 100 ? 'Magazyn Lv 100/100' : 'Ulepsz magazyn'} max={mine.warehouseLevel >= 100} onClick={() => onUpgradeWarehouse(mine.element)} /></div></section>
-      <section className="element-elevator-stats"><small>TRANSPORT WINDY · LV {mine.elevatorLevel}</small><div><span>Ładunek na kurs<strong>{formatNumber(getMineElevatorLoad(mine.elevatorLevel))} {meta.icon}</strong></span><span>Czas przejazdu<strong>{getMineElevatorCycleSeconds(mine.elevatorLevel).toFixed(1)} s</strong></span><span>Przepustowość<strong>{formatCompact(getMineElevatorThroughput(mine.elevatorLevel), 2)} {meta.icon}/s</strong></span><span>Czeka w skrzynkach<strong>{formatCompact(pending, 1)} {meta.icon}</strong></span></div><MinePurchaseButton balance={balance} cost={elevatorCost} icon={meta.icon} label={mine.elevatorLevel >= 100 ? 'Winda Lv 100/100' : 'Ulepsz windę'} max={mine.elevatorLevel >= 100} onClick={() => onUpgradeElevator(mine.element)} /></section>
+      <section className="element-elevator-stats"><small>TRANSPORT WINDY · LV {mine.elevatorLevel}</small><div><span>Limit ładunku<strong>{formatNumber(getMineElevatorLoad(mine.elevatorLevel))} {meta.icon}</strong></span><span>Pełny cykl P1<strong>{getMineElevatorCycleSeconds(mine.elevatorLevel).toFixed(1)} s</strong></span><span>Szac. przepustowość<strong>{formatCompact(getMineElevatorThroughput(mine.elevatorLevel), 2)} {meta.icon}/s</strong></span><span>Czeka w skrzynkach<strong>{formatCompact(pending, 1)} {meta.icon}</strong></span></div><MinePurchaseButton balance={balance} cost={elevatorCost} icon={meta.icon} label={mine.elevatorLevel >= 100 ? 'Winda Lv 100/100' : 'Ulepsz windę'} max={mine.elevatorLevel >= 100} onClick={() => onUpgradeElevator(mine.element)} /></section>
     </div>
 
     <div className={`element-mine-interior element-mine-interior--${mine.element}`}>

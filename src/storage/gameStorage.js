@@ -20,6 +20,7 @@ import {
   createElementMine,
   createMineFloor,
   createSpiritMineState,
+  sanitizeMineElevatorState,
   getMineFloorChestCapacity,
   getMineRoomElement,
   getMineWarehouseCapacity
@@ -265,14 +266,24 @@ function sanitizeState(rawState, nowTs = Date.now()) {
       clicks: clampCurrency(daily.clicks ?? 0),
       buys: clampCurrency(daily.buys ?? 0),
       coinsEarned: clampCurrency(daily.coinsEarned ?? 0),
-      maxTier: clamp(Number(daily.maxTier) || 1, 1, MAX_TIER)
+      maxTier: clamp(Number(daily.maxTier) || 1, 1, MAX_TIER),
+      upgrades: clampCurrency(daily.upgrades ?? 0),
+      sells: clampCurrency(daily.sells ?? 0),
+      rebirths: clampCurrency(daily.rebirths ?? 0),
+      evolutions: clampCurrency(daily.evolutions ?? 0),
+      mineCollects: clampCurrency(daily.mineCollects ?? 0)
     },
     weekly: {
       merges: clampCurrency(weekly.merges ?? 0),
       clicks: clampCurrency(weekly.clicks ?? 0),
       buys: clampCurrency(weekly.buys ?? 0),
       coinsEarned: clampCurrency(weekly.coinsEarned ?? 0),
-      maxTier: clamp(Number(weekly.maxTier) || 1, 1, MAX_TIER)
+      maxTier: clamp(Number(weekly.maxTier) || 1, 1, MAX_TIER),
+      upgrades: clampCurrency(weekly.upgrades ?? 0),
+      sells: clampCurrency(weekly.sells ?? 0),
+      rebirths: clampCurrency(weekly.rebirths ?? 0),
+      evolutions: clampCurrency(weekly.evolutions ?? 0),
+      mineCollects: clampCurrency(weekly.mineCollects ?? 0)
     }
   };
 
@@ -307,6 +318,7 @@ function sanitizeState(rawState, nowTs = Date.now()) {
   const quests = {
     dailyKey: typeof rawState.quests?.dailyKey === 'string' ? rawState.quests.dailyKey : base.quests.dailyKey,
     weeklyKey: typeof rawState.quests?.weeklyKey === 'string' ? rawState.quests.weeklyKey : base.quests.weeklyKey,
+    scalingVersion: clampCurrency(rawState.quests?.scalingVersion ?? 0),
     daily: safeDailyQuests.length > 0 ? safeDailyQuests : base.quests.daily,
     weekly: safeWeeklyQuests.length > 0 ? safeWeeklyQuests : base.quests.weekly,
     loginRewards: {
@@ -420,7 +432,8 @@ function sanitizeState(rawState, nowTs = Date.now()) {
     const unlocked = element === 'fire' || Boolean(
       (rawElementMine?.unlocked ?? legacyElementShafts.length > 0) && previousUnlocked
     );
-    return { ...fallback, unlocked, elevatorLevel, warehouseLevel, warehouseStored, floors };
+    const elevator = sanitizeMineElevatorState(rawElementMine?.elevator, { elevatorLevel, floors });
+    return { ...fallback, unlocked, elevatorLevel, elevator, warehouseLevel, warehouseStored, floors };
   });
   const spiritMine = {
     ...mineBase,

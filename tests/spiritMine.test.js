@@ -32,6 +32,46 @@ test('worker count is derived from floor level at exact progression thresholds',
   assert.deepEqual([1, 9, 10, 24, 25, 49, 50, 99, 100].map(getMineWorkerCount), [1, 1, 2, 2, 3, 3, 4, 4, 5]);
 });
 
+test('elevator keeps cargo in the cab and unloads it only at the surface warehouse', async () => {
+  const mineApi = await import('../src/game/spiritMine.js');
+  const base = mineApi.createSpiritMineState();
+  const fire = {
+    ...base.mines[0],
+    floors: [{ ...base.mines[0].floors[0], chestStored: 35 }]
+  };
+  let state = { ...base, unlocked: true, mines: [fire, ...base.mines.slice(1)] };
+
+  state = mineApi.advanceSpiritMine(state, 0.75);
+  let advancedFire = mineApi.getElementMine(state, 'fire');
+  assert.equal(advancedFire.elevator.phase, 'travel-down');
+
+  state = mineApi.advanceSpiritMine(state, advancedFire.elevator.duration);
+  advancedFire = mineApi.getElementMine(state, 'fire');
+  assert.equal(advancedFire.elevator.phase, 'loading');
+
+  state = mineApi.advanceSpiritMine(state, advancedFire.elevator.duration);
+  advancedFire = mineApi.getElementMine(state, 'fire');
+  assert.equal(advancedFire.elevator.phase, 'travel-up');
+  assert.ok(advancedFire.elevator.cargo > 0);
+  assert.equal(advancedFire.warehouseStored, 0);
+
+  state = mineApi.advanceSpiritMine(state, advancedFire.elevator.duration);
+  advancedFire = mineApi.getElementMine(state, 'fire');
+  assert.equal(advancedFire.elevator.phase, 'unloading');
+  assert.equal(advancedFire.warehouseStored, 0);
+
+  state = mineApi.advanceSpiritMine(state, advancedFire.elevator.duration);
+  advancedFire = mineApi.getElementMine(state, 'fire');
+  assert.ok(advancedFire.warehouseStored > 0);
+  assert.equal(advancedFire.elevator.cargo, 0);
+});
+
+test('elevator loading time scales with the actual cargo amount', async () => {
+  const mineApi = await import('../src/game/spiritMine.js');
+  const capacity = mineApi.getMineElevatorLoad(1);
+  assert.ok(mineApi.getMineElevatorLoadSeconds(1, 3, capacity) < mineApi.getMineElevatorLoadSeconds(1, capacity, capacity));
+});
+
 test('map always contains three mines unlocked with previous element currency', async () => {
   const mineApi = await import('../src/game/spiritMine.js');
   const spiritMine = { ...mineApi.createSpiritMineState(), unlocked: true };
@@ -109,6 +149,9 @@ test('mine UI shows three-card map, animated workers, floor chests, elevator and
   assert.match(component, /label="Odblokuj kopalnię"/);
   assert.match(component, /element-mine-chest/);
   assert.match(component, /getMineWorkerCount/);
+  assert.match(component, /Limit ładunku/);
+  assert.match(component, /mine-action-progress/);
+  assert.match(component, /element-worker-progress/);
   assert.match(component, /Odbierz \+/);
   assert.match(component, /onUnlockFloor/);
   assert.match(styles, /@keyframes element-worker-cycle/);

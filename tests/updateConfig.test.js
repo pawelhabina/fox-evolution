@@ -89,13 +89,13 @@ test('main menu uses the official game icon instead of the paw glyph', () => {
   assert.doesNotMatch(mainMenu, /<GuiIcon name="pet" alt="" size=\{64\} \/>/);
 });
 
-test('version 1.2.16 is visibly marked as Early Access', () => {
+test('version 1.2.17 is visibly marked as Early Access', () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
   const constants = fs.readFileSync(path.join(projectRoot, 'src/game/constants.js'), 'utf8');
   const mainMenu = fs.readFileSync(path.join(projectRoot, 'src/components/MainMenu.jsx'), 'utf8');
 
-  assert.equal(packageJson.version, '1.2.16');
-  assert.match(constants, /GAME_VERSION = '1\.2\.16'/);
+  assert.equal(packageJson.version, '1.2.17');
+  assert.match(constants, /GAME_VERSION = '1\.2\.17'/);
   assert.match(constants, /RELEASE_CHANNEL = 'EARLY ACCESS'/);
   assert.match(mainMenu, /EARLY ACCESS/);
   assert.match(mainMenu, /Wczesna wersja gry/);
@@ -117,6 +117,15 @@ test('unlocked essence uses its own icon and stays in the single-row desktop HUD
   assert.doesNotMatch(hud, /value: `◈ \$\{formatNumber\(essence\)\}`/);
   assert.match(pixelIcons, /essence:\s*\(/);
   assert.match(styles, /\.hud-stat-grid--with-essence\s*\{\s*grid-template-columns:\s*repeat\(7,/);
+});
+
+test('the active game mode is visibly shifted in the modes menu', () => {
+  const app = fs.readFileSync(path.join(projectRoot, 'src/App.jsx'), 'utf8');
+  const styles = fs.readFileSync(path.join(projectRoot, 'src/styles.css'), 'utf8');
+
+  assert.match(app, /mode-menu-option[\s\S]*?is-active/);
+  assert.match(app, /aria-current=\{activeRealm === 'merge'/);
+  assert.match(styles, /\.mode-menu-option\.is-active\s*\{[^}]*translateX\(7px\)/);
 });
 
 test('macOS packages receive a complete stable ad-hoc signature', () => {

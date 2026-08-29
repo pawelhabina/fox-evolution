@@ -72,6 +72,18 @@ test('daily and weekly quests use achievable idle-game targets', () => {
   assert.match(quests, /syncQuestDefinitions\(nextState\.quests\.weekly/);
 });
 
+test('quest targets scale with the save phase and include late-game activities', () => {
+  const constants = read('src/game/constants.js');
+  const quests = read('src/game/quests.js');
+
+  assert.match(quests, /getQuestGameStage/);
+  assert.match(quests, /phaseFloor = target \* 10 \*\* stage/);
+  assert.match(quests, /getExpectedCoinsPerSecond/);
+  assert.match(quests, /getBuyFoxCost/);
+  assert.match(quests, /QUEST_SCALING_VERSION = 2/);
+  for (const type of ['upgrades', 'sells', 'rebirths', 'evolutions', 'mineCollects']) assert.match(constants, new RegExp(`type: '${type}'`));
+});
+
 test('every rebirth shop cost grows by two and gem drop starts at 1%', () => {
   const constants = read('src/game/constants.js');
   const economy = read('src/game/economy.js');

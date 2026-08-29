@@ -506,10 +506,12 @@ export function gameReducer(state, action) {
         foxes: next.foxes.filter((item) => item.id !== action.id),
         stats: {
           ...next.stats,
-          lifetimeSells: clampCurrency((next.stats.lifetimeSells || 0) + 1)
+          lifetimeSells: clampCurrency((next.stats.lifetimeSells || 0) + 1),
+          daily: { ...next.stats.daily, sells: clampCurrency((next.stats.daily.sells || 0) + 1) },
+          weekly: { ...next.stats.weekly, sells: clampCurrency((next.stats.weekly.sells || 0) + 1) }
         }
       };
-      return withCoinsGain(withoutFox, gain, 'sale');
+      return refreshQuestProgress(withCoinsGain(withoutFox, gain, 'sale'));
     }
 
     case ACTIONS.EVOLVE_FOX: {
@@ -547,10 +549,12 @@ export function gameReducer(state, action) {
         stats: {
           ...next.stats,
           lifetimeGemsSpent: clampCurrency((next.stats.lifetimeGemsSpent || 0) + EVOLUTION_COST_GEMS),
-          lifetimeEvolutions: clampCurrency((next.stats.lifetimeEvolutions || 0) + 1)
+          lifetimeEvolutions: clampCurrency((next.stats.lifetimeEvolutions || 0) + 1),
+          daily: { ...next.stats.daily, evolutions: clampCurrency((next.stats.daily.evolutions || 0) + 1) },
+          weekly: { ...next.stats.weekly, evolutions: clampCurrency((next.stats.weekly.evolutions || 0) + 1) }
         }
       };
-      return withFoxProgress(evolved, evolved.foxes.find((fox) => fox.id === action.id), nowTs);
+      return refreshQuestProgress(withFoxProgress(evolved, evolved.foxes.find((fox) => fox.id === action.id), nowTs));
     }
 
     case ACTIONS.START_BOSS_BATTLE: {
@@ -734,7 +738,7 @@ export function gameReducer(state, action) {
         return next;
       }
 
-      return {
+      return refreshQuestProgress({
         ...next,
         currencies: {
           ...next.currencies,
@@ -749,9 +753,11 @@ export function gameReducer(state, action) {
           lifetimeCoinsSpent: clampCurrency((next.stats.lifetimeCoinsSpent || 0) + (config.currency === 'coins' ? cost : 0)),
           lifetimeGemsSpent: clampCurrency((next.stats.lifetimeGemsSpent || 0) + (config.currency === 'gems' ? cost : 0)),
           lifetimeRebirthTokensSpent: clampCurrency((next.stats.lifetimeRebirthTokensSpent || 0) + (config.currency === 'rebirthTokens' ? cost : 0)),
-          lifetimeUpgradesBought: clampCurrency((next.stats.lifetimeUpgradesBought || 0) + 1)
+          lifetimeUpgradesBought: clampCurrency((next.stats.lifetimeUpgradesBought || 0) + 1),
+          daily: { ...next.stats.daily, upgrades: clampCurrency((next.stats.daily.upgrades || 0) + 1) },
+          weekly: { ...next.stats.weekly, upgrades: clampCurrency((next.stats.weekly.upgrades || 0) + 1) }
         }
-      };
+      });
     }
 
     case ACTIONS.BUY_TEMP_BOOST: {
@@ -824,7 +830,7 @@ export function gameReducer(state, action) {
       const collected = Math.floor(Math.max(0, Number(elementMine.warehouseStored) || 0));
       if (collected <= 0) return next;
       const currencyKey = SPIRIT_MINE_CURRENCY_KEYS[elementMine.element];
-      return {
+      return refreshQuestProgress({
         ...next,
         currencies: {
           ...next.currencies,
@@ -839,8 +845,13 @@ export function gameReducer(state, action) {
               ? { ...mine, warehouseStored: mine.warehouseStored - collected }
               : mine)
           }
+        },
+        stats: {
+          ...next.stats,
+          daily: { ...next.stats.daily, mineCollects: clampCurrency((next.stats.daily.mineCollects || 0) + 1) },
+          weekly: { ...next.stats.weekly, mineCollects: clampCurrency((next.stats.weekly.mineCollects || 0) + 1) }
         }
-      };
+      });
     }
 
     case ACTIONS.MINE_UPGRADE_SHAFT: {
@@ -1057,7 +1068,9 @@ export function gameReducer(state, action) {
         stats: {
           ...next.stats,
           lifetimeRebirths: clampCurrency(next.stats.lifetimeRebirths + 1),
-          lifetimeRebirthTokensEarned: clampCurrency((next.stats.lifetimeRebirthTokensEarned || 0) + earned)
+          lifetimeRebirthTokensEarned: clampCurrency((next.stats.lifetimeRebirthTokensEarned || 0) + earned),
+          daily: { ...next.stats.daily, rebirths: clampCurrency((next.stats.daily.rebirths || 0) + 1) },
+          weekly: { ...next.stats.weekly, rebirths: clampCurrency((next.stats.weekly.rebirths || 0) + 1) }
         },
         quests: next.quests,
         pokedex: next.pokedex,

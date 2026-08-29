@@ -1,4 +1,4 @@
-export const GAME_VERSION = '1.2.16';
+export const GAME_VERSION = '1.2.17';
 export const RELEASE_CHANNEL = 'EARLY ACCESS';
 export const BASE_TICK_SECONDS = 5;
 export const MIN_TICK_SECONDS = 1;
@@ -267,7 +267,13 @@ export const DAILY_QUEST_POOL = [
   { id: 'daily_buy_20', label: 'Kup 20 lisów', target: 20, type: 'buys' },
   { id: 'daily_buy_35', label: 'Kup 50 lisów', target: 50, type: 'buys' },
   { id: 'daily_tier_8', label: 'Osiągnij tier 9', target: 9, type: 'maxTier' },
-  { id: 'daily_coins_20k', label: 'Zarób 50 000 monet', target: 50000, type: 'coinsEarned' }
+  { id: 'daily_coins_20k', label: 'Zarób 50 000 monet', target: 50000, type: 'coinsEarned' },
+  { id: 'daily_coins_long', label: 'Zarób 200 000 monet', target: 200000, type: 'coinsEarned' },
+  { id: 'daily_upgrades', label: 'Kup 5 ulepszeń', target: 5, type: 'upgrades' },
+  { id: 'daily_sells', label: 'Sprzedaj 4 lisy', target: 4, type: 'sells' },
+  { id: 'daily_rebirth', label: 'Wykonaj rebirth', target: 1, type: 'rebirths', minStage: 2 },
+  { id: 'daily_evolutions', label: 'Ewoluuj lisa', target: 1, type: 'evolutions', minStage: 2 },
+  { id: 'daily_mine_collects', label: 'Odbierz magazyn 3 razy', target: 3, type: 'mineCollects', requiresMine: true }
 ];
 
 export const WEEKLY_QUEST_POOL = [
@@ -279,7 +285,13 @@ export const WEEKLY_QUEST_POOL = [
   { id: 'weekly_buy_260', label: 'Kup 600 lisów', target: 600, type: 'buys' },
   { id: 'weekly_tier_14', label: 'Osiągnij tier 16', target: 16, type: 'maxTier' },
   { id: 'weekly_tier_18', label: 'Osiągnij tier 20', target: 20, type: 'maxTier' },
-  { id: 'weekly_coins_2m', label: 'Zarób 25 000 000 monet', target: 25000000, type: 'coinsEarned' }
+  { id: 'weekly_coins_2m', label: 'Zarób 25 000 000 monet', target: 25000000, type: 'coinsEarned' },
+  { id: 'weekly_coins_long', label: 'Zarób 100 000 000 monet', target: 100000000, type: 'coinsEarned' },
+  { id: 'weekly_upgrades', label: 'Kup 40 ulepszeń', target: 40, type: 'upgrades' },
+  { id: 'weekly_sells', label: 'Sprzedaj 30 lisów', target: 30, type: 'sells' },
+  { id: 'weekly_rebirths', label: 'Wykonaj 2 rebirthy', target: 2, type: 'rebirths', minStage: 2 },
+  { id: 'weekly_evolutions', label: 'Wykonaj 5 ewolucji', target: 5, type: 'evolutions', minStage: 2 },
+  { id: 'weekly_mine_collects', label: 'Odbierz magazyn 20 razy', target: 20, type: 'mineCollects', requiresMine: true }
 ];
 
 export const LOGIN_REWARD_VALUES = {

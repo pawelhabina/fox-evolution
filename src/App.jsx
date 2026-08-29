@@ -595,7 +595,12 @@ export default function App() {
       const currentTickMs = getTickDurationSeconds(currentState, nowTs) * 1000;
       const tickCount = Math.floor(clock.accumulatedMs / currentTickMs);
       setTickCountdown(roundToTenth(Math.max(0, (currentTickMs - clock.accumulatedMs) / 1000)));
-      if (tickCount <= 0) return;
+      if (tickCount <= 0) {
+        if (elapsedMs > 0 && currentState.realms?.spiritMine?.unlocked) {
+          dispatch({ type: ACTIONS.APPLY_TICK, tickCount: 0, elapsedSeconds: elapsedMs / 1000, nowTs });
+        }
+        return;
+      }
 
       const accountedMs = tickCount * currentTickMs;
       clock.accumulatedMs -= accountedMs;
@@ -609,7 +614,7 @@ export default function App() {
           }))
         });
       }
-      dispatch({ type: ACTIONS.APPLY_TICK, tickCount, elapsedSeconds: accountedMs / 1000, nowTs });
+      dispatch({ type: ACTIONS.APPLY_TICK, tickCount, elapsedSeconds: elapsedMs / 1000, nowTs });
     };
 
     const interval = window.setInterval(advanceEconomyClock, 200);
@@ -1144,7 +1149,7 @@ export default function App() {
 
       {modeMenuOpen && (
         <div
-          className="pixel-frame fixed left-5 top-24 z-40 w-64 rounded-xl border border-slate-700 bg-slate-900/95 p-3 shadow-2xl"
+          className="mode-menu pixel-frame fixed left-5 top-24 z-40 w-64 rounded-xl border border-slate-700 bg-slate-900/95 p-3 shadow-2xl"
           onClick={(event) => event.stopPropagation()}
         >
           <p className="mb-2 flex items-center gap-2 text-sm font-bold text-amber-300">
@@ -1154,7 +1159,8 @@ export default function App() {
           <div className="grid gap-2">
             <button
               type="button"
-              className={`rounded-lg border px-3 py-2 text-left text-sm ${activeRealm === 'merge' ? 'border-emerald-400/80 bg-emerald-500/10 text-emerald-200' : 'border-slate-600 bg-slate-800/70 text-slate-200'}`}
+              aria-current={activeRealm === 'merge' ? 'page' : undefined}
+              className={`mode-menu-option rounded-lg border px-3 py-2 text-left text-sm ${activeRealm === 'merge' ? 'is-active border-emerald-400/80 bg-emerald-500/10 text-emerald-200' : 'border-slate-600 bg-slate-800/70 text-slate-200'}`}
               onClick={() => {
                 setActiveRealm('merge');
                 setModeMenuOpen(false);
@@ -1165,14 +1171,15 @@ export default function App() {
             <button
               type="button"
               disabled={!state.realms?.spiritMine?.unlocked}
-              className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm ${state.realms?.spiritMine?.unlocked ? (activeRealm === 'mine' ? 'border-fuchsia-400 bg-fuchsia-500/15 text-fuchsia-100' : 'border-fuchsia-700 bg-fuchsia-950/30 text-fuchsia-200') : 'border-slate-700 bg-slate-800/70 text-slate-500'}`}
+              aria-current={activeRealm === 'mine' ? 'page' : undefined}
+              className={`mode-menu-option flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm ${state.realms?.spiritMine?.unlocked ? (activeRealm === 'mine' ? 'is-active border-fuchsia-400 bg-fuchsia-500/15 text-fuchsia-100' : 'border-fuchsia-700 bg-fuchsia-950/30 text-fuchsia-200') : 'border-slate-700 bg-slate-800/70 text-slate-500'}`}
               onClick={() => {
                 setActiveRealm('mine');
                 setModeMenuOpen(false);
                 playSfx('ui');
               }}
             >
-              <span>Kopalnia Duchów</span><span>{state.realms?.spiritMine?.unlocked ? '◈' : '🔒'}</span>
+              <span>Kopalnia Duchów {activeRealm === 'mine' ? '(aktywna)' : ''}</span><span>{state.realms?.spiritMine?.unlocked ? '◈' : '🔒'}</span>
             </button>
             <button
               type="button"

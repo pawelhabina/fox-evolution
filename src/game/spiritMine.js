@@ -14,6 +14,19 @@ export const SPIRIT_MINE_UNLOCKS = {
 };
 
 const BASE_RATE = { fire: 0.42, electric: 0.52, water: 0.36 };
+const ELEVATOR_IDLE_CHECK_SECONDS = 0.75;
+const ELEVATOR_PHASES = new Set(['idle', 'travel-down', 'loading', 'travel-up', 'unloading', 'warehouse-full']);
+
+export function createMineElevatorState() {
+  return {
+    phase: 'idle',
+    floorId: 0,
+    cargo: 0,
+    elapsed: 0,
+    duration: ELEVATOR_IDLE_CHECK_SECONDS,
+    transferAmount: 0
+  };
+}
 
 export function getMineRoomElement(room) {
   const safeRoom = Math.max(1, Math.floor(Number(room) || 1));
@@ -41,6 +54,7 @@ export function createElementMine(element, unlocked = element === 'fire') {
     element: safeElement,
     unlocked: Boolean(unlocked),
     elevatorLevel: 1,
+    elevator: createMineElevatorState(),
     warehouseLevel: 1,
     warehouseStored: 0,
     floors: [createMineFloor(1)]
@@ -119,8 +133,30 @@ export function getMineElevatorLoad(level) {
   return Math.floor(35 * 1.16 ** Math.max(0, (Number(level) || 1) - 1));
 }
 
+export function getMineElevatorTravelSeconds(level, floor = 1) {
+  const safeLevel = Math.max(1, Number(level) || 1);
+  const safeFloor = Math.max(1, Number(floor) || 1);
+  const speedMultiplier = 1 + (safeLevel - 1) * 0.045;
+  return Math.max(0.45, (1.55 + safeFloor * 0.24) / speedMultiplier);
+}
+
+export function getMineElevatorLoadSeconds(level, amount, capacity = getMineElevatorLoad(level)) {
+  const safeLevel = Math.max(1, Number(level) || 1);
+  const safeCapacity = Math.max(1, Number(capacity) || 1);
+  const fillRatio = Math.max(0, Math.min(1, (Number(amount) || 0) / safeCapacity));
+  const fullLoadSeconds = Math.max(0.8, 4.4 / (1 + (safeLevel - 1) * 0.035));
+  return Math.max(0.35, fullLoadSeconds * (0.16 + fillRatio * 0.84));
+}
+
+export function getMineElevatorUnloadSeconds(level, amount, capacity = getMineElevatorLoad(level)) {
+  return Math.max(0.3, getMineElevatorLoadSeconds(level, amount, capacity) * 0.72);
+}
+
 export function getMineElevatorCycleSeconds(level) {
-  return Math.max(1.35, 8.5 / (1 + Math.max(0, (Number(level) || 1) - 1) * 0.045));
+  const capacity = getMineElevatorLoad(level);
+  return getMineElevatorTravelSeconds(level, 1) * 2
+    + getMineElevatorLoadSeconds(level, capacity, capacity)
+    + getMineElevatorUnloadSeconds(level, capacity, capacity);
 }
 
 export function getMineElevatorThroughput(level) {
@@ -147,44 +183,156 @@ export function getMineNextRoom(mine) {
   return getMineNextFloor(mine);
 }
 
-function advanceElementMine(mine, elapsedSeconds) {
-  if (!mine?.unlocked) return mine;
-  const floors = mine.floors.map((floor) => ({
+function normalizeElevatorState(mine) {
+  const fallback = createMineElevatorState();
+  const raw = mine?.elevator || fallback;
+  const capacity = getMineElevatorLoad(mine?.elevatorLevel);
+  const floorIds = new Set((mine?.floors || []).map((floor) => floor.id));
+  const phase = ELEVATOR_PHASES.has(raw.phase) ? raw.phase : fallback.phase;
+  const floorId = floorIds.has(Number(raw.floorId)) ? Number(raw.floorId) : 0;
+  const duration = Math.max(0.05, Number(raw.duration) || fallback.duration);
+  return {
+    phase,
+    floorId,
+    cargo: Math.min(capacity, Math.max(0, Number(raw.cargo) || 0)),
+    elapsed: Math.min(duration, Math.max(0, Number(raw.elapsed) || 0)),
+    duration,
+    transferAmount: Math.max(0, Number(raw.transferAmount) || 0)
+  };
+}
+
+function produceOnFloors(floors, mine, seconds) {
+  if (seconds <= 0) return floors;
+  return floors.map((floor) => ({
     ...floor,
     chestStored: Math.min(
       getMineFloorChestCapacity(floor),
-      Math.max(0, Number(floor.chestStored) || 0) + getMineFloorRate(floor, mine) * elapsedSeconds
+      Math.max(0, Number(floor.chestStored) || 0) + getMineFloorRate(floor, mine) * seconds
     )
   }));
+}
 
+function selectElevatorFloor(floors) {
+  return floors
+    .filter((floor) => floor.chestStored > 0.001)
+    .sort((a, b) => b.chestStored - a.chestStored || b.floor - a.floor)[0] || null;
+}
+
+function nextElevatorPhase(elevator, floors, mine, warehouseStored) {
+  const capacity = getMineElevatorLoad(mine.elevatorLevel);
   const warehouseCapacity = getMineWarehouseCapacity(mine.warehouseLevel);
-  const warehouseStored = Math.min(warehouseCapacity, Math.max(0, Number(mine.warehouseStored) || 0));
-  const freeWarehouseSpace = Math.max(0, warehouseCapacity - warehouseStored);
-  const pendingTotal = floors.reduce((sum, floor) => sum + floor.chestStored, 0);
-  const transportBudget = Math.min(
-    pendingTotal,
-    freeWarehouseSpace,
-    getMineElevatorThroughput(mine.elevatorLevel) * elapsedSeconds
-  );
+  const selectedFloor = floors.find((floor) => floor.id === elevator.floorId);
 
-  if (transportBudget <= 0 || pendingTotal <= 0) {
-    return { ...mine, warehouseStored, floors };
+  if (elevator.phase === 'idle') {
+    if (elevator.cargo > 0) {
+      const freeSpace = Math.max(0, warehouseCapacity - warehouseStored);
+      const amount = Math.min(elevator.cargo, freeSpace);
+      return amount > 0
+        ? { ...elevator, phase: 'unloading', floorId: 0, elapsed: 0, duration: getMineElevatorUnloadSeconds(mine.elevatorLevel, amount, capacity), transferAmount: amount }
+        : { ...elevator, phase: 'warehouse-full', floorId: 0, elapsed: 0, duration: ELEVATOR_IDLE_CHECK_SECONDS, transferAmount: 0 };
+    }
+    const target = selectElevatorFloor(floors);
+    return target
+      ? { ...elevator, phase: 'travel-down', floorId: target.id, elapsed: 0, duration: getMineElevatorTravelSeconds(mine.elevatorLevel, target.floor), transferAmount: 0 }
+      : { ...elevator, elapsed: 0, duration: ELEVATOR_IDLE_CHECK_SECONDS, transferAmount: 0 };
   }
 
-  let transported = 0;
-  const transportedFloors = floors.map((floor, index) => {
-    const share = index === floors.length - 1
-      ? Math.min(floor.chestStored, Math.max(0, transportBudget - transported))
-      : Math.min(floor.chestStored, transportBudget * floor.chestStored / pendingTotal);
-    transported += share;
-    return { ...floor, chestStored: Math.max(0, floor.chestStored - share) };
-  });
+  if (elevator.phase === 'travel-down') {
+    const amount = Math.min(Math.max(0, capacity - elevator.cargo), Math.max(0, selectedFloor?.chestStored || 0));
+    return amount > 0
+      ? { ...elevator, phase: 'loading', elapsed: 0, duration: getMineElevatorLoadSeconds(mine.elevatorLevel, amount, capacity), transferAmount: amount }
+      : { ...elevator, phase: 'travel-up', elapsed: 0, duration: getMineElevatorTravelSeconds(mine.elevatorLevel, selectedFloor?.floor || 1), transferAmount: 0 };
+  }
 
-  return {
-    ...mine,
-    warehouseStored: Math.min(warehouseCapacity, warehouseStored + transported),
-    floors: transportedFloors
-  };
+  if (elevator.phase === 'loading') {
+    const amount = Math.min(elevator.transferAmount, Math.max(0, selectedFloor?.chestStored || 0), Math.max(0, capacity - elevator.cargo));
+    if (amount > 0 && selectedFloor) {
+      selectedFloor.chestStored = Math.max(0, selectedFloor.chestStored - amount);
+    }
+    return {
+      ...elevator,
+      phase: 'travel-up',
+      cargo: Math.min(capacity, elevator.cargo + amount),
+      elapsed: 0,
+      duration: getMineElevatorTravelSeconds(mine.elevatorLevel, selectedFloor?.floor || 1),
+      transferAmount: 0
+    };
+  }
+
+  if (elevator.phase === 'travel-up') {
+    const freeSpace = Math.max(0, warehouseCapacity - warehouseStored);
+    const amount = Math.min(elevator.cargo, freeSpace);
+    return amount > 0
+      ? { ...elevator, phase: 'unloading', floorId: 0, elapsed: 0, duration: getMineElevatorUnloadSeconds(mine.elevatorLevel, amount, capacity), transferAmount: amount }
+      : { ...elevator, phase: 'warehouse-full', floorId: 0, elapsed: 0, duration: ELEVATOR_IDLE_CHECK_SECONDS, transferAmount: 0 };
+  }
+
+  if (elevator.phase === 'unloading') {
+    const amount = Math.min(elevator.transferAmount, elevator.cargo, Math.max(0, warehouseCapacity - warehouseStored));
+    return {
+      elevator: {
+        ...elevator,
+        phase: elevator.cargo - amount > 0.001 ? 'warehouse-full' : 'idle',
+        floorId: 0,
+        cargo: Math.max(0, elevator.cargo - amount),
+        elapsed: 0,
+        duration: ELEVATOR_IDLE_CHECK_SECONDS,
+        transferAmount: 0
+      },
+      warehouseStored: warehouseStored + amount
+    };
+  }
+
+  if (elevator.phase === 'warehouse-full') {
+    if (elevator.cargo <= 0.001) {
+      return { ...elevator, phase: 'idle', cargo: 0, elapsed: 0, duration: ELEVATOR_IDLE_CHECK_SECONDS, transferAmount: 0 };
+    }
+    const freeSpace = Math.max(0, warehouseCapacity - warehouseStored);
+    const amount = Math.min(elevator.cargo, freeSpace);
+    return amount > 0
+      ? { ...elevator, phase: 'unloading', elapsed: 0, duration: getMineElevatorUnloadSeconds(mine.elevatorLevel, amount, capacity), transferAmount: amount }
+      : { ...elevator, elapsed: 0, duration: ELEVATOR_IDLE_CHECK_SECONDS, transferAmount: 0 };
+  }
+
+  return createMineElevatorState();
+}
+
+function advanceElementMine(mine, elapsedSeconds) {
+  if (!mine?.unlocked) return mine;
+  let floors = mine.floors.map((floor) => ({ ...floor }));
+  let elevator = normalizeElevatorState(mine);
+  const warehouseCapacity = getMineWarehouseCapacity(mine.warehouseLevel);
+  let warehouseStored = Math.min(warehouseCapacity, Math.max(0, Number(mine.warehouseStored) || 0));
+  let remaining = Math.max(0, elapsedSeconds);
+  let transitions = 0;
+
+  while (remaining > 0.0001 && transitions < 20_000) {
+    if (elevator.phase === 'warehouse-full' && warehouseStored >= warehouseCapacity - 0.001) {
+      floors = produceOnFloors(floors, mine, remaining);
+      elevator = { ...elevator, elapsed: (elevator.elapsed + remaining) % elevator.duration };
+      remaining = 0;
+      break;
+    }
+
+    const phaseRemaining = Math.max(0.0001, elevator.duration - elevator.elapsed);
+    const step = Math.min(remaining, phaseRemaining);
+    floors = produceOnFloors(floors, mine, step);
+    elevator = { ...elevator, elapsed: elevator.elapsed + step };
+    remaining -= step;
+
+    if (elevator.elapsed + 0.0001 < elevator.duration) continue;
+    const transition = nextElevatorPhase(elevator, floors, mine, warehouseStored);
+    if (transition?.elevator) {
+      elevator = transition.elevator;
+      warehouseStored = Math.min(warehouseCapacity, transition.warehouseStored);
+    } else {
+      elevator = transition;
+    }
+    transitions += 1;
+  }
+
+  if (remaining > 0) floors = produceOnFloors(floors, mine, remaining);
+  return { ...mine, warehouseStored, elevator, floors };
 }
 
 export function advanceSpiritMine(spiritMine, elapsedSeconds, nowTs = Date.now()) {
@@ -199,6 +347,15 @@ export function advanceSpiritMine(spiritMine, elapsedSeconds, nowTs = Date.now()
 
 export function getMinePendingTotal(mine) {
   return (mine?.floors || []).reduce((sum, floor) => sum + Math.max(0, Number(floor.chestStored) || 0), 0);
+}
+
+export function getMineElevatorProgress(mine) {
+  const elevator = normalizeElevatorState(mine);
+  return Math.max(0, Math.min(1, elevator.elapsed / Math.max(0.05, elevator.duration)));
+}
+
+export function sanitizeMineElevatorState(elevator, mine) {
+  return normalizeElevatorState({ ...mine, elevator });
 }
 
 export function getMineStoredByElement(spiritMine) {
