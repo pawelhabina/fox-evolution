@@ -25,7 +25,7 @@ test('gem rewards are reduced without removing regular drops', () => {
   const constants = read('src/game/constants.js');
   const quests = read('src/game/quests.js');
 
-  assert.match(constants, /BASE_GEM_DROP_RATE = 0\.008/);
+  assert.match(constants, /BASE_GEM_DROP_RATE = 0\.01/);
   assert.match(constants, /early: 15/);
   assert.match(constants, /common: 30/);
   assert.match(quests, /nextStreakDay <= 3/);
@@ -72,7 +72,7 @@ test('daily and weekly quests use achievable idle-game targets', () => {
   assert.match(quests, /syncQuestDefinitions\(nextState\.quests\.weekly/);
 });
 
-test('every rebirth shop cost doubles on each level and gem drop starts at 0.8%', () => {
+test('every rebirth shop cost doubles on each level and gem drop starts at 1%', () => {
   const constants = read('src/game/constants.js');
   const economy = read('src/game/economy.js');
 
@@ -81,7 +81,7 @@ test('every rebirth shop cost doubles on each level and gem drop starts at 0.8%'
   assert.match(constants.match(/purchaseTierChance: \{[\s\S]*?\r?\n  \},\r?\n  gemDropRate:/)?.[0] || '', /growth: 2/);
   assert.match(constants.match(/gemDropRate: \{[\s\S]*?\r?\n  \}\r?\n\};/)?.[0] || '', /growth: 2/);
   assert.doesNotMatch(economy, /upgradeId === 'tickSpeed'/);
-  assert.match(constants, /BASE_GEM_DROP_RATE = 0\.008/);
+  assert.match(constants, /BASE_GEM_DROP_RATE = 0\.01/);
 });
 
 test('legacy rebirth shop purchases receive a one-time refund without losing levels', () => {

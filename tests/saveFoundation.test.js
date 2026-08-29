@@ -51,3 +51,20 @@ test('gameplay actions feed currency, activity, time and discovery counters', ()
   assert.match(quests, /lifetimeWeeklyQuestsClaimed/);
   assert.match(quests, /lifetimeLoginRewardsClaimed/);
 });
+
+test('cloud polling identifies the writer and ignores this installation own autosaves', () => {
+  const app = read('src/App.jsx');
+  const storage = read('src/storage/gameStorage.js');
+  const gameRoute = read('server/src/routes/game.js');
+  const saveService = read('server/src/services/saveService.js');
+  const prismaSchema = read('server/prisma/schema.prisma');
+
+  assert.match(storage, /getSyncClientId/);
+  assert.match(storage, /clientId: getSyncClientId\(\)/);
+  assert.match(storage, /lastWriterId: found\.lastWriterId/);
+  assert.match(app, /getRemoteChangeAction\(remoteSlotUpdatedAtRef\.current, remoteMeta, syncClientIdRef\.current\)/);
+  assert.match(gameRoute, /clientId: z\.string\(\)\.min\(8\)\.max\(128\)/);
+  assert.match(saveService, /lastWriterId: clientId \|\| null/);
+  assert.match(saveService, /lastWriterId: 'admin'/);
+  assert.match(prismaSchema, /lastWriterId\s+String\?/);
+});

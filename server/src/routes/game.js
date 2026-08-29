@@ -8,6 +8,7 @@ const router = express.Router();
 
 const saveSchema = z.object({
   name: z.string().max(64).optional(),
+  clientId: z.string().min(8).max(128).optional(),
   state: z.record(z.any())
 });
 
@@ -47,6 +48,7 @@ router.put('/saves/:slotId', async (req, res) => {
       principal: req.principal,
       slotId,
       name: parsed.name,
+      clientId: parsed.clientId,
       state: parsed.state
     });
 

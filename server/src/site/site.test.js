@@ -32,8 +32,8 @@ test('public site contains the complete download journey and required assets', (
   assert.equal((html.match(/data-tilt/g) || []).length, 3);
   assert.match(html, /data-scroll-progress/);
   assert.match(html, /data-motion-toggle/);
-  assert.match(html, /site\.css\?v=1\.2\.10/);
-  assert.match(html, /site\.js\?v=1\.2\.10/);
+  assert.match(html, /site\.css\?v=1\.2\.11/);
+  assert.match(html, /site\.js\?v=1\.2\.11/);
 
   assert.match(script, /completeMergeDemo/);
   assert.match(script, /startAutomaticMergeDemo/);

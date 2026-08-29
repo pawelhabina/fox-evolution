@@ -46,6 +46,23 @@ import {
 const STORAGE_LEGACY_KEY = 'fox-evolution-save-v1';
 const STORAGE_META_KEY = 'fox-evolution-meta-v2';
 const STORAGE_SLOT_PREFIX = 'fox-evolution-slot-';
+const STORAGE_SYNC_CLIENT_ID_KEY = 'fox-evolution-sync-client-id-v1';
+let fallbackSyncClientId = null;
+
+export function getSyncClientId() {
+  try {
+    const existing = localStorage.getItem(STORAGE_SYNC_CLIENT_ID_KEY);
+    if (existing) return existing;
+    const created = globalThis.crypto?.randomUUID?.() || `client-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(STORAGE_SYNC_CLIENT_ID_KEY, created);
+    return created;
+  } catch (_error) {
+    if (!fallbackSyncClientId) {
+      fallbackSyncClientId = `client-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+    return fallbackSyncClientId;
+  }
+}
 
 function toUiNumber(value) {
   const num = Number(value);
@@ -505,6 +522,7 @@ function normalizeRemoteSaveResponse(payload) {
   return {
     state: sanitizeState(save.state),
     updatedAt: save.updatedAt || null,
+    lastWriterId: save.lastWriterId || null,
     slotId: save.slotId || null
   };
 }
@@ -623,6 +641,7 @@ export async function saveSlotState({ slotId, state, name }) {
         method: 'PUT',
         body: {
           name,
+          clientId: getSyncClientId(),
           state
         }
       });
@@ -642,7 +661,8 @@ export async function saveSlotState({ slotId, state, name }) {
 
       return {
         slotId: payload?.save?.slotId || effectiveSlotId,
-        updatedAt: payload?.save?.updatedAt || null
+        updatedAt: payload?.save?.updatedAt || null,
+        lastWriterId: payload?.save?.lastWriterId || null
       };
     } catch (_error) {
       // The desktop game remains playable offline and stores the save locally.
@@ -703,6 +723,11 @@ export async function loadSlotStateWithMeta(slotId) {
 }
 
 export async function getRemoteSlotUpdatedAt(slotId) {
+  const meta = await getRemoteSlotMeta(slotId);
+  return meta?.updatedAt || null;
+}
+
+export async function getRemoteSlotMeta(slotId) {
   if (!isRemoteApiEnabled()) {
     return null;
   }
@@ -711,7 +736,9 @@ export async function getRemoteSlotUpdatedAt(slotId) {
     await ensureGuestSession();
     const payload = await apiRequest('/api/game/saves');
     const found = (payload?.saves || []).find((save) => save.slotId === slotId);
-    return found?.updatedAt || null;
+    return found
+      ? { updatedAt: found.updatedAt || null, lastWriterId: found.lastWriterId || null }
+      : null;
   } catch (_error) {
     return null;
   }

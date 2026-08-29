@@ -33,6 +33,8 @@ export function serializeSave(save) {
       topTier: save.summaryTopTier
     },
     cheatScore: save.cheatScore,
+    lastWriterId: save.lastWriterId || null,
+    editedByAdminAt: save.editedByAdminAt || null,
     updatedAt: save.updatedAt,
     createdAt: save.createdAt
   };
@@ -94,7 +96,7 @@ export async function getSaveForPrincipal(principal, slotId) {
   });
 }
 
-export async function saveForPrincipal({ principal, slotId, name, state, skipCheatValidation = false, editedByAdmin = false }) {
+export async function saveForPrincipal({ principal, slotId, name, state, clientId = null, skipCheatValidation = false, editedByAdmin = false }) {
   const ownerWhere = ownerWhereFromPrincipal(principal);
   const existing = await prisma.gameSave.findFirst({
     where: {
@@ -145,7 +147,9 @@ export async function saveForPrincipal({ principal, slotId, name, state, skipChe
     summaryTopTier: summary.topTier,
     cheatScore,
     cheatNotes,
-    editedByAdminAt: editedByAdmin ? new Date() : null,
+    ...(editedByAdmin
+      ? { editedByAdminAt: new Date(), lastWriterId: 'admin' }
+      : { lastWriterId: clientId || null }),
     ...ownerWhere
   };
 
@@ -210,7 +214,8 @@ async function updateSaveAsAdmin({
         summaryCoins: summary.coins,
         summaryGems: summary.gems,
         summaryTopTier: summary.topTier,
-        editedByAdminAt: new Date()
+        editedByAdminAt: new Date(),
+        lastWriterId: 'admin'
       }
     });
 

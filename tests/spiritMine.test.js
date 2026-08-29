@@ -106,13 +106,17 @@ test('mine UI shows three-card map, animated workers, floor chests, elevator and
   const component = fs.readFileSync(path.join(root, 'src/components/SpiritMineRealm.jsx'), 'utf8');
   const styles = fs.readFileSync(path.join(root, 'src/styles.css'), 'utf8');
   assert.match(component, /Trzy kopalnie/);
-  assert.match(component, /Odblokuj ·/);
+  assert.match(component, /label="Odblokuj kopalnię"/);
   assert.match(component, /element-mine-chest/);
   assert.match(component, /getMineWorkerCount/);
   assert.match(component, /Odbierz \+/);
   assert.match(component, /onUnlockFloor/);
   assert.match(styles, /@keyframes element-worker-cycle/);
   assert.match(styles, /transition: top var\(--cab-travel-time\) linear/);
+  assert.match(component, /is-affordable/);
+  assert.match(component, /BRAKUJE/);
+  assert.match(styles, /\.mine-purchase-button\.is-affordable/);
+  assert.match(styles, /\.mine-purchase-button\.is-unaffordable/);
 });
 
 test('boss QTE timer animates continuously for the full prompt duration', () => {

@@ -48,6 +48,7 @@ import {
 } from './game/bossBattle';
 import { registerFoxClick } from './game/clickRateLimit.mjs';
 import { createInitialState } from './storage/defaultState';
+import { getRemoteChangeAction } from './storage/cloudSync.mjs';
 import {
   deleteSlot,
   acceptGameFriendRequest,
@@ -58,7 +59,8 @@ import {
   getAuthPrincipal,
   beginOAuthLogin,
   completeOAuthLoginFromCallback,
-  getRemoteSlotUpdatedAt,
+  getRemoteSlotMeta,
+  getSyncClientId,
   hydrateSessionFromOAuthRedirect,
   installGameUpdateAndRestart,
   isRemoteStorageEnabled,
@@ -104,21 +106,6 @@ const EVENT_MODE_ENABLED = false;
 
 function roundToTenth(value) {
   return Math.round(value * 10) / 10;
-}
-
-function isRemoteTimestampNewer(currentTs, nextTs) {
-  if (!nextTs) {
-    return false;
-  }
-  const nextMs = new Date(nextTs).getTime();
-  if (!Number.isFinite(nextMs)) {
-    return false;
-  }
-  const currentMs = currentTs ? new Date(currentTs).getTime() : 0;
-  if (!Number.isFinite(currentMs)) {
-    return true;
-  }
-  return nextMs > currentMs;
 }
 
 function useToasts() {
@@ -229,6 +216,7 @@ export default function App() {
   const stateRef = useRef(state);
   const incomePulseIdRef = useRef(0);
   const remoteSlotUpdatedAtRef = useRef(null);
+  const syncClientIdRef = useRef(getSyncClientId());
   const updateDownloadedToastShownRef = useRef(false);
   const foxClickTimestampsRef = useRef([]);
   const adminMessageRef = useRef(null);
@@ -677,17 +665,23 @@ export default function App() {
     const autosave = setInterval(() => {
       (async () => {
         if (remoteEnabled) {
-          const remoteUpdatedAt = await getRemoteSlotUpdatedAt(currentSlotId);
-          if (isRemoteTimestampNewer(remoteSlotUpdatedAtRef.current, remoteUpdatedAt)) {
-            const latest = await loadSlotStateWithMeta(currentSlotId);
-            if (latest?.state) {
-              const syncedState = withGlobalSettings(latest.state);
-              remoteSlotUpdatedAtRef.current = latest.updatedAt || remoteUpdatedAt;
-              dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: syncedState, nowTs: Date.now() });
-              setTickCountdown(getTickDurationSeconds(syncedState));
-              pushToast('Save został zaktualizowany na serwerze. Wczytano nowe dane.');
+          const remoteMeta = await getRemoteSlotMeta(currentSlotId);
+          const remoteUpdatedAt = remoteMeta?.updatedAt || null;
+          const remoteAction = getRemoteChangeAction(remoteSlotUpdatedAtRef.current, remoteMeta, syncClientIdRef.current);
+          if (remoteAction !== 'none') {
+            if (remoteAction === 'acknowledge-own') {
+              remoteSlotUpdatedAtRef.current = remoteUpdatedAt;
+            } else {
+              const latest = await loadSlotStateWithMeta(currentSlotId);
+              if (latest?.state) {
+                const syncedState = withGlobalSettings(latest.state);
+                remoteSlotUpdatedAtRef.current = latest.updatedAt || remoteUpdatedAt;
+                dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: syncedState, nowTs: Date.now() });
+                setTickCountdown(getTickDurationSeconds(syncedState));
+                pushToast('Save został zaktualizowany na serwerze. Wczytano nowe dane.');
+              }
+              return;
             }
-            return;
           }
         }
 
@@ -740,9 +734,16 @@ export default function App() {
     }
 
     const remoteRefresh = setInterval(() => {
-      getRemoteSlotUpdatedAt(currentSlotId)
-        .then(async (remoteUpdatedAt) => {
-          if (!isRemoteTimestampNewer(remoteSlotUpdatedAtRef.current, remoteUpdatedAt)) {
+      getRemoteSlotMeta(currentSlotId)
+        .then(async (remoteMeta) => {
+          const remoteUpdatedAt = remoteMeta?.updatedAt || null;
+          const remoteAction = getRemoteChangeAction(remoteSlotUpdatedAtRef.current, remoteMeta, syncClientIdRef.current);
+          if (remoteAction === 'none') {
+            return;
+          }
+
+          if (remoteAction === 'acknowledge-own') {
+            remoteSlotUpdatedAtRef.current = remoteUpdatedAt;
             return;
           }
 

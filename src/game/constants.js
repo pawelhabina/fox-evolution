@@ -1,4 +1,4 @@
-export const GAME_VERSION = '1.2.10';
+export const GAME_VERSION = '1.2.11';
 export const RELEASE_CHANNEL = 'EARLY ACCESS';
 export const BASE_TICK_SECONDS = 5;
 export const MIN_TICK_SECONDS = 1;
@@ -8,7 +8,7 @@ export const MIN_FOXES_LIMIT = 5;
 export const MAX_FOXES_LIMIT = 100;
 export const TILE_SIZE = 78;
 export const BASE_HIGHER_TIER_CHANCE = 0.05;
-export const BASE_GEM_DROP_RATE = 0.008;
+export const BASE_GEM_DROP_RATE = 0.01;
 export const TEMP_BOOST_DURATION_OPTIONS = [
   { id: '15m', label: '15 min', seconds: 15 * 60, cost: 20 },
   { id: '30m', label: '30 min', seconds: 30 * 60, cost: 35 },
@@ -234,7 +234,7 @@ export const UPGRADE_DEFS = {
   gemDropRate: {
     id: 'gemDropRate',
     title: 'Drop rate diamentów',
-    description: 'Start 0.8%. Każdy poziom dodaje +0.2% do szansy dropu diamentu na tick, aż do 25%.',
+    description: 'Start 1%. Każdy poziom dodaje +0.2% do szansy dropu diamentu na tick, aż do 25%.',
     shop: 'rebirth',
     currency: 'rebirthTokens',
     cap: 120,
