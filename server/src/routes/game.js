@@ -62,6 +62,12 @@ router.put('/saves/:slotId', async (req, res) => {
     if (error.message === 'SAVE_LIMIT_REACHED') {
       return res.status(409).json({ error: 'SAVE_LIMIT_REACHED', maxSaves: 5 });
     }
+    if (error.message === 'SYNC_CLIENT_UPDATE_REQUIRED') {
+      return res.status(409).json({ error: 'CLIENT_UPDATE_REQUIRED' });
+    }
+    if (error.message === 'SAVE_ACTIVE_ELSEWHERE') {
+      return res.status(409).json({ error: 'SAVE_ACTIVE_ELSEWHERE' });
+    }
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'VALIDATION_ERROR', details: error.flatten() });
     }

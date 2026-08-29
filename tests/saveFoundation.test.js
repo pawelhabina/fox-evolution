@@ -63,6 +63,8 @@ test('cloud polling identifies the writer and ignores this installation own auto
   assert.match(storage, /clientId: getSyncClientId\(\)/);
   assert.match(storage, /lastWriterId: found\.lastWriterId/);
   assert.match(app, /getRemoteChangeAction\(remoteSlotUpdatedAtRef\.current, remoteMeta, syncClientIdRef\.current\)/);
+  assert.match(app, /cloudSyncInFlightRef/);
+  assert.match(app, /Zachowano bieżący postęp lokalnie/);
   assert.match(gameRoute, /clientId: z\.string\(\)\.min\(8\)\.max\(128\)/);
   assert.match(saveService, /lastWriterId: clientId \|\| null/);
   assert.match(saveService, /lastWriterId: 'admin'/);

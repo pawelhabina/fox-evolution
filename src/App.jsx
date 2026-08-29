@@ -217,6 +217,8 @@ export default function App() {
   const incomePulseIdRef = useRef(0);
   const remoteSlotUpdatedAtRef = useRef(null);
   const syncClientIdRef = useRef(getSyncClientId());
+  const cloudSyncInFlightRef = useRef(false);
+  const cloudConflictToastShownRef = useRef(false);
   const updateDownloadedToastShownRef = useRef(false);
   const foxClickTimestampsRef = useRef([]);
   const adminMessageRef = useRef(null);
@@ -663,19 +665,32 @@ export default function App() {
     }
 
     const autosave = setInterval(() => {
+      if (cloudSyncInFlightRef.current) {
+        return;
+      }
+      cloudSyncInFlightRef.current = true;
       (async () => {
         if (remoteEnabled) {
           const remoteMeta = await getRemoteSlotMeta(currentSlotId);
           const remoteUpdatedAt = remoteMeta?.updatedAt || null;
           const remoteAction = getRemoteChangeAction(remoteSlotUpdatedAtRef.current, remoteMeta, syncClientIdRef.current);
           if (remoteAction !== 'none') {
-            if (remoteAction === 'acknowledge-own') {
+            if (remoteAction === 'acknowledge-own' || remoteAction === 'acknowledge-unattributed') {
               remoteSlotUpdatedAtRef.current = remoteUpdatedAt;
+            } else if (remoteAction === 'conflict') {
+              remoteSlotUpdatedAtRef.current = remoteUpdatedAt;
+              saveSlotStateSync({ slotId: currentSlotId, state: stateRef.current });
+              if (!cloudConflictToastShownRef.current) {
+                cloudConflictToastShownRef.current = true;
+                pushToast('Ten save jest aktywny na innym urządzeniu. Zachowano bieżący postęp lokalnie.');
+              }
+              return;
             } else {
               const latest = await loadSlotStateWithMeta(currentSlotId);
               if (latest?.state) {
                 const syncedState = withGlobalSettings(latest.state);
                 remoteSlotUpdatedAtRef.current = latest.updatedAt || remoteUpdatedAt;
+                cloudConflictToastShownRef.current = false;
                 dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: syncedState, nowTs: Date.now() });
                 setTickCountdown(getTickDurationSeconds(syncedState));
                 pushToast('Save został zaktualizowany na serwerze. Wczytano nowe dane.');
@@ -688,10 +703,15 @@ export default function App() {
         const result = await saveSlotState({ slotId: currentSlotId, state: stateRef.current });
         if (result?.updatedAt) {
           remoteSlotUpdatedAtRef.current = result.updatedAt;
+          cloudConflictToastShownRef.current = false;
         }
-      })().catch(() => {
-        // ignore transient autosave errors
-      });
+      })()
+        .catch(() => {
+          // ignore transient autosave errors
+        })
+        .finally(() => {
+          cloudSyncInFlightRef.current = false;
+        });
     }, AUTOSAVE_SECONDS * 1000);
 
     return () => clearInterval(autosave);
@@ -734,6 +754,10 @@ export default function App() {
     }
 
     const remoteRefresh = setInterval(() => {
+      if (cloudSyncInFlightRef.current) {
+        return;
+      }
+      cloudSyncInFlightRef.current = true;
       getRemoteSlotMeta(currentSlotId)
         .then(async (remoteMeta) => {
           const remoteUpdatedAt = remoteMeta?.updatedAt || null;
@@ -742,8 +766,18 @@ export default function App() {
             return;
           }
 
-          if (remoteAction === 'acknowledge-own') {
+          if (remoteAction === 'acknowledge-own' || remoteAction === 'acknowledge-unattributed') {
             remoteSlotUpdatedAtRef.current = remoteUpdatedAt;
+            return;
+          }
+
+          if (remoteAction === 'conflict') {
+            remoteSlotUpdatedAtRef.current = remoteUpdatedAt;
+            saveSlotStateSync({ slotId: currentSlotId, state: stateRef.current });
+            if (!cloudConflictToastShownRef.current) {
+              cloudConflictToastShownRef.current = true;
+              pushToast('Ten save jest aktywny na innym urządzeniu. Zachowano bieżący postęp lokalnie.');
+            }
             return;
           }
 
@@ -754,12 +788,16 @@ export default function App() {
 
           const syncedState = withGlobalSettings(latest.state);
           remoteSlotUpdatedAtRef.current = latest.updatedAt || remoteUpdatedAt;
+          cloudConflictToastShownRef.current = false;
           dispatch({ type: ACTIONS.INIT_FROM_SAVE, payload: syncedState, nowTs: Date.now() });
           setTickCountdown(getTickDurationSeconds(syncedState));
           pushToast('Wykryto zmiany save na serwerze. Odświeżono stan gry.');
         })
         .catch(() => {
           // ignore polling errors
+        })
+        .finally(() => {
+          cloudSyncInFlightRef.current = false;
         });
     }, 6000);
 

@@ -4,6 +4,7 @@ import { detectCheatSignals } from '../utils/cheatDetection.js';
 import { summarizeState } from '../utils/gameState.js';
 import { listStatePatchPaths, mergeStatePatch } from '../utils/statePatch.js';
 import { buildAdminSavePresetPatch } from '../utils/adminSavePresets.js';
+import { getSaveWriteBlockReason } from './saveSync.js';
 
 const MAX_SAVES_PER_OWNER = 5;
 
@@ -109,6 +110,13 @@ export async function saveForPrincipal({ principal, slotId, name, state, clientI
     const count = await prisma.gameSave.count({ where: ownerWhere });
     if (count >= MAX_SAVES_PER_OWNER) {
       throw new Error('SAVE_LIMIT_REACHED');
+    }
+  }
+
+  if (!editedByAdmin) {
+    const writeBlockReason = getSaveWriteBlockReason(existing, clientId);
+    if (writeBlockReason) {
+      throw new Error(writeBlockReason);
     }
   }
 

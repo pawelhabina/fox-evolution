@@ -9,6 +9,8 @@ export function isRemoteTimestampNewer(currentTs, nextTs) {
 
 export function getRemoteChangeAction(currentTs, remoteMeta, syncClientId) {
   if (!isRemoteTimestampNewer(currentTs, remoteMeta?.updatedAt)) return 'none';
-  if (remoteMeta?.lastWriterId && remoteMeta.lastWriterId === syncClientId) return 'acknowledge-own';
-  return 'reload';
+  if (remoteMeta?.lastWriterId === 'admin') return 'reload';
+  if (!remoteMeta?.lastWriterId) return 'acknowledge-unattributed';
+  if (remoteMeta.lastWriterId === syncClientId) return 'acknowledge-own';
+  return 'conflict';
 }
