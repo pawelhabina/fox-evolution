@@ -89,13 +89,13 @@ test('main menu uses the official game icon instead of the paw glyph', () => {
   assert.doesNotMatch(mainMenu, /<GuiIcon name="pet" alt="" size=\{64\} \/>/);
 });
 
-test('version 1.2.17 is visibly marked as Early Access', () => {
+test('version 1.3.0 is visibly marked as Early Access', () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
   const constants = fs.readFileSync(path.join(projectRoot, 'src/game/constants.js'), 'utf8');
   const mainMenu = fs.readFileSync(path.join(projectRoot, 'src/components/MainMenu.jsx'), 'utf8');
 
-  assert.equal(packageJson.version, '1.2.17');
-  assert.match(constants, /GAME_VERSION = '1\.2\.17'/);
+  assert.equal(packageJson.version, '1.3.0');
+  assert.match(constants, /GAME_VERSION = '1\.3\.0'/);
   assert.match(constants, /RELEASE_CHANNEL = 'EARLY ACCESS'/);
   assert.match(mainMenu, /EARLY ACCESS/);
   assert.match(mainMenu, /Wczesna wersja gry/);
@@ -126,6 +126,7 @@ test('the active game mode is visibly shifted in the modes menu', () => {
   assert.match(app, /mode-menu-option[\s\S]*?is-active/);
   assert.match(app, /aria-current=\{activeRealm === 'merge'/);
   assert.match(styles, /\.mode-menu-option\.is-active\s*\{[^}]*translateX\(7px\)/);
+  assert.doesNotMatch(app, /\(aktywna\)|\(aktywne\)/);
 });
 
 test('macOS packages receive a complete stable ad-hoc signature', () => {

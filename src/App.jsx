@@ -1166,7 +1166,7 @@ export default function App() {
                 setModeMenuOpen(false);
               }}
             >
-              Plansza ewolucji {activeRealm === 'merge' ? '(aktywna)' : ''}
+              Plansza ewolucji
             </button>
             <button
               type="button"
@@ -1179,7 +1179,7 @@ export default function App() {
                 playSfx('ui');
               }}
             >
-              <span>Kopalnia Duchów {activeRealm === 'mine' ? '(aktywna)' : ''}</span><span>{state.realms?.spiritMine?.unlocked ? '◈' : '🔒'}</span>
+              <span>Kopalnia Duchów</span><span>{state.realms?.spiritMine?.unlocked ? '◈' : '🔒'}</span>
             </button>
             <button
               type="button"
