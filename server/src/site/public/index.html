@@ -17,7 +17,7 @@
     <meta name="twitter:description" content="Wczesny dostęp. Łącz. Ewoluuj. Zbuduj lisie imperium." />
     <meta name="twitter:image" content="https://foxevo.mionix.pl/og.png" />
     <link rel="icon" type="image/png" href="/assets/fox-evolution-icon.png" />
-    <link rel="stylesheet" href="/site.css?v=1.3.0" />
+    <link rel="stylesheet" href="/site.css?v=1.3.1" />
     <title>Fox Evolution Early Access — Merge Fox Tycoon</title>
   </head>
   <body>
@@ -35,7 +35,7 @@
           <span></span><span></span><span></span><span class="sr-only">Otwórz menu</span>
         </button>
         <nav id="site-nav" class="site-nav" aria-label="Główna nawigacja" data-nav>
-          <a href="#gra">Gra</a><a href="#ewolucja">Ewolucja</a><a href="#funkcje">Funkcje</a><a href="#poradnik">Poradnik</a><a href="#faq">FAQ</a>
+          <a href="#gra">Gra</a><a href="#ewolucja">Ewolucja</a><a href="#funkcje">Funkcje</a><a href="#poradnik">Poradnik</a><a href="#changelog">Changelog</a><a href="#faq">FAQ</a>
           <button class="motion-toggle" type="button" aria-pressed="true" data-motion-toggle><span aria-hidden="true">●</span><span data-motion-label>Animacje: ON</span></button>
           <a class="nav-download" href="#download">Pobierz grę</a>
         </nav>
@@ -165,10 +165,47 @@
         </div>
       </section>
 
+      <section id="changelog" class="changelog-section section-grid">
+        <div class="shell changelog-layout">
+          <div class="section-heading reveal">
+            <p class="eyebrow">// HISTORIA AKTUALIZACJI</p>
+            <h2>FOX EVOLUTION<br /><span>CHANGELOG.</span></h2>
+            <p>Najważniejsze nowości, poprawki i zmiany balansu publikowane razem z kolejnymi wydaniami gry.</p>
+          </div>
+          <div class="changelog-list">
+            <article class="changelog-entry changelog-entry--latest reveal">
+              <header><div><span class="changelog-version">v1.3.1</span><span class="changelog-badge">NAJNOWSZA</span></div><time datetime="2026-08-29">29.08.2026</time></header>
+              <h3>Changelog na stronie</h3>
+              <ul><li>Dodano publiczną historię aktualizacji dostępną z głównej nawigacji.</li><li>Uporządkowano informacje o najważniejszych zmianach z ostatnich wydań.</li></ul>
+            </article>
+            <article class="changelog-entry reveal">
+              <header><span class="changelog-version">v1.3.0</span><time datetime="2026-08-29">29.08.2026</time></header>
+              <h3>Czytelniejsze menu trybów</h3>
+              <ul><li>Aktywny tryb jest wyróżniony przesunięciem i kolorem bez dodatkowego dopisku tekstowego.</li></ul>
+            </article>
+            <article class="changelog-entry reveal">
+              <header><span class="changelog-version">v1.2.17</span><time datetime="2026-08-29">29.08.2026</time></header>
+              <h3>Nowa logika kopalni i zadania</h3>
+              <ul><li>Winda posiada rzeczywisty limit ładunku, fazy transportu i rozładunek na powierzchni.</li><li>Dodano paski postępu pracy windy i lisów oraz szybsze ładowanie mniejszych transportów.</li><li>Zadania skalują się do etapu gry i obejmują więcej rodzajów aktywności.</li></ul>
+            </article>
+            <article class="changelog-entry reveal">
+              <header><span class="changelog-version">v1.2.16–1.2.14</span><time datetime="2026-08-29">29.08.2026</time></header>
+              <h3>Interfejs i balans rebirth</h3>
+              <ul><li>Esencja mieści się w jednym wierszu głównego paska i ma własną ikonę.</li><li>Poprawiono obwódkę celu podczas przeciągania lisa do połączenia.</li><li>Koszty sklepu rebirth ponownie rosną liniowo o 2 punkty.</li></ul>
+            </article>
+            <article class="changelog-entry reveal">
+              <header><span class="changelog-version">v1.2.13–1.2.10</span><time datetime="2026-08-29">29.08.2026</time></header>
+              <h3>Stabilniejsze zapisy i kopalnie</h3>
+              <ul><li>Usunięto pętlę cofania zapisu z chmury i rozróżniono własne autosave’y urządzenia.</li><li>Rebirth prawidłowo zużywa hydrę, zachowując odblokowanie krainy kopalni.</li><li>Przebudowano transport, piętra, magazyn oraz mapę trzech kopalni żywiołów.</li></ul>
+            </article>
+          </div>
+        </div>
+      </section>
+
       <section id="download" class="download-section section-grid">
         <div class="shell download-panel reveal">
           <div class="download-icon"><img src="/assets/fox-evolution-icon.png" alt="Ikona Fox Evolution" /></div>
-          <div class="download-copy"><p class="eyebrow">// EARLY ACCESS 1.3.0</p><h2>ROZPOCZNIJ EWOLUCJĘ.</h2><p>Darmowe instalatory wczesnego dostępu dla Windows i macOS. Aktualizacje pobierzesz później bezpośrednio w grze.</p></div>
+          <div class="download-copy"><p class="eyebrow">// EARLY ACCESS 1.3.1</p><h2>ROZPOCZNIJ EWOLUCJĘ.</h2><p>Darmowe instalatory wczesnego dostępu dla Windows i macOS. Aktualizacje pobierzesz później bezpośrednio w grze.</p></div>
           <div class="download-options">
             <a class="pixel-button pixel-button--primary" href="/download/windows" data-download-link="windows"><span class="button-icon">↓</span><span><strong>Windows</strong><small data-download-meta="windows">x64 · EXE</small></span></a>
             <a class="pixel-button pixel-button--primary" href="/download/macos/arm64" data-download-link="macos-arm64"><span class="button-icon">↓</span><span><strong>macOS Apple Silicon</strong><small data-download-meta="macos-arm64">M1–M4 · DMG</small></span></a>
@@ -198,6 +235,6 @@
         <p>© <span data-year></span> Mionix Games. Łącz. Ewoluuj. Powtarzaj.</p><a href="mailto:kontakt@mionix.pl">kontakt@mionix.pl</a>
       </div>
     </footer>
-    <script src="/site.js?v=1.3.0" defer></script>
+    <script src="/site.js?v=1.3.1" defer></script>
   </body>
 </html>

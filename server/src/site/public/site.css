@@ -157,7 +157,7 @@ button.fox-slot:hover .slot-action, button.fox-slot.is-selected .slot-action { c
 .signal-track i { color: #92400e; font-style: normal; }
 .signal-strip:hover .signal-track { animation-play-state: paused; }
 
-.gameplay-section, .evolution-section, .features-section, .guide-section, .faq-section { padding: 118px 0; }
+.gameplay-section, .evolution-section, .features-section, .guide-section, .changelog-section, .faq-section { padding: 118px 0; }
 .section-heading { max-width: 670px; margin-bottom: 52px; }
 .section-heading h2, .evolution-copy h2, .download-copy h2 { font-size: clamp(34px, 4.6vw, 60px); }
 .section-heading > p:last-child, .evolution-copy > p { margin-top: 22px; color: var(--muted); font-size: 16px; }
@@ -221,6 +221,26 @@ button.fox-slot:hover .slot-action, button.fox-slot.is-selected .slot-action { c
 .guide-contact a { padding: 11px 14px; border: 1px solid var(--cyan); color: var(--cyan); font-size: 11px; font-weight: 900; }
 .guide-contact a:hover { color: #020617; background: var(--cyan); }
 
+.changelog-section { background: linear-gradient(180deg, rgba(8, 145, 178, .07), transparent 42%), #050c18; }
+.changelog-layout { display: grid; grid-template-columns: minmax(260px, .7fr) minmax(0, 1.3fr); align-items: start; gap: 72px; }
+.changelog-layout > .section-heading { position: sticky; top: 116px; margin-bottom: 0; }
+.changelog-list { position: relative; display: grid; gap: 16px; }
+.changelog-list::before { position: absolute; top: 28px; bottom: 28px; left: -37px; width: 2px; content: ""; background: linear-gradient(var(--amber), var(--cyan), #334155); }
+.changelog-entry { position: relative; padding: 28px 30px; border: 1px solid #334155; background: linear-gradient(135deg, rgba(34, 211, 238, .04), transparent 50%), var(--panel); box-shadow: 5px 5px 0 var(--shadow); }
+.changelog-entry::before { position: absolute; top: 27px; left: -44px; width: 16px; height: 16px; border: 3px solid #050c18; content: ""; background: #64748b; box-shadow: 0 0 0 1px #64748b; }
+.changelog-entry--latest { border-color: var(--amber); background: linear-gradient(135deg, rgba(245, 158, 11, .13), rgba(34, 211, 238, .055) 70%), var(--panel); box-shadow: 6px 6px 0 #451a03; }
+.changelog-entry--latest::before { background: var(--amber-light); box-shadow: 0 0 14px rgba(245, 158, 11, .75), 0 0 0 1px var(--amber); }
+.changelog-entry header { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.changelog-entry header > div { display: flex; align-items: center; gap: 10px; }
+.changelog-version { color: var(--cyan); font-size: 12px; font-weight: 900; letter-spacing: .08em; }
+.changelog-entry--latest .changelog-version { color: var(--amber-light); }
+.changelog-badge { padding: 4px 7px; color: #020617; background: var(--amber-light); font-size: 8px; font-weight: 900; letter-spacing: .08em; }
+.changelog-entry time { color: #64748b; font-size: 9px; font-weight: 900; letter-spacing: .08em; }
+.changelog-entry h3 { margin-top: 16px; color: var(--paper); font-size: 18px; text-transform: uppercase; }
+.changelog-entry ul { display: grid; gap: 9px; margin: 16px 0 0; padding: 0; color: var(--muted); font-size: 13px; list-style: none; }
+.changelog-entry li { position: relative; padding-left: 18px; }
+.changelog-entry li::before { position: absolute; left: 0; color: var(--cyan); content: "+"; font-weight: 900; }
+
 .download-section { padding: 80px 0; }
 .download-panel { display: grid; grid-template-columns: 130px 1fr; align-items: center; gap: 34px; padding: 38px; border: 2px solid var(--amber); background: linear-gradient(100deg, rgba(146, 64, 14, 0.28), transparent 50%), #07101f; box-shadow: 10px 10px 0 #451a03; }
 .download-icon { display: grid; width: 118px; height: 118px; place-items: center; border: 1px solid #6b4d13; background: #020617; }
@@ -272,12 +292,15 @@ button.fox-slot:hover .slot-action, button.fox-slot.is-selected .slot-action { c
 
 @media (max-width: 980px) {
   .hero { padding-top: 128px; }
-  .hero-layout, .evolution-layout, .faq-layout { grid-template-columns: 1fr; }
+  .hero-layout, .evolution-layout, .changelog-layout, .faq-layout { grid-template-columns: 1fr; }
   .hero-visual { max-width: 720px; }
   .mechanics-grid { grid-template-columns: 1fr; }
   .mechanic-card { min-height: 250px; }
   .download-panel { grid-template-columns: 110px 1fr; }
   .download-options { grid-template-columns: 1fr; }
+  .changelog-layout { gap: 30px; }
+  .changelog-layout > .section-heading { position: static; }
+  .changelog-list { margin-left: 36px; }
   .faq-layout { gap: 16px; }
 }
 
@@ -297,7 +320,7 @@ button.fox-slot:hover .slot-action, button.fox-slot.is-selected .slot-action { c
   .fox-slot img { width: 78px; }
   .floating-chip { display: none; }
   .cursor-glow { display: none; }
-  .gameplay-section, .evolution-section, .features-section, .guide-section, .faq-section { padding: 84px 0; }
+  .gameplay-section, .evolution-section, .features-section, .guide-section, .changelog-section, .faq-section { padding: 84px 0; }
   .evolution-track { grid-template-columns: 1fr 1fr; }
   .track-line { display: none; }
   .feature-board { grid-template-columns: 1fr; }
@@ -306,6 +329,10 @@ button.fox-slot:hover .slot-action, button.fox-slot.is-selected .slot-action { c
   .guide-grid { grid-template-columns: 1fr; }
   .guide-contact { grid-template-columns: 48px 1fr; }
   .guide-contact a { grid-column: 1 / -1; text-align: center; }
+  .changelog-list { margin-left: 25px; }
+  .changelog-list::before { left: -22px; }
+  .changelog-entry { padding: 24px 20px; }
+  .changelog-entry::before { left: -29px; }
   .download-panel { grid-template-columns: 1fr; padding: 28px 22px; text-align: center; }
   .download-icon { margin: 0 auto; }
   .footer-layout { grid-template-columns: 1fr; padding: 34px 0; justify-items: center; }
