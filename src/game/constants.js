@@ -1,4 +1,4 @@
-export const GAME_VERSION = '1.2.13';
+export const GAME_VERSION = '1.2.14';
 export const RELEASE_CHANNEL = 'EARLY ACCESS';
 export const BASE_TICK_SECONDS = 5;
 export const MIN_TICK_SECONDS = 1;
@@ -189,8 +189,8 @@ export const UPGRADE_DEFS = {
     shop: 'rebirth',
     currency: 'rebirthTokens',
     cap: 45,
-    baseCost: 1,
-    growth: 2
+    baseCost: 2,
+    costStep: 2
   },
   gemIncomeMultiplier: {
     id: 'gemIncomeMultiplier',
@@ -218,8 +218,8 @@ export const UPGRADE_DEFS = {
     shop: 'rebirth',
     currency: 'rebirthTokens',
     cap: 40,
-    baseCost: 5,
-    growth: 2
+    baseCost: 2,
+    costStep: 2
   },
   purchaseTierChance: {
     id: 'purchaseTierChance',
@@ -229,7 +229,7 @@ export const UPGRADE_DEFS = {
     currency: 'rebirthTokens',
     cap: 95,
     baseCost: 2,
-    growth: 2
+    costStep: 2
   },
   gemDropRate: {
     id: 'gemDropRate',
@@ -239,7 +239,7 @@ export const UPGRADE_DEFS = {
     currency: 'rebirthTokens',
     cap: 120,
     baseCost: 2,
-    growth: 2
+    costStep: 2
   }
 };
 

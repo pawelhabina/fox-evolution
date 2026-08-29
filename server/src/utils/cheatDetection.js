@@ -58,7 +58,14 @@ export function detectCheatSignals({ prevState, nextState, elapsedSeconds }) {
   }
 
   const rebirthDelta = Number(toSafeBigInt(nextState?.currencies?.rebirthTokens, 0n) - toSafeBigInt(prevState?.currencies?.rebirthTokens, 0n));
-  if (rebirthDelta > 1000 && safeElapsed < 300) {
+  const appliedRebirthPricingMigration = (
+    prevState?.meta?.rebirthPricingRefundV128Applied !== true
+    && nextState?.meta?.rebirthPricingRefundV128Applied === true
+  ) || (
+    prevState?.meta?.rebirthLinearPricingRefundV1214Applied !== true
+    && nextState?.meta?.rebirthLinearPricingRefundV1214Applied === true
+  );
+  if (rebirthDelta > 1000 && safeElapsed < 300 && !appliedRebirthPricingMigration) {
     reasons.push('Rebirth token increase too high for elapsed time');
     score += 20;
   }

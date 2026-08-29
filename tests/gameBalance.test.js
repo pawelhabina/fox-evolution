@@ -49,7 +49,7 @@ test('fox limit is a persistent rebirth upgrade instead of a coin upgrade', () =
   assert.ok(foxLimitUpgrade, 'fox limit upgrade definition is missing');
   assert.match(foxLimitUpgrade[0], /shop: 'rebirth'/);
   assert.match(foxLimitUpgrade[0], /currency: 'rebirthTokens'/);
-  assert.match(foxLimitUpgrade[0], /baseCost: 1/);
+  assert.match(foxLimitUpgrade[0], /baseCost: 2/);
 });
 
 test('session refresh is shared between concurrent startup requests', () => {
@@ -72,14 +72,14 @@ test('daily and weekly quests use achievable idle-game targets', () => {
   assert.match(quests, /syncQuestDefinitions\(nextState\.quests\.weekly/);
 });
 
-test('every rebirth shop cost doubles on each level and gem drop starts at 1%', () => {
+test('every rebirth shop cost grows by two and gem drop starts at 1%', () => {
   const constants = read('src/game/constants.js');
   const economy = read('src/game/economy.js');
 
-  assert.match(constants.match(/foxLimit: \{[\s\S]*?\r?\n  \},\r?\n  gemIncomeMultiplier:/)?.[0] || '', /growth: 2/);
-  assert.match(constants.match(/tickSpeed: \{[\s\S]*?\r?\n  \},\r?\n  purchaseTierChance:/)?.[0] || '', /growth: 2/);
-  assert.match(constants.match(/purchaseTierChance: \{[\s\S]*?\r?\n  \},\r?\n  gemDropRate:/)?.[0] || '', /growth: 2/);
-  assert.match(constants.match(/gemDropRate: \{[\s\S]*?\r?\n  \}\r?\n\};/)?.[0] || '', /growth: 2/);
+  assert.equal((constants.match(/costStep: 2/g) || []).length, 4);
+  assert.match(constants.match(/foxLimit: \{[\s\S]*?\r?\n  \},\r?\n  gemIncomeMultiplier:/)?.[0] || '', /baseCost: 2/);
+  assert.match(constants.match(/tickSpeed: \{[\s\S]*?\r?\n  \},\r?\n  purchaseTierChance:/)?.[0] || '', /baseCost: 2/);
+  assert.match(economy, /config\.baseCost \+ config\.costStep \* safeLevel/);
   assert.doesNotMatch(economy, /upgradeId === 'tickSpeed'/);
   assert.match(constants, /BASE_GEM_DROP_RATE = 0\.01/);
 });
@@ -93,9 +93,14 @@ test('legacy rebirth shop purchases receive a one-time refund without losing lev
   assert.match(economy, /Math\.floor\(1\.35 \*\* level\)/);
   assert.match(economy, /level < 20 \? 5 \+ level \* 5 : 110/);
   assert.match(storage, /rebirthPricingRefundV128Applied === true/);
-  assert.match(storage, /rebirthTokens: clampCurrency\([\s\S]*?\+ legacyRebirthRefund\)/);
+  assert.match(storage, /\+ legacyRebirthRefund/);
   assert.match(storage, /rebirthPricingRefundV128Applied: true/);
   assert.match(defaults, /rebirthPricingRefundV128Applied: true/);
+  assert.match(economy, /getRebirthLinearPricingRefund/);
+  assert.match(storage, /rebirthLinearPricingRefundV1214Applied === true/);
+  assert.match(storage, /linearRebirthRefundApplied \|\| !legacyRebirthRefundApplied/);
+  assert.match(storage, /\+ linearRebirthRefund/);
+  assert.match(defaults, /rebirthLinearPricingRefundV1214Applied: true/);
 });
 
 test('fox purchase always shows its price, including when blocked', () => {

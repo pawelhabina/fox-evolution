@@ -11,7 +11,8 @@ function loadGameModules() {
     stdin: {
       contents: [
         "export { ACTIONS, gameReducer } from './src/game/reducer.js';",
-        "export { createInitialState } from './src/storage/defaultState.js';"
+        "export { createInitialState } from './src/storage/defaultState.js';",
+        "export { getRebirthLinearPricingRefund, getUpgradeCost } from './src/game/economy.js';"
       ].join('\n'),
       resolveDir: projectRoot,
       sourcefile: 'rebirth-test-entry.js'
@@ -58,4 +59,24 @@ test('rebirth consumes a hydra once while preserving the unlocked mine realm', (
   assert.equal(repeated.currencies.rebirthTokens, 32, 'a consumed hydra must not award another 32 points');
   assert.deepEqual(repeated.foxes, []);
   assert.equal(repeated.realms.spiritMine.unlocked, true);
+});
+
+test('every rebirth upgrade starts at two points and increases by two', () => {
+  const { getRebirthLinearPricingRefund, getUpgradeCost } = loadGameModules();
+  const rebirthUpgradeIds = ['foxLimit', 'tickSpeed', 'purchaseTierChance', 'gemDropRate'];
+
+  rebirthUpgradeIds.forEach((upgradeId) => {
+    assert.deepEqual(
+      [0, 1, 2, 3].map((level) => getUpgradeCost(upgradeId, level)),
+      [2, 4, 6, 8],
+      `${upgradeId} should use linear +2 pricing`
+    );
+  });
+
+  assert.equal(getRebirthLinearPricingRefund({
+    foxLimit: 3,
+    tickSpeed: 3,
+    purchaseTierChance: 3,
+    gemDropRate: 3
+  }), 27);
 });

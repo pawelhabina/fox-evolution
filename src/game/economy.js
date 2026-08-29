@@ -51,7 +51,31 @@ export function getUpgradeCost(upgradeId, level) {
   if (upgradeId === 'gemIncomeMultiplier') {
     return 50 + safeLevel * 50;
   }
+  if (Number.isFinite(config.costStep)) {
+    return Math.max(1, Math.floor(config.baseCost + config.costStep * safeLevel));
+  }
   return Math.max(1, Math.floor(config.baseCost * config.growth ** safeLevel));
+}
+
+const PRE_LINEAR_REBIRTH_PRICING = {
+  foxLimit: { baseCost: 1, cap: 45 },
+  tickSpeed: { baseCost: 5, cap: 40 },
+  purchaseTierChance: { baseCost: 2, cap: 95 },
+  gemDropRate: { baseCost: 2, cap: 120 }
+};
+
+export function getRebirthLinearPricingRefund(upgrades = {}) {
+  const refund = Object.entries(PRE_LINEAR_REBIRTH_PRICING).reduce((total, [upgradeId, previous]) => {
+    const levelCount = clamp(Math.floor(Number(upgrades[upgradeId]) || 0), 0, previous.cap);
+    let upgradeRefund = 0;
+    for (let level = 0; level < levelCount; level += 1) {
+      const previousCost = Math.max(1, Math.floor(previous.baseCost * 2 ** level));
+      const linearCost = 2 + level * 2;
+      upgradeRefund += Math.max(0, previousCost - linearCost);
+    }
+    return total + upgradeRefund;
+  }, 0);
+  return clampCurrency(refund);
 }
 
 export function getLegacyRebirthShopRefund(upgrades = {}) {

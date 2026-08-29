@@ -1,4 +1,10 @@
-import { clamp, clampCurrency, clampFoxPosition, getLegacyRebirthShopRefund } from '../game/economy';
+import {
+  clamp,
+  clampCurrency,
+  clampFoxPosition,
+  getLegacyRebirthShopRefund,
+  getRebirthLinearPricingRefund
+} from '../game/economy';
 import { MAX_FOXES_LIMIT, MAX_TIER } from '../game/constants';
 import { createInitialState } from './defaultState';
 import { SAVE_DATA_VERSION, sanitizePokedex } from '../game/progression.mjs';
@@ -172,10 +178,18 @@ function sanitizeState(rawState, nowTs = Date.now()) {
 
   const legacyRebirthRefundApplied = rawState.meta?.rebirthPricingRefundV128Applied === true;
   const legacyRebirthRefund = legacyRebirthRefundApplied ? 0 : getLegacyRebirthShopRefund(rawState.upgrades);
+  const linearRebirthRefundApplied = rawState.meta?.rebirthLinearPricingRefundV1214Applied === true;
+  const linearRebirthRefund = linearRebirthRefundApplied || !legacyRebirthRefundApplied
+    ? 0
+    : getRebirthLinearPricingRefund(rawState.upgrades);
   const currencies = {
     coins: clampCurrency(rawState.currencies?.coins ?? base.currencies.coins),
     gems: clampCurrency(rawState.currencies?.gems ?? base.currencies.gems),
-    rebirthTokens: clampCurrency((rawState.currencies?.rebirthTokens ?? base.currencies.rebirthTokens) + legacyRebirthRefund),
+    rebirthTokens: clampCurrency(
+      (rawState.currencies?.rebirthTokens ?? base.currencies.rebirthTokens)
+      + legacyRebirthRefund
+      + linearRebirthRefund
+    ),
     essence: clampCurrency(rawState.currencies?.essence ?? base.currencies.essence),
     fireCoins: clampCurrency(rawState.currencies?.fireCoins ?? base.currencies.fireCoins),
     electricCoins: clampCurrency(rawState.currencies?.electricCoins ?? base.currencies.electricCoins),
@@ -446,6 +460,7 @@ function sanitizeState(rawState, nowTs = Date.now()) {
       ),
       gemDropCounter: clampCurrency(rawState.meta?.gemDropCounter ?? base.meta.gemDropCounter),
       rebirthPricingRefundV128Applied: true,
+      rebirthLinearPricingRefundV1214Applied: true,
       createdAt: sanitizeIsoTimestamp(rawState.meta?.createdAt, base.meta.createdAt),
       lastPlayedAt: sanitizeIsoTimestamp(rawState.meta?.lastPlayedAt, base.meta.lastPlayedAt),
       lastEconomyAt: sanitizeIsoTimestamp(rawState.meta?.lastEconomyAt || rawState.meta?.lastPlayedAt, base.meta.lastPlayedAt)
