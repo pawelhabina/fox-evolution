@@ -1,4 +1,4 @@
-export const GAME_VERSION = '1.2.14';
+export const GAME_VERSION = '1.2.15';
 export const RELEASE_CHANNEL = 'EARLY ACCESS';
 export const BASE_TICK_SECONDS = 5;
 export const MIN_TICK_SECONDS = 1;

@@ -89,16 +89,23 @@ test('main menu uses the official game icon instead of the paw glyph', () => {
   assert.doesNotMatch(mainMenu, /<GuiIcon name="pet" alt="" size=\{64\} \/>/);
 });
 
-test('version 1.2.14 is visibly marked as Early Access', () => {
+test('version 1.2.15 is visibly marked as Early Access', () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
   const constants = fs.readFileSync(path.join(projectRoot, 'src/game/constants.js'), 'utf8');
   const mainMenu = fs.readFileSync(path.join(projectRoot, 'src/components/MainMenu.jsx'), 'utf8');
 
-  assert.equal(packageJson.version, '1.2.14');
-  assert.match(constants, /GAME_VERSION = '1\.2\.14'/);
+  assert.equal(packageJson.version, '1.2.15');
+  assert.match(constants, /GAME_VERSION = '1\.2\.15'/);
   assert.match(constants, /RELEASE_CHANNEL = 'EARLY ACCESS'/);
   assert.match(mainMenu, /EARLY ACCESS/);
   assert.match(mainMenu, /Wczesna wersja gry/);
+});
+
+test('merge drop targets keep their feedback while the pointer is hovering them', () => {
+  const styles = fs.readFileSync(path.join(projectRoot, 'src/styles.css'), 'utf8');
+
+  assert.match(styles, /\.fox-tile\.fox-tile--merge-hover-ok\s*\{[^}]*outline:\s*3px solid #4ade80/);
+  assert.match(styles, /\.fox-tile\.fox-tile--merge-hover-blocked\s*\{[^}]*outline:\s*3px solid #fb7185/);
 });
 
 test('macOS packages receive a complete stable ad-hoc signature', () => {
